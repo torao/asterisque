@@ -10,6 +10,8 @@ import scala.io.Source
 import com.kazzla.asterisk.netty.Netty
 import java.net.InetSocketAddress
 import java.io.PrintWriter
+import scala.util.{Failure, Success}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object Sample {
 	val executor = Executors.newCachedThreadPool()
@@ -22,16 +24,18 @@ object Sample {
 					val log = session.getRemoteInterface(classOf[LogServer])
 					log.info("hoge")
 
-					val pipe = session2.open(30, "hoge")
+					val pipe = session.open(30, "hoge")
 					val out = new PrintWriter(pipe.out)
 					(0 until 10).foreach{ i => out.println(i) }
 					out.close()
 
 					100
+				case None =>
+					throw new Exception()
 			}
 		}).runOn(executor).build()
 
-		Netty.listen(new InetSocketAddress(7777), ns)
+		Netty.listen(new InetSocketAddress(7777), None, ns)
 	}
 
 	object Node2 {
@@ -39,19 +43,26 @@ object Sample {
 		val logging = Node("LoggingServer").serve(new LogServer {
 			def error(msg:String) { Console.out.print(s"INFO : $msg\n") }
 			def info(msg:String)  { Console.out.print(s"ERROR: $msg\n") }
-			def dump(msg:String):Unit = Pipe.apply() match {
+			def dump(msg:String):Unit = Pipe() match {
 				case Some(pipe) =>
 					Console.out.print(s"DUMP: $msg\n")
 					Source.fromInputStream(pipe.in).getLines().foreach { line =>
 						Console.out.println(line)
 					}
+				case None =>
+					throw new Exception()
 			}
 		}).runOn(executor).build()
 
-		val session:Session = Netty.connect(new InetSocketAddress(7777), logging)
+		Netty.connect(new InetSocketAddress(7777), None).onComplete{
+			case Success(wire) =>
+				val session = logging.connect(wire)
+				val ns = session.getRemoteInterface(classOf[NameServer])
+				Console.println(ns.lookup("www.google.com"))
+			case Failure(ex) =>
+				throw ex
+		}
 
-		val ns = session1.getRemoteInterface(classOf[NameServer])
-		Console.println(ns.lookup("www.google.com"))
 	}
 
 }

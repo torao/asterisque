@@ -5,7 +5,6 @@
 */
 package com.kazzla.asterisk
 
-import com.kazzla.asterisk._
 import java.lang.reflect.{Method, InvocationHandler}
 import java.util.concurrent.Executor
 import java.util.concurrent.atomic.{AtomicReference, AtomicInteger}
@@ -20,14 +19,13 @@ import org.slf4j.LoggerFactory
 /**
  * @author Takami Torao
  * @param name このセッションの名前
- * @param isServer このセッションの UNIQUE_MASK ビットを立てる場合 true
  * @param executor このセッション上での RPC 処理を実行するためのスレッドプール
  */
-class Session(val name:String, isServer:Boolean, executor:Executor, service:Object, wire:Wire) {
+class Session(val name:String, executor:Executor, service:Object, wire:Wire) {
 
 	import Session.logger
 
-	private[this] val pipeIdMask:Short = if(isServer) Pipe.UNIQUE_MASK else 0
+	private[this] val pipeIdMask:Short = if(wire.isServer) Pipe.UNIQUE_MASK else 0
 	private[this] val pipeSequence = new AtomicInteger(0)
 	private[this] val pipes = new AtomicReference[Map[Short, Pipe]](Map())
 

@@ -7,10 +7,12 @@ package com.kazzla.asterisk.netty
 
 import java.net.SocketAddress
 import javax.net.ssl.SSLContext
-import org.jboss.netty.bootstrap.{ServerBootstrap, ClientBootstrap, Bootstrap}
+import org.jboss.netty.bootstrap.{ServerBootstrap, ClientBootstrap}
 import scala.concurrent.{Promise, Future}
-import com.kazzla.asterisk.Wire
+import com.kazzla.asterisk._
 import org.jboss.netty.channel.socket.nio.{NioServerSocketChannelFactory, NioClientSocketChannelFactory}
+import org.slf4j.LoggerFactory
+import java.io.Closeable
 import org.jboss.netty.channel.{ChannelFuture, ChannelFutureListener}
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -19,41 +21,51 @@ import org.jboss.netty.channel.{ChannelFuture, ChannelFutureListener}
 /**
  * @author Takami Torao
  */
-object Netty {
+object Netty extends NetworkDriver {
+	private[this] val logger = LoggerFactory.getLogger(getClass)
 
-	def connect(address:SocketAddress, ssl:Option[SSLContext]):(Bootstrap, Future[Wire]) = {
-		logger.trace(s"connect(${address.getName},$ssl)")
+	def connect(address:SocketAddress, sslContext:Option[SSLContext]):Future[Wire] = {
 		val promise = Promise[Wire]()
-		val channelFactory = new NioClientSocketChannelFactory()
-		val client = new ClientBootstrap(channelFactory)
-		client.setPipelineFactory(new Factory(false, ssl))
-		client.connect(address).addListener(new ChannelFutureListener {
+		val factory = new AsteriskPipelineFactory(false, sslContext, { wire =>
+			logger.debug(s"onWireCreate($wire)")
+			promise.success(wire)
+		})
+		val client = new ClientBootstrap(new NioClientSocketChannelFactory())
+		client.setPipelineFactory(factory)
+		val future = client.connect(address)
+		future.addListener(new ChannelFutureListener {
 			def operationComplete(future:ChannelFuture) {
 				if(future.isSuccess){
-					promise.success(NettyWire.this)
+					logger.debug("operationComplete(success)")
 				} else {
+					logger.debug("operationComplete(failure)")
 					promise.failure(future.getCause)
 				}
 			}
 		})
-		(client, promise.future)
+		promise.future
 	}
 
-	def listen(address:SocketAddress, ssl:Option[SSLContext]):(Bootstrap, Future[Wire]) = {
-		logger.trace(s"listen(${address.getName},$ssl)")
-		val promise = Promise[Wire]()
-		val channelFactory = new NioServerSocketChannelFactory()
-		val server = new ServerBootstrap(channelFactory)
-		server.setPipelineFactory(new Factory(true, ssl))
-		server.bindAsync(address).addListener(new ChannelFutureListener {
+	def listen(address:SocketAddress, sslContext:Option[SSLContext])(onAccept:(Wire)=>Unit):Server = {
+		val factory = new AsteriskPipelineFactory(true, sslContext, { wire =>
+			logger.debug(s"onWireCreate($wire)")
+			onAccept(wire)
+		})
+		val server = new ServerBootstrap(new NioServerSocketChannelFactory())
+		server.setPipelineFactory(factory)
+		val future = server.bindAsync(address)
+		future.addListener(new ChannelFutureListener {
 			def operationComplete(future:ChannelFuture) {
 				if(future.isSuccess){
-					promise.success(NettyWire.this)
+					logger.debug("operationComplete(success)")
 				} else {
-					promise.failure(future.getCause)
+					logger.debug("operationComplete(failure)")
 				}
 			}
 		})
-		(server, promise.future)
+		new Server(address) {
+			override def close() { server.shutdown() }
+		}
 	}
+
 }

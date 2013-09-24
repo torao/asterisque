@@ -9,6 +9,8 @@ import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicReference
 import scala.annotation.tailrec
 import org.slf4j.LoggerFactory
+import java.net.SocketAddress
+import com.sun.net.ssl.SSLContext
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Node
@@ -99,9 +101,9 @@ class Node private[Node](name:String, executor:Executor, initService:Object){
 		}
 	}
 
-	def connect(wire:Wire, isServer:Boolean = false):Session = {
-		logger.trace(s"newSession($isServer,$wire):$name")
-		val s = new Session(s"$name[${wire.peerName}]", isServer, executor, service, wire)
+	def connect(wire:Wire):Session = {
+		logger.trace(s"newSession($wire):$name")
+		val s = new Session(s"$name[${wire.peerName}]", executor, service, wire)
 		add(s)
 		s.onClosed ++ remove
 		s
