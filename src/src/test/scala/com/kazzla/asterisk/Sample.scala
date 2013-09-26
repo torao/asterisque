@@ -65,6 +65,11 @@ object Sample {
 
 	}
 
+	def main(args:Array[String]):Unit = {
+		Node1
+		Node2
+	}
+
 }
 
 trait NameServer {

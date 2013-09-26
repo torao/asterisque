@@ -10,6 +10,7 @@ import javax.net.ssl.SSLContext
 import scala.concurrent.{Promise, Future}
 import java.io.Closeable
 import scala.util.{Failure, Success}
+import org.slf4j.LoggerFactory
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // NetworkDriver
@@ -18,10 +19,12 @@ import scala.util.{Failure, Success}
  * @author Takami Torao
  */
 trait NetworkDriver {
+	import NetworkDriver._
 	def connect(address:SocketAddress, sslContext:Option[SSLContext]):Future[Wire]
 	def listen(address:SocketAddress, sslContext:Option[SSLContext])(onAccept:(Wire)=>Unit):Server
 
 	def listen(address:SocketAddress, sslContext:Option[SSLContext], node:Node):NetworkDriver = {
+		logger.debug(s"listening on ${address.toString} with TLS $sslContext on node: $node")
 		listen(address, sslContext){ wire => node.connect(wire) }
 		this
 	}
@@ -36,6 +39,10 @@ trait NetworkDriver {
 		promise.future
 	}
 
+}
+
+object NetworkDriver {
+	private[NetworkDriver] val logger = LoggerFactory.getLogger(classOf[NetworkDriver])
 }
 
 class Server(val address:SocketAddress) extends Closeable {
