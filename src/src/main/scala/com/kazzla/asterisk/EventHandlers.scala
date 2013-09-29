@@ -7,6 +7,7 @@ package com.kazzla.asterisk
 
 import java.util.concurrent.atomic.AtomicReference
 import scala.annotation.tailrec
+import org.slf4j.LoggerFactory
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // EventHandlers
@@ -16,6 +17,7 @@ import scala.annotation.tailrec
  * @author Takami Torao
  */
 final class EventHandlers[T] {
+	import EventHandlers._
 	private[this] val listeners = new AtomicReference(Seq[(T)=>Unit]())
 
 	/**
@@ -52,5 +54,16 @@ final class EventHandlers[T] {
 	/**
 	 * すべてのイベントハンドラに通知を行います。
 	 */
-	def apply(s:T):Unit = listeners.get().foreach{ _(s) }
+	def apply(s:T):Unit = {
+		listeners.get().foreach{ l =>
+			l(s)
+			if(logger.isTraceEnabled){
+				logger.trace(s"${l.getClass.getSimpleName}($s)")
+			}
+		}
+	}
+}
+
+object EventHandlers {
+	private[EventHandlers] val logger = LoggerFactory.getLogger(classOf[EventHandlers[_]])
 }

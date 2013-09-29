@@ -71,7 +71,7 @@ object Message {
 				packer.write(b.payload, b.offset, b.length)
 		}
 		if(logger.isTraceEnabled){
-			logger.trace(s"$packet -> ${packer.getBufferSize} bytes")
+			logger.trace(s"encode($packet):${packer.getBufferSize} bytes")
 		}
 		ByteBuffer.wrap(packer.toByteArray)
 	}

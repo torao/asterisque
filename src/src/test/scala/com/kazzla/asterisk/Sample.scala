@@ -12,8 +12,12 @@ import java.net.InetSocketAddress
 import java.io.PrintWriter
 import scala.util.{Failure, Success}
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+import org.slf4j.LoggerFactory
 
 object Sample {
+	val logger = LoggerFactory.getLogger(Sample.getClass)
 	val executor = Executors.newCachedThreadPool()
 
 	object Node1 {
@@ -21,14 +25,18 @@ object Sample {
 		val ns = Node("NameServer").serve(new NameServer {
 			def lookup(name:String):Int = Session() match {
 				case Some(session) =>
+
+					logger.info("calling log.info(\"hoge\")")
 					val log = session.getRemoteInterface(classOf[LogServer])
 					log.info("hoge")
 
+					logger.info("calling log.dump() with line from 0 to 9")
 					val pipe = session.open(30, "hoge")
 					val out = new PrintWriter(pipe.out)
 					(0 until 10).foreach{ i => out.println(i) }
 					out.close()
 
+					logger.info("returning 100")
 					100
 				case None =>
 					throw new Exception()
@@ -41,8 +49,8 @@ object Sample {
 	object Node2 {
 
 		val logging = Node("LoggingServer").serve(new LogServer {
-			def error(msg:String) { Console.out.print(s"INFO : $msg\n") }
-			def info(msg:String)  { Console.out.print(s"ERROR: $msg\n") }
+			def error(msg:String) { Console.out.print(s"ERROR: $msg\n") }
+			def info(msg:String)  { Console.out.print(s"INFO : $msg\n") }
 			def dump(msg:String):Unit = Pipe() match {
 				case Some(pipe) =>
 					Console.out.print(s"DUMP: $msg\n")
@@ -54,15 +62,12 @@ object Sample {
 			}
 		}).runOn(executor).build()
 
-		Netty.connect(new InetSocketAddress(7777), None).onComplete{
-			case Success(wire) =>
-				val session = logging.connect(wire)
-				val ns = session.getRemoteInterface(classOf[NameServer])
-				Console.println(ns.lookup("www.google.com"))
-			case Failure(ex) =>
-				throw ex
-		}
+		val future = Netty.connect(new InetSocketAddress(7777), None)
 
+		val wire = Await.result(future, Duration.Inf)
+		val session = logging.connect(wire)
+		val ns = session.getRemoteInterface(classOf[NameServer])
+		Console.println(ns.lookup("www.google.com"))
 	}
 
 	def main(args:Array[String]):Unit = {

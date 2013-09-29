@@ -44,6 +44,7 @@ class Session(val name:String, executor:Executor, service:Object, wire:Wire) {
 
 	// ワイヤーにメッセージが到着した時にメッセージをディスパッチ
 	wire.onReceive(m => dispatch(m))
+	wire.start()
 
 	// ==============================================================================================
 	// パイプのオープン
@@ -78,7 +79,7 @@ class Session(val name:String, executor:Executor, service:Object, wire:Wire) {
 	 */
 	private[this] def dispatch(frame:Message):Unit = {
 		if(logger.isTraceEnabled){
-			logger.trace(s"-> $frame")
+			logger.trace(s"dispatch($frame)")
 		}
 		frame match {
 			case open:Open =>
@@ -145,7 +146,9 @@ class Session(val name:String, executor:Executor, service:Object, wire:Wire) {
 	 */
 	private[asterisk] def post(frame:Message):Unit = {
 		wire.send(frame)
-		logger.trace(s"<- $frame")
+		if(logger.isTraceEnabled){
+			logger.trace(s"post($frame)")
+		}
 	}
 
 	/**

@@ -2,11 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/src/test/resources/log4j.properties" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/NetworkDriver.scala" afterPath="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/NetworkDriver.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/EventHandlers.scala" afterPath="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/EventHandlers.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Message.scala" afterPath="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Message.scala" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/src/test/scala/com/kazzla/asterisk/Sample.scala" afterPath="$PROJECT_DIR$/src/src/test/scala/com/kazzla/asterisk/Sample.scala" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/asterisk.iml" afterPath="$PROJECT_DIR$/asterisk.iml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Session.scala" afterPath="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Session.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Wire.scala" afterPath="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Wire.scala" />
     </list>
     <ignored path="asterisk.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -15,16 +15,16 @@
     <file path="/fragment.java" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1378523037613" ignored="false" />
     <file path="/introduction.md" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1378528033594" ignored="false" />
     <file path="/NettyWire.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1379518745405" ignored="false" />
-    <file path="/Message.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1378526947491" ignored="false" />
-    <file path="/Session.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1380027036486" ignored="false" />
+    <file path="/Message.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1380275726382" ignored="false" />
+    <file path="/Session.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1380452105609" ignored="false" />
     <file path="/package.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1378527367502" ignored="false" />
     <file path="/Pipe.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1378531414662" ignored="false" />
-    <file path="/EventHandlers.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1378529131268" ignored="false" />
+    <file path="/EventHandlers.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1380276201554" ignored="false" />
     <file path="/BirpcChannelPipelineFactory.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1378535276746" ignored="false" />
-    <file path="/Wire.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1380026580520" ignored="false" />
+    <file path="/Wire.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1380452009315" ignored="false" />
     <file path="/Node.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1380026979474" ignored="false" />
     <file path="/AsteriskPipelineFactory.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1380026536970" ignored="false" />
-    <file path="/Sample.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1380028525925" ignored="false" />
+    <file path="/Sample.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1380453244061" ignored="false" />
     <file path="/Netty.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1379523842346" ignored="false" />
     <file path="/a.java" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1378918064010" ignored="false" />
     <file path="/NetworkDriver.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1380217241641" ignored="false" />
@@ -90,10 +90,10 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="package.scala" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/package.scala">
+      <file leaf-file-name="Session.scala" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Session.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="19" column="15" selection-start="624" selection-end="624" vertical-scroll-proportion="0.0">
+            <state line="79" column="20" selection-start="2496" selection-end="2496" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -102,7 +102,7 @@
       <file leaf-file-name="Wire.scala" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Wire.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="79" column="23" selection-start="1869" selection-end="1869" vertical-scroll-proportion="0.0">
+            <state line="41" column="52" selection-start="1127" selection-end="1127" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -111,52 +111,16 @@
       <file leaf-file-name="Sample.scala" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/src/test/scala/com/kazzla/asterisk/Sample.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="42" column="0" selection-start="1064" selection-end="1064" vertical-scroll-proportion="0.33333334">
+            <state line="38" column="36" selection-start="1199" selection-end="1199" vertical-scroll-proportion="-0.0862069">
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="log4j.properties" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/src/test/resources/log4j.properties">
+      <file leaf-file-name="EventHandlers.scala" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/EventHandlers.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="1" column="0" selection-start="31" selection-end="31" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="Session.scala" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Session.scala">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="7" column="0" selection-start="198" selection-end="198" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="Netty.scala" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/netty/Netty.scala">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="23" column="0" selection-start="878" selection-end="878" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="NetworkDriver.scala" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/NetworkDriver.scala">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="26" column="60" selection-start="1021" selection-end="1021" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="Node.scala" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Node.scala">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="105" column="18" selection-start="3140" selection-end="3140" vertical-scroll-proportion="0.0">
+            <state line="57" column="0" selection-start="1242" selection-end="1242" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -165,16 +129,52 @@
       <file leaf-file-name="AsteriskPipelineFactory.scala" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/netty/AsteriskPipelineFactory.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="61" column="73" selection-start="2617" selection-end="2617" vertical-scroll-proportion="0.0">
+            <state line="95" column="0" selection-start="3643" selection-end="3643" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="package.scala" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/netty/package.scala">
+      <file leaf-file-name="FrameDecoder.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="jar://$PROJECT_DIR$/lib/netty-3.6.6.Final-sources.jar!/org/jboss/netty/handler/codec/frame/FrameDecoder.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="10" column="15" selection-start="321" selection-end="321" vertical-scroll-proportion="0.0">
+            <state line="461" column="0" selection-start="17978" selection-end="17978" vertical-scroll-proportion="0.0">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="DefaultChannelPipeline.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="jar://$PROJECT_DIR$/lib/netty-3.6.6.Final-sources.jar!/org/jboss/netty/channel/DefaultChannelPipeline.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="563" column="0" selection-start="17513" selection-end="17513" vertical-scroll-proportion="0.0">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="SimpleChannelHandler.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="jar://$PROJECT_DIR$/lib/netty-3.6.6.Final-sources.jar!/org/jboss/netty/channel/SimpleChannelHandler.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="87" column="0" selection-start="3700" selection-end="3700" vertical-scroll-proportion="0.0">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="Channels.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="jar://$PROJECT_DIR$/lib/netty-3.6.6.Final-sources.jar!/org/jboss/netty/channel/Channels.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="295" column="0" selection-start="11082" selection-end="11082" vertical-scroll-proportion="0.0">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="UpstreamMessageEvent.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="jar://$PROJECT_DIR$/lib/netty-3.6.6.Final-sources.jar!/org/jboss/netty/channel/UpstreamMessageEvent.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="62" column="0" selection-start="1832" selection-end="1832" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -198,9 +198,7 @@
   <component name="IdeDocumentHistory">
     <option name="changedFiles">
       <list>
-        <option value="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/package.scala" />
         <option value="$PROJECT_DIR$/docs/introduction.md" />
-        <option value="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/EventHandlers.scala" />
         <option value="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/TypeMapper.scala" />
         <option value="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Pipe.scala" />
         <option value="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/netty/BirpcChannelPipelineFactory.scala" />
@@ -208,12 +206,14 @@
         <option value="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/netty/NettyWire.scala" />
         <option value="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/netty/Netty.scala" />
         <option value="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/netty/AsteriskPipelineFactory.scala" />
-        <option value="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Wire.scala" />
         <option value="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Node.scala" />
-        <option value="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Session.scala" />
-        <option value="$PROJECT_DIR$/src/src/test/scala/com/kazzla/asterisk/Sample.scala" />
         <option value="$PROJECT_DIR$/src/src/test/resources/log4j.properties" />
         <option value="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/NetworkDriver.scala" />
+        <option value="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Message.scala" />
+        <option value="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/EventHandlers.scala" />
+        <option value="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Wire.scala" />
+        <option value="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Session.scala" />
+        <option value="$PROJECT_DIR$/src/src/test/scala/com/kazzla/asterisk/Sample.scala" />
       </list>
     </option>
   </component>
@@ -392,8 +392,38 @@
               <option name="myItemId" value="asterisk" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
+          </PATH>
+          <PATH>
             <PATH_ELEMENT>
-              <option name="myItemId" value="Wire.scala" />
+              <option name="myItemId" value="asterisk" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisk" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="main" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="scala" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisk" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="Session.scala" />
               <option name="myItemType" value="org.jetbrains.plugins.scala.components.ScalaDefsProjectViewProvider$ScalaFileTreeNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -425,6 +455,10 @@
             <PATH_ELEMENT>
               <option name="myItemId" value="asterisk" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="Pipe.scala" />
+              <option name="myItemType" value="org.jetbrains.plugins.scala.components.ScalaDefsProjectViewProvider$ScalaFileTreeNode" />
             </PATH_ELEMENT>
           </PATH>
           <PATH>
@@ -717,14 +751,14 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="0" width="1680" height="1050" extended-state="0" />
-    <editor active="false" />
+    <editor active="true" />
     <layout>
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="JetGradle" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="SBT Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
-      <window_info id="Debug" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.39810926" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.39810926" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="1" side_tool="true" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="true" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
@@ -807,92 +841,6 @@
     <option name="FILTER_TARGETS" value="false" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="jar://$PROJECT_DIR$/lib/netty-3.6.6.Final-sources.jar!/org/jboss/netty/channel/Channel.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="295" column="18" selection-start="12032" selection-end="12032" vertical-scroll-proportion="0.3323398" />
-      </provider>
-    </entry>
-    <entry file="jar://$PROJECT_DIR$/lib/netty-3.6.6.Final-sources.jar!/org/jboss/netty/channel/ChannelHandlerContext.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="127" column="8" selection-start="5073" selection-end="5073" vertical-scroll-proportion="0.3323398" />
-      </provider>
-    </entry>
-    <entry file="jar://$PROJECT_DIR$/lib/netty-3.6.6.Final-sources.jar!/org/jboss/netty/handler/ssl/SslHandler.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="166" column="17" selection-start="7426" selection-end="7428" vertical-scroll-proportion="0.33333334" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/package.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="19" column="15" selection-start="624" selection-end="624" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar:///opt/scala-2.10.2/lib/scala-library.jar!/scala/util/Try.class">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="1" column="29" selection-start="48" selection-end="48" vertical-scroll-proportion="0.023219815" />
-      </provider>
-    </entry>
-    <entry file="jar://$PROJECT_DIR$/lib/scala-library-2.10.2.jar!/scala/util/Failure.class">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="1" column="82" selection-start="101" selection-end="101" vertical-scroll-proportion="0.023219815" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/netty/AsteriskPipelineFactory.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="61" column="73" selection-start="2617" selection-end="2617" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Wire.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="79" column="23" selection-start="1869" selection-end="1869" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Node.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="105" column="18" selection-start="3140" selection-end="3140" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Session.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="7" column="0" selection-start="198" selection-end="198" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/netty/Netty.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="23" column="0" selection-start="878" selection-end="878" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.7.0_40.jdk/Contents/Home/jre/lib/rt.jar!/sun/nio/ch/KQueueArrayWrapper.class">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="58" column="3" selection-start="1681" selection-end="1681" vertical-scroll-proportion="0.7984645" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/netty/package.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="10" column="15" selection-start="321" selection-end="321" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/src/test/resources/log4j.properties">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="1" column="0" selection-start="31" selection-end="31" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/NetworkDriver.scala">
       <provider selected="true" editor-type-id="text-editor">
         <state line="26" column="60" selection-start="1021" selection-end="1021" vertical-scroll-proportion="0.0">
@@ -900,9 +848,107 @@
         </state>
       </provider>
     </entry>
+    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.7.0_40.jdk/Contents/Home/jre/lib/rt.jar!/sun/nio/ch/KQueueArrayWrapper.class">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="51" column="24" selection-start="1501" selection-end="1501" vertical-scroll-proportion="0.59770113">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Pipe.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="26" column="33" selection-start="956" selection-end="956" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar://$PROJECT_DIR$/lib/netty-3.6.6.Final-sources.jar!/org/jboss/netty/channel/DownstreamMessageEvent.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="70" column="0" selection-start="2039" selection-end="2039" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar://$PROJECT_DIR$/lib/netty-3.6.6.Final-sources.jar!/org/jboss/netty/handler/codec/oneone/OneToOneEncoder.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="58" column="0" selection-start="2079" selection-end="2079" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Message.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="78" column="0" selection-start="2399" selection-end="2399" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar://$PROJECT_DIR$/lib/netty-3.6.6.Final-sources.jar!/org/jboss/netty/handler/codec/frame/FrameDecoder.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="461" column="0" selection-start="17978" selection-end="17978" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar://$PROJECT_DIR$/lib/netty-3.6.6.Final-sources.jar!/org/jboss/netty/channel/Channels.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="295" column="0" selection-start="11082" selection-end="11082" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar://$PROJECT_DIR$/lib/netty-3.6.6.Final-sources.jar!/org/jboss/netty/channel/DefaultChannelPipeline.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="563" column="0" selection-start="17513" selection-end="17513" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar://$PROJECT_DIR$/lib/netty-3.6.6.Final-sources.jar!/org/jboss/netty/channel/SimpleChannelHandler.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="87" column="0" selection-start="3700" selection-end="3700" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar://$PROJECT_DIR$/lib/netty-3.6.6.Final-sources.jar!/org/jboss/netty/channel/UpstreamMessageEvent.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="62" column="0" selection-start="1832" selection-end="1832" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/netty/AsteriskPipelineFactory.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="95" column="0" selection-start="3643" selection-end="3643" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/EventHandlers.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="57" column="0" selection-start="1242" selection-end="1242" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Wire.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="41" column="52" selection-start="1127" selection-end="1127" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Session.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="79" column="20" selection-start="2496" selection-end="2496" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/src/test/scala/com/kazzla/asterisk/Sample.scala">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="42" column="0" selection-start="1064" selection-end="1064" vertical-scroll-proportion="0.33333334">
+        <state line="38" column="36" selection-start="1199" selection-end="1199" vertical-scroll-proportion="-0.0862069">
           <folding />
         </state>
       </provider>

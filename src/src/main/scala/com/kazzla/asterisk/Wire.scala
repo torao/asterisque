@@ -9,6 +9,7 @@ import scala.concurrent.{Future, Promise}
 import scala.collection._
 import javax.net.ssl.SSLSession
 import java.util.concurrent.atomic.AtomicBoolean
+import org.slf4j.LoggerFactory
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Wire
@@ -18,6 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * @author Takami Torao
  */
 trait Wire {
+	import Wire._
 
 	@volatile
 	private[this] var active = false
@@ -37,6 +39,7 @@ trait Wire {
 			onReceive(msg)
 		} else {
 			buffer.append(msg)
+			logger.debug(s"message buffered on closed wire: $msg")
 		}
 	}
 
@@ -68,6 +71,7 @@ trait Wire {
 }
 
 object Wire {
+	private[Wire] val logger = LoggerFactory.getLogger(classOf[Wire])
 
 	def newPipe():(Wire,Wire) = {
 		import scala.language.reflectiveCalls
