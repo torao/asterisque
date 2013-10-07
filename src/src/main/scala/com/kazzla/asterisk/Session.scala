@@ -277,7 +277,7 @@ object Session {
 	 * @param params リモートから渡された呼び出しパラメータ値
 	 * @return 呼び出しに使用するパラメータ値
 	 */
-	private[Session] def mapParameters(types:Array[Class[_]], params:AnyRef*):Array[Object] = {
+	private[Session] def mapParameters(types:Array[Class[_]], params:Any*):Array[Object] = {
 		types.zip(params).map{ case (t, v) => TypeMapper.appropriateValue(v, t).asInstanceOf[Object] }.toList.toArray
 	}
 

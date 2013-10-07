@@ -19,6 +19,7 @@ import java.net.SocketAddress
 import com.kazzla.asterisk
 import com.kazzla.asterisk._
 import java.io.Closeable
+import com.kazzla.asterisk.codec.Codec
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // AsteriskPipelineFactory
@@ -26,7 +27,7 @@ import java.io.Closeable
 /**
  * @author Takami Torao
  */
-class AsteriskPipelineFactory(isServer:Boolean, sslContext:Option[SSLContext], onWireCreate:(Wire)=>Unit) extends ChannelPipelineFactory {
+class AsteriskPipelineFactory(codec:Codec, isServer:Boolean, sslContext:Option[SSLContext], onWireCreate:(Wire)=>Unit) extends ChannelPipelineFactory {
 	private[this] val logger = LoggerFactory.getLogger(classOf[AsteriskPipelineFactory])
 	def getPipeline = {
 		val sslSession = Promise[Option[SSLSession]]()    // SSLハンドシェイク完了用
@@ -45,8 +46,8 @@ class AsteriskPipelineFactory(isServer:Boolean, sslContext:Option[SSLContext], o
 			case None =>
 				sslSession.success(None)
 		}
-		pipeline.addLast("com.kazzla.asterisk.frame.encoder", new MessageEncoder())
-		pipeline.addLast("com.kazzla.asterisk.frame.decoder", new MessageDecoder())
+		pipeline.addLast("com.kazzla.asterisk.frame.encoder", new MessageEncoder(codec))
+		pipeline.addLast("com.kazzla.asterisk.frame.decoder", new MessageDecoder(codec))
 		pipeline.addLast("com.kazzla.asterisk.service", new WireConnect(sslSession.future))
 		pipeline
 	}
@@ -136,10 +137,10 @@ class AsteriskPipelineFactory(isServer:Boolean, sslContext:Option[SSLContext], o
 /**
  * @author Takami Torao
  */
-private[netty] class MessageEncoder extends OneToOneEncoder {
+private[netty] class MessageEncoder(codec:Codec) extends OneToOneEncoder {
 	def encode(ctx:ChannelHandlerContext, channel:Channel, msg:Any):AnyRef = msg match {
-		case packet:Message =>
-			val buffer = Message.encode(packet)
+		case message:Message =>
+			val buffer = codec.encode(message)
 			ChannelBuffers.copiedBuffer(buffer)
 		case unknown:AnyRef => unknown
 	}
@@ -151,10 +152,10 @@ private[netty] class MessageEncoder extends OneToOneEncoder {
 /**
  * @author Takami Torao
  */
-private[netty] class MessageDecoder extends FrameDecoder {
+private[netty] class MessageDecoder(codec:Codec) extends FrameDecoder {
 	def decode(ctx:ChannelHandlerContext, channel:Channel, b:ChannelBuffer):AnyRef = {
 		val buffer = b.toByteBuffer
-		Message.decode(buffer) match {
+		codec.decode(buffer) match {
 			case Some(frame) =>
 				b.skipBytes(buffer.position())
 				frame

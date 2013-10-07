@@ -10,6 +10,9 @@ import org.slf4j._
 import java.net.{InetSocketAddress, SocketAddress}
 import java.security.{DigestInputStream, MessageDigest}
 import java.lang.reflect.Method
+import java.text.NumberFormat
+import scala.collection.JavaConversions._
+import javax.management.remote.rmi._RMIConnection_Stub
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // asterisk
@@ -67,4 +70,33 @@ package object asterisk {
 			}.mkString(",") + "):" + method.getReturnType.getSimpleName
 		}
 	}
+
+	def debugString(value:Any):String = value match {
+		case null => "null"
+		case i:Boolean => i.toString
+		case i:Number => NumberFormat.getNumberInstance.format(i)
+		case i:Char => s"\'${escape(i)}\'"
+		case i:String => i.map{ escape }.mkString("\"", "", "\"")
+		case i:Map[_,_] => i.map{ case (key, value) => s"${debugString(key)}:${debugString(value)}" }.mkString("{", ",", "}")
+		case i:java.util.Map[_,_] => debugString(i.toMap)
+		case i:Seq[_] => i.map{ debugString }.mkString("[", ",", "]")
+		case i:Array[_] => debugString(i.toSeq)
+		case i:java.util.List[_] => debugString(i.toSeq)
+		case i => i.toString
+	}
+
+	private[this] def escape(ch:Char):String = ch match {
+		case '\0' => "\\0"
+		case '\b' => "\\b"
+		case '\f' => "\\f"
+		case '\n' => "\\n"
+		case '\r' => "\\r"
+		case '\t' => "\\t"
+		case '\\' => "\\\\"
+		case '\'' => "\\\'"
+		case '\"' => "\\\""
+		case c if ! Character.isDefined(ch) | Character.isISOControl(ch) => f"\\u${c.toInt}%04X"
+		case c => c.toString
+	}
+
 }

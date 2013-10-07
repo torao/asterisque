@@ -18,7 +18,7 @@ object TypeMapper {
 
 	class Exception(msg:String) extends java.lang.Exception(msg)
 
-	def appropriateValue[T](value:AnyRef, to:Class[T]):T = {
+	def appropriateValue[T](value:Any, to:Class[T]):T = {
 		mapper.get(to) match {
 			case Some(f) =>
 				if(f.isDefinedAt(value)){
@@ -32,10 +32,10 @@ object TypeMapper {
 	}
 
 
-	var mapper = Map[Class[_], PartialFunction[AnyRef,_]]()
+	var mapper = Map[Class[_], PartialFunction[Any,_]]()
 
 	class Mapper[T](to:Class[T]){
-		def from(f:PartialFunction[AnyRef,T]) = {
+		def from(f:PartialFunction[Any,T]) = {
 			mapper += to -> f
 		}
 	}

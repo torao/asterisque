@@ -14,6 +14,7 @@ import org.jboss.netty.channel.socket.nio.{NioServerSocketChannelFactory, NioCli
 import org.slf4j.LoggerFactory
 import java.io.Closeable
 import org.jboss.netty.channel.{ChannelFuture, ChannelFutureListener}
+import com.kazzla.asterisk.codec.MsgPackCodec
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Netty
@@ -26,7 +27,7 @@ object Netty extends NetworkDriver {
 
 	def connect(address:SocketAddress, sslContext:Option[SSLContext]):Future[Wire] = {
 		val promise = Promise[Wire]()
-		val factory = new AsteriskPipelineFactory(false, sslContext, { wire =>
+		val factory = new AsteriskPipelineFactory(MsgPackCodec, false, sslContext, { wire =>
 			logger.debug(s"onWireCreate($wire)")
 			promise.success(wire)
 		})
@@ -47,7 +48,7 @@ object Netty extends NetworkDriver {
 	}
 
 	def listen(address:SocketAddress, sslContext:Option[SSLContext])(onAccept:(Wire)=>Unit):Server = {
-		val factory = new AsteriskPipelineFactory(true, sslContext, { wire =>
+		val factory = new AsteriskPipelineFactory(MsgPackCodec, true, sslContext, { wire =>
 			logger.debug(s"onWireCreate($wire)")
 			onAccept(wire)
 		})
