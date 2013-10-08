@@ -27,6 +27,7 @@ class Node private[Node](name:String, executor:Executor, initService:Object, dri
 
 	private[this] var service = initService
 
+	private[this] val servers = new AtomicReference(Seq[Server]())
 	private[this] val sessions = new AtomicReference(Seq[Session]())
 
 	val onConnect = new EventHandlers[Session]()
@@ -39,7 +40,20 @@ class Node private[Node](name:String, executor:Executor, initService:Object, dri
 	}
 
 	def listen(address:SocketAddress, tls:Option[SSLContext] = None)(onAccept:(Session)=>Unit):Future[Server] = {
-		driver.listen(codec, address, tls){ wire => onAccept(bind(wire)) }
+		import scala.concurrent.ExecutionContext.Implicits.global
+		val promise = Promise[Server]()
+		driver.listen(codec, address, tls){ wire => onAccept(bind(wire)) }.onComplete {
+			case Success(server) =>
+				add(servers, server)
+				promise.success(new Server(server.address){
+					override def close(){
+						remove(servers, server)
+						server.close()
+					}
+				})
+			case Failure(ex) => promise.failure(ex)
+		}
+		promise.future
 	}
 
 	def connect(address:SocketAddress, tls:Option[SSLContext] = None):Future[Session] = {
@@ -54,32 +68,20 @@ class Node private[Node](name:String, executor:Executor, initService:Object, dri
 
 	def bind(wire:Wire):Session = connect(wire)
 
+	/**
+	 * このノード上でアクティブなすべてのサーバ及びセッションがクローズされます。
+	 */
 	def shutdown():Unit = {
+		servers.get().foreach{ _.close() }
 		sessions.get().foreach{ _.close() }
-		logger.debug(s"$name shutting-down; all available ${sessions.get().size} sessions are closed")
-	}
-
-	@tailrec
-	private[this] def add(s:Session):Unit = {
-		val n = sessions.get()
-		if(! sessions.compareAndSet(n, n.+:(s))){
-			add(s)
-		}
-	}
-
-	@tailrec
-	private[this] def remove(s:Session):Unit = {
-		val n = sessions.get()
-		if(! sessions.compareAndSet(n, n.filter{ _ != s })){
-			remove(s)
-		}
+		logger.debug(s"$name shutting-down; all available ${sessions.get().size} sessions, ${servers.get().size} servers are closed")
 	}
 
 	def connect(wire:Wire):Session = {
 		logger.trace(s"newSession($wire):$name")
 		val s = new Session(s"$name[${wire.peerName}]", executor, service, wire)
-		add(s)
-		s.onClosed ++ remove
+		add(sessions, s)
+		s.onClosed ++ { session => remove(sessions, session) }
 		s
 	}
 }
@@ -118,4 +120,22 @@ object Node {
 		def build():Node = new Node(name, executor, service, driver, codec)
 
 	}
+
+
+	@tailrec
+	private[Node] def add[T](container:AtomicReference[Seq[T]], element:T):Unit = {
+		val n = container.get()
+		if(! container.compareAndSet(n, n.+:(element))){
+			add(container, element)
+		}
+	}
+
+	@tailrec
+	private[Node] def remove[T](container:AtomicReference[Seq[T]], element:T):Unit = {
+		val n = container.get()
+		if(! container.compareAndSet(n, n.filter{ _ != element })){
+			remove(container, element)
+		}
+	}
+
 }

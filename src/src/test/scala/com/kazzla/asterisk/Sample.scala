@@ -76,7 +76,6 @@ object Sample {
 		Node1
 		Node2
 		Node1.ns.shutdown()
-		Node1.server.close()
 		Node2.logging.shutdown()
 		executor.shutdown()
 	}

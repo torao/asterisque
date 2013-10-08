@@ -7,8 +7,8 @@ package com.kazzla.asterisk.netty
 
 import java.net.SocketAddress
 import javax.net.ssl.SSLContext
-import org.jboss.netty.bootstrap.{ServerBootstrap, ClientBootstrap}
-import scala.concurrent.{Promise, Future}
+import org.jboss.netty.bootstrap.{Bootstrap, ServerBootstrap, ClientBootstrap}
+import scala.concurrent.{ExecutionContext, Promise, Future}
 import com.kazzla.asterisk._
 import org.jboss.netty.channel.socket.nio.{NioServerSocketChannelFactory, NioClientSocketChannelFactory}
 import org.slf4j.LoggerFactory
@@ -30,7 +30,7 @@ object Netty extends NetworkDriver {
 		val promise = Promise[Wire]()
 		val factory = new AsteriskPipelineFactory(codec, false, sslContext, { wire =>
 			logger.debug(s"onConnect($wire)")
-			wire.onClosed ++ { w => new Thread(){ override def run(){ client.shutdown() } }.start() }
+			wire.onClosed ++ { w => shutdown(client) }
 			promise.success(wire)
 		})
 		client.setPipelineFactory(factory)
@@ -49,11 +49,11 @@ object Netty extends NetworkDriver {
 	}
 
 	def listen(codec:Codec, address:SocketAddress, sslContext:Option[SSLContext])(onAccept:(Wire)=>Unit):Future[Server] = {
+		val server = new ServerBootstrap(new NioServerSocketChannelFactory())
 		val factory = new AsteriskPipelineFactory(codec, true, sslContext, { wire =>
 			logger.debug(s"onAccept($wire)")
 			onAccept(wire)
 		})
-		val server = new ServerBootstrap(new NioServerSocketChannelFactory())
 		server.setPipelineFactory(factory)
 		val future = server.bindAsync(address)
 		val promise = Promise[Server]()
@@ -69,6 +69,14 @@ object Netty extends NetworkDriver {
 			}
 		})
 		promise.future
+	}
+
+	private[this] def shutdown(bootstrap:Bootstrap):Unit = {
+		ExecutionContext.Implicits.global.execute(new Runnable(){
+			def run(){
+				bootstrap.shutdown()
+			}
+		})
 	}
 
 }
