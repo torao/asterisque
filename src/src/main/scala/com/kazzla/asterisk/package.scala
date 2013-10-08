@@ -12,7 +12,6 @@ import java.security.{DigestInputStream, MessageDigest}
 import java.lang.reflect.Method
 import java.text.NumberFormat
 import scala.collection.JavaConversions._
-import javax.management.remote.rmi._RMIConnection_Stub
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // asterisk

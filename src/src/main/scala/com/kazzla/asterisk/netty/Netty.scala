@@ -12,9 +12,8 @@ import scala.concurrent.{ExecutionContext, Promise, Future}
 import com.kazzla.asterisk._
 import org.jboss.netty.channel.socket.nio.{NioServerSocketChannelFactory, NioClientSocketChannelFactory}
 import org.slf4j.LoggerFactory
-import java.io.Closeable
 import org.jboss.netty.channel.{ChannelFuture, ChannelFutureListener}
-import com.kazzla.asterisk.codec.{Codec, MsgPackCodec}
+import com.kazzla.asterisk.codec.Codec
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Netty
@@ -22,7 +21,7 @@ import com.kazzla.asterisk.codec.{Codec, MsgPackCodec}
 /**
  * @author Takami Torao
  */
-object Netty extends NetworkDriver {
+object Netty extends Bridge {
 	private[this] val logger = LoggerFactory.getLogger(getClass)
 
 	def connect(codec:Codec, address:SocketAddress, sslContext:Option[SSLContext]):Future[Wire] = {

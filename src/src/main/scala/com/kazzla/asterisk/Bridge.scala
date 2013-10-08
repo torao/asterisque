@@ -7,10 +7,8 @@ package com.kazzla.asterisk
 
 import java.net.SocketAddress
 import javax.net.ssl.SSLContext
-import scala.concurrent.{Promise, Future}
+import scala.concurrent.Future
 import java.io.Closeable
-import scala.util.{Failure, Success}
-import org.slf4j.LoggerFactory
 import com.kazzla.asterisk.codec.Codec
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -19,7 +17,7 @@ import com.kazzla.asterisk.codec.Codec
 /**
  * @author Takami Torao
  */
-trait NetworkDriver {
+trait Bridge {
 	def connect(codec:Codec, address:SocketAddress, sslContext:Option[SSLContext]):Future[Wire]
 	def listen(codec:Codec, address:SocketAddress, sslContext:Option[SSLContext])(onAccept:(Wire)=>Unit):Future[Server]
 }

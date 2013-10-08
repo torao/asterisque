@@ -13,7 +13,7 @@ import java.net.SocketAddress
 import com.kazzla.asterisk.netty.Netty
 import com.kazzla.asterisk.codec.{MsgPackCodec, Codec}
 import javax.net.ssl.SSLContext
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 import scala.concurrent.{Promise, Future}
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -22,7 +22,7 @@ import scala.concurrent.{Promise, Future}
 /**
  * @author Takami Torao
  */
-class Node private[Node](name:String, executor:Executor, initService:Object, driver:NetworkDriver, codec:Codec){
+class Node private[Node](name:String, executor:Executor, initService:Object, bridge:Bridge, codec:Codec){
 	import Node._
 
 	private[this] var service = initService
@@ -42,7 +42,7 @@ class Node private[Node](name:String, executor:Executor, initService:Object, dri
 	def listen(address:SocketAddress, tls:Option[SSLContext] = None)(onAccept:(Session)=>Unit):Future[Server] = {
 		import scala.concurrent.ExecutionContext.Implicits.global
 		val promise = Promise[Server]()
-		driver.listen(codec, address, tls){ wire => onAccept(bind(wire)) }.onComplete {
+		bridge.listen(codec, address, tls){ wire => onAccept(bind(wire)) }.onComplete {
 			case Success(server) =>
 				add(servers, server)
 				promise.success(new Server(server.address){
@@ -59,7 +59,7 @@ class Node private[Node](name:String, executor:Executor, initService:Object, dri
 	def connect(address:SocketAddress, tls:Option[SSLContext] = None):Future[Session] = {
 		import scala.concurrent.ExecutionContext.Implicits.global
 		val promise = Promise[Session]()
-		driver.connect(codec, address, tls).onComplete{
+		bridge.connect(codec, address, tls).onComplete{
 			case Success(wire) => promise.success(bind(wire))
 			case Failure(ex) => promise.failure(ex)
 		}
@@ -94,7 +94,7 @@ object Node {
 	class Builder private[Node](name:String) {
 		private var executor:Executor = scala.concurrent.ExecutionContext.global
 		private var service:Object = new Object()
-		private var driver:NetworkDriver = Netty
+		private var bridge:Bridge = Netty
 		private var codec:Codec = MsgPackCodec
 
 		def runOn(exec:Executor):Builder = {
@@ -102,8 +102,8 @@ object Node {
 			this
 		}
 
-		def driver(driver:NetworkDriver):Builder = {
-			this.driver = driver
+		def bridge(bridge:Bridge):Builder = {
+			this.bridge = bridge
 			this
 		}
 
@@ -117,7 +117,7 @@ object Node {
 			this
 		}
 
-		def build():Node = new Node(name, executor, service, driver, codec)
+		def build():Node = new Node(name, executor, service, bridge, codec)
 
 	}
 
