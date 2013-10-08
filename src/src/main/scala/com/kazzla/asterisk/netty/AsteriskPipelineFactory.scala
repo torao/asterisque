@@ -60,7 +60,7 @@ class AsteriskPipelineFactory(codec:Codec, isServer:Boolean, sslContext:Option[S
 
 		override def channelConnected(ctx:ChannelHandlerContext, e:ChannelStateEvent):Unit = {
 			assert(wire.isEmpty)
-			wire = Some(new NettyWire(e.getChannel.getRemoteAddress, isServer, ssl, ctx))
+			wire = Some(NettyWire(e.getChannel.getRemoteAddress, isServer, ssl, ctx))
 			super.channelConnected(ctx, e)
 
 			// TODO ここで onConnect 呼んでも SSL ハンドシェイクが済んでいないはず
@@ -110,7 +110,7 @@ class AsteriskPipelineFactory(codec:Codec, isServer:Boolean, sslContext:Option[S
 
 	}
 
-	private[netty] class NettyWire(address:SocketAddress, override val isServer:Boolean, override val tls:Future[Option[SSLSession]], context:ChannelHandlerContext) extends Wire {
+	private[netty] case class NettyWire(address:SocketAddress, override val isServer:Boolean, override val tls:Future[Option[SSLSession]], context:ChannelHandlerContext) extends Wire {
 
 		override val peerName = address.getName
 

@@ -43,7 +43,10 @@ object Sample {
 			}
 		}).runOn(executor).build()
 
-		Netty.listen(new InetSocketAddress(7777), None, ns)
+		val server = {
+			val future = ns.listen(new InetSocketAddress(7777), None){ s => None }
+			Await.result(future, Duration.Inf)
+		}
 	}
 
 	object Node2 {
@@ -62,10 +65,9 @@ object Sample {
 			}
 		}).runOn(executor).build()
 
-		val future = Netty.connect(new InetSocketAddress(7777), None)
+		val future = logging.connect(new InetSocketAddress(7777), None)
 
-		val wire = Await.result(future, Duration.Inf)
-		val session = logging.connect(wire)
+		val session = Await.result(future, Duration.Inf)
 		val ns = session.getRemoteInterface(classOf[NameServer])
 		Console.println(ns.lookup("www.google.com"))
 	}
@@ -73,6 +75,10 @@ object Sample {
 	def main(args:Array[String]):Unit = {
 		Node1
 		Node2
+		Node1.ns.shutdown()
+		Node1.server.close()
+		Node2.logging.shutdown()
+		executor.shutdown()
 	}
 
 }

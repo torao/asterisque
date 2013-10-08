@@ -11,6 +11,7 @@ import scala.concurrent.{Promise, Future}
 import java.io.Closeable
 import scala.util.{Failure, Success}
 import org.slf4j.LoggerFactory
+import com.kazzla.asterisk.codec.Codec
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // NetworkDriver
@@ -19,30 +20,8 @@ import org.slf4j.LoggerFactory
  * @author Takami Torao
  */
 trait NetworkDriver {
-	import NetworkDriver._
-	def connect(address:SocketAddress, sslContext:Option[SSLContext]):Future[Wire]
-	def listen(address:SocketAddress, sslContext:Option[SSLContext])(onAccept:(Wire)=>Unit):Server
-
-	def listen(address:SocketAddress, sslContext:Option[SSLContext], node:Node):NetworkDriver = {
-		logger.debug(s"listening on ${address.toString} with TLS $sslContext on node: $node")
-		listen(address, sslContext){ wire => node.connect(wire) }
-		this
-	}
-
-	def connect(address:SocketAddress, sslContext:Option[SSLContext], node:Node):Future[Session] = {
-		import scala.concurrent.ExecutionContext.Implicits.global
-		val promise = Promise[Session]()
-		connect(address, sslContext).onComplete {
-			case Success(wire) => promise.success(node.connect(wire))
-			case Failure(ex) => promise.failure(ex)
-		}
-		promise.future
-	}
-
-}
-
-object NetworkDriver {
-	private[NetworkDriver] val logger = LoggerFactory.getLogger(classOf[NetworkDriver])
+	def connect(codec:Codec, address:SocketAddress, sslContext:Option[SSLContext]):Future[Wire]
+	def listen(codec:Codec, address:SocketAddress, sslContext:Option[SSLContext])(onAccept:(Wire)=>Unit):Future[Server]
 }
 
 class Server(val address:SocketAddress) extends Closeable {

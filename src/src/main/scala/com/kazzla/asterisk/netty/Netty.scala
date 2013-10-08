@@ -14,7 +14,7 @@ import org.jboss.netty.channel.socket.nio.{NioServerSocketChannelFactory, NioCli
 import org.slf4j.LoggerFactory
 import java.io.Closeable
 import org.jboss.netty.channel.{ChannelFuture, ChannelFutureListener}
-import com.kazzla.asterisk.codec.MsgPackCodec
+import com.kazzla.asterisk.codec.{Codec, MsgPackCodec}
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Netty
@@ -25,9 +25,9 @@ import com.kazzla.asterisk.codec.MsgPackCodec
 object Netty extends NetworkDriver {
 	private[this] val logger = LoggerFactory.getLogger(getClass)
 
-	def connect(address:SocketAddress, sslContext:Option[SSLContext]):Future[Wire] = {
+	def connect(codec:Codec, address:SocketAddress, sslContext:Option[SSLContext]):Future[Wire] = {
 		val promise = Promise[Wire]()
-		val factory = new AsteriskPipelineFactory(MsgPackCodec, false, sslContext, { wire =>
+		val factory = new AsteriskPipelineFactory(codec, false, sslContext, { wire =>
 			logger.debug(s"onWireCreate($wire)")
 			promise.success(wire)
 		})
@@ -47,26 +47,27 @@ object Netty extends NetworkDriver {
 		promise.future
 	}
 
-	def listen(address:SocketAddress, sslContext:Option[SSLContext])(onAccept:(Wire)=>Unit):Server = {
-		val factory = new AsteriskPipelineFactory(MsgPackCodec, true, sslContext, { wire =>
-			logger.debug(s"onWireCreate($wire)")
+	def listen(codec:Codec, address:SocketAddress, sslContext:Option[SSLContext])(onAccept:(Wire)=>Unit):Future[Server] = {
+		val factory = new AsteriskPipelineFactory(codec, true, sslContext, { wire =>
+			logger.debug(s"onAccept($wire)")
 			onAccept(wire)
 		})
 		val server = new ServerBootstrap(new NioServerSocketChannelFactory())
 		server.setPipelineFactory(factory)
 		val future = server.bindAsync(address)
+		val promise = Promise[Server]()
 		future.addListener(new ChannelFutureListener {
 			def operationComplete(future:ChannelFuture) {
 				if(future.isSuccess){
 					logger.debug("operationComplete(success)")
+					promise.success(new Server(address) { override def close() { server.shutdown() } })
 				} else {
 					logger.debug("operationComplete(failure)")
+					promise.failure(future.getCause)
 				}
 			}
 		})
-		new Server(address) {
-			override def close() { server.shutdown() }
-		}
+		promise.future
 	}
 
 }

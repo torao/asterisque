@@ -10,7 +10,11 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.annotation.tailrec
 import org.slf4j.LoggerFactory
 import java.net.SocketAddress
-import com.sun.net.ssl.SSLContext
+import com.kazzla.asterisk.netty.Netty
+import com.kazzla.asterisk.codec.{MsgPackCodec, Codec}
+import javax.net.ssl.SSLContext
+import scala.util.{Failure, Success, Try}
+import scala.concurrent.{Promise, Future}
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Node
@@ -18,7 +22,7 @@ import com.sun.net.ssl.SSLContext
 /**
  * @author Takami Torao
  */
-class Node private[Node](name:String, executor:Executor, initService:Object){
+class Node private[Node](name:String, executor:Executor, initService:Object, driver:NetworkDriver, codec:Codec){
 	import Node._
 
 	private[this] var service = initService
@@ -34,56 +38,26 @@ class Node private[Node](name:String, executor:Executor, initService:Object){
 		old
 	}
 
-	/*
-	def listen(address:SocketAddress):Unit = listen(address, defaultTls)
-	def listen(address:SocketAddress, tls:SSLContext):Unit = listen(address, Option(tls))
-	private[this] def listen(address:SocketAddress, ssl:Option[SSLContext]):Unit = {
-		logger.trace(s"listen(${address.getName},$ssl)")
-		val channelFactory = new NioServerSocketChannelFactory()
-		val bootstrap:Bootstrap = {
-			val server = new ServerBootstrap(channelFactory)
-			server.setPipelineFactory(new BirpcChannelPipelineFactory(newSession, true, ssl))
-			server.bind(address)
-			server
-		}
-		add(bootstrap)
+	def listen(address:SocketAddress, tls:Option[SSLContext] = None)(onAccept:(Session)=>Unit):Future[Server] = {
+		driver.listen(codec, address, tls){ wire => onAccept(bind(wire)) }
 	}
 
-	def connect(address:SocketAddress)(f:(Session)=>Unit):Session = connect(address, defaultTls, f)
-	def connect(address:SocketAddress, tls:SSLContext)(f:(Session)=>Unit):Session = connect(address, Option(tls), f)
-	private[this] def connect(address:SocketAddress, ssl:Option[SSLContext], f:(Session)=>Unit):Session = {
-		logger.trace(s"connect(${address.getName},$ssl)")
-		val channelFactory = new NioClientSocketChannelFactory()
-		val (bootstrap:Bootstrap, channel:Channel) = {
-			val client = new ClientBootstrap(channelFactory)
-			client.setPipelineFactory(new BirpcChannelPipelineFactory(newSession, false, ssl))
-			val future = client.connect(address)
-			future.awaitUninterruptibly()
-			if(! future.isSuccess){
-				throw future.getCause
-			}
-			(client, future.getChannel)
+	def connect(address:SocketAddress, tls:Option[SSLContext] = None):Future[Session] = {
+		import scala.concurrent.ExecutionContext.Implicits.global
+		val promise = Promise[Session]()
+		driver.connect(codec, address, tls).onComplete{
+			case Success(wire) => promise.success(bind(wire))
+			case Failure(ex) => promise.failure(ex)
 		}
-		add(bootstrap)
-		channel.getAttachment.asInstanceOf[Session]
+		promise.future
 	}
 
-	*/
+	def bind(wire:Wire):Session = connect(wire)
 
 	def shutdown():Unit = {
 		sessions.get().foreach{ _.close() }
-		logger.trace(s"shutdown():$name")
+		logger.debug(s"$name shutting-down; all available ${sessions.get().size} sessions are closed")
 	}
-
-	/*
-	@tailrec
-	private[this] def add(con:Bootstrap):Unit = {
-		val n = bootstraps.get()
-		if(! bootstraps.compareAndSet(n, n.+:(con))){
-			add(con)
-		}
-	}
-	*/
 
 	@tailrec
 	private[this] def add(s:Session):Unit = {
@@ -118,9 +92,16 @@ object Node {
 	class Builder private[Node](name:String) {
 		private var executor:Executor = scala.concurrent.ExecutionContext.global
 		private var service:Object = new Object()
+		private var driver:NetworkDriver = Netty
+		private var codec:Codec = MsgPackCodec
 
 		def runOn(exec:Executor):Builder = {
 			this.executor = executor
+			this
+		}
+
+		def driver(driver:NetworkDriver):Builder = {
+			this.driver = driver
 			this
 		}
 
@@ -129,7 +110,12 @@ object Node {
 			this
 		}
 
-		def build():Node = new Node(name, executor, service)
+		def codec(codec:Codec):Builder = {
+			this.codec = codec
+			this
+		}
+
+		def build():Node = new Node(name, executor, service, driver, codec)
 
 	}
 }

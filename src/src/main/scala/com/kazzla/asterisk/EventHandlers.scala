@@ -58,7 +58,7 @@ final class EventHandlers[T] {
 		listeners.get().foreach{ l =>
 			l(s)
 			if(logger.isTraceEnabled){
-				logger.trace(s"${l.getClass.getSimpleName}($s)")
+				logger.trace(s"callback ${l.getClass.getSimpleName}($s)")
 			}
 		}
 	}
