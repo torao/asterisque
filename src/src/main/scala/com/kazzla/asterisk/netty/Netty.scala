@@ -26,12 +26,13 @@ object Netty extends NetworkDriver {
 	private[this] val logger = LoggerFactory.getLogger(getClass)
 
 	def connect(codec:Codec, address:SocketAddress, sslContext:Option[SSLContext]):Future[Wire] = {
+		val client = new ClientBootstrap(new NioClientSocketChannelFactory())
 		val promise = Promise[Wire]()
 		val factory = new AsteriskPipelineFactory(codec, false, sslContext, { wire =>
-			logger.debug(s"onWireCreate($wire)")
+			logger.debug(s"onConnect($wire)")
+			wire.onClosed ++ { w => new Thread(){ override def run(){ client.shutdown() } }.start() }
 			promise.success(wire)
 		})
-		val client = new ClientBootstrap(new NioClientSocketChannelFactory())
 		client.setPipelineFactory(factory)
 		val future = client.connect(address)
 		future.addListener(new ChannelFutureListener {

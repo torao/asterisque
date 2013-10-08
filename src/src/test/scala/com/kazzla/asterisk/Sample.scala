@@ -12,7 +12,7 @@ import java.net.InetSocketAddress
 import java.io.PrintWriter
 import scala.util.{Failure, Success}
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Await
+import scala.concurrent.{ExecutionContext, Await}
 import scala.concurrent.duration.Duration
 import org.slf4j.LoggerFactory
 
