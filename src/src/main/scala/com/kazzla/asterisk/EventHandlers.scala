@@ -19,6 +19,9 @@ import org.slf4j.LoggerFactory
 private[asterisk] final class EventHandlers[T] {
 	import EventHandlers._
 
+	/**
+	 * このインスタンスが呼び出し対象としているイベントハンドラ。
+	 */
 	private[this] val listeners = new AtomicReference(Seq[(T)=>Unit]())
 
 	// ==============================================================================================
@@ -37,15 +40,6 @@ private[asterisk] final class EventHandlers[T] {
 			this
 		}
 	}
-
-	// ==============================================================================================
-	// イベントハンドラの追加
-	// ==============================================================================================
-	/**
-	 * 指定されたイベントハンドラを追加します。
-	 * @param f 追加するイベントハンドラ
-	 */
-	def apply(f:(T)=>Unit) = ++(f)
 
 	// ==============================================================================================
 	// イベントハンドラの削除
@@ -68,14 +62,18 @@ private[asterisk] final class EventHandlers[T] {
 	// イベントハンドラへの通知
 	// ==============================================================================================
 	/**
-	 * すべてのイベントハンドラに通知を行います。
+	 * このインスタンスに登録されているすべてのイベントハンドラに引数 `s` で通知を行います。
+	 * @param s イベントハンドラの呼び出しパラメータ
 	 */
-	def apply(s:T):Unit = {
-		listeners.get().foreach{ l =>
+	def apply(s:T):Unit = listeners.get().foreach{ l =>
+		try {
 			l(s)
 			if(logger.isTraceEnabled){
 				logger.trace(s"callback ${l.getClass.getSimpleName}($s)")
 			}
+		} catch {
+			case ex:Throwable if ! ex.isInstanceOf[ThreadDeath] =>
+				logger.error(s"unexpected exception on calling ${l.getClass.getSimpleName}($s)", ex)
 		}
 	}
 }

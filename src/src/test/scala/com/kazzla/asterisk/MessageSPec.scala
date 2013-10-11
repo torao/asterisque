@@ -7,7 +7,6 @@ package com.kazzla.asterisk
 
 import org.specs2.Specification
 import java.lang.reflect.Modifier
-import com.kazzla.asterisk.codec.MsgPackCodec
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // MessageSPec
