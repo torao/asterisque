@@ -24,15 +24,32 @@ import org.slf4j.LoggerFactory
  * @author Takami Torao
  */
 class Pipe private[asterisk](val id:Short, session:Session) {
+
+	/**
+	 * 受信した [[com.kazzla.asterisk.Block]] インスタンスを保持するためのキュー。
+	 */
 	private[asterisk] val receiveQueue = new LinkedBlockingQueue[Block]()
 
 	@volatile
 	private[asterisk] var closed = false
 
+	/**
+	 * このパイプが受信したデータをストリームとして参照するための入力ストリームです。ブロックとして到着したデータは
+	 * 内部でバッファリングされ連続したストリームとして参照されます。
+	 */
 	lazy val in:InputStream = new IS()
+
+	/**
+	 * このパイプからブロックとしてデータを送信するための出力ストリームです。出力されたバイナリは内部でバッファリング
+	 * され、フラグメント化されたブロックとして送信されます。
+	 */
 	lazy val out:OutputStream = new OS()
 
 	private[asterisk] val promise = Promise[Close[_]]()
+
+	/**
+	 * このパイプが相手側からクローズされた時に [[com.kazzla.asterisk.Close]] を参照するための Future です。
+	 */
 	val future = promise.future
 
 	// ==============================================================================================
@@ -117,7 +134,7 @@ class Pipe private[asterisk](val id:Short, session:Session) {
 			// TODO 読み出しクローズしたキューにそれ以上ブロックを入れない処理
 		}
 		private[this] def processingBuffer:Option[ByteBuffer] = {
-			if(isClosed){
+			if(closed || isClosed){
 				None
 			} else if(processing.isDefined && processing.get.hasRemaining){
 				processing
@@ -186,8 +203,15 @@ class Pipe private[asterisk](val id:Short, session:Session) {
 object Pipe {
 	private[Pipe] val logger = LoggerFactory.getLogger(classOf[Pipe])
 
+	/**
+	 * [[com.kazzla.asterisk.Wire.isServer]] が true の通信端点側で新しいパイプ ID を発行するときに立てる
+	 * ビット。
+	 */
 	private[asterisk] val UNIQUE_MASK:Short = (1 << 15).toShort
 
+	/**
+	 * メソッド呼び出し中にパイプを保持するためのスレッドローカル。
+	 */
 	private[asterisk] val pipes = new ThreadLocal[Pipe]()
 
 	// ==============================================================================================
@@ -195,7 +219,7 @@ object Pipe {
 	// ==============================================================================================
 	/**
 	 * 現在のスレッドを実行しているパイプを参照します。
-	 * @return 現在のセッション
+	 * @return 現在のパイプ
 	 */
 	def apply():Option[Pipe] = Option(pipes.get())
 

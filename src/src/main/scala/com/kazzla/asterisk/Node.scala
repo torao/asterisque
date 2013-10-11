@@ -25,6 +25,7 @@ import scala.concurrent.{Promise, Future}
 class Node private[Node](name:String, executor:Executor, initService:Object, bridge:Bridge, codec:Codec){
 	import Node._
 
+	@volatile
 	private[this] var service = initService
 
 	private[this] val servers = new AtomicReference(Seq[Server]())
@@ -66,8 +67,27 @@ class Node private[Node](name:String, executor:Executor, initService:Object, bri
 		promise.future
 	}
 
-	def bind(wire:Wire):Session = connect(wire)
+	// ==============================================================================================
+	// セッションの構築
+	// ==============================================================================================
+	/**
+	 * 指定された Wire 上で新規のセッションを構築しメッセージング処理を開始します。
+	 * このメソッドを使用することで `listen()`, `connect()` によるネットワーク以外の `Wire` 実装を使用すること
+	 * が出来ます。
+	 * @param wire セッションに結びつける Wire
+	 * @return 新規セッション
+	 */
+	def bind(wire:Wire):Session = {
+		logger.trace(s"bind($wire):$name")
+		val s = new Session(s"$name[${wire.peerName}]", executor, service, wire)
+		add(sessions, s)
+		s.onClosed ++ { session => remove(sessions, session) }
+		s
+	}
 
+	// ==============================================================================================
+	// ノードのシャットダウン
+	// ==============================================================================================
 	/**
 	 * このノード上でアクティブなすべてのサーバ及びセッションがクローズされます。
 	 */
@@ -77,13 +97,6 @@ class Node private[Node](name:String, executor:Executor, initService:Object, bri
 		logger.debug(s"$name shutting-down; all available ${sessions.get().size} sessions, ${servers.get().size} servers are closed")
 	}
 
-	def connect(wire:Wire):Session = {
-		logger.trace(s"newSession($wire):$name")
-		val s = new Session(s"$name[${wire.peerName}]", executor, service, wire)
-		add(sessions, s)
-		s.onClosed ++ { session => remove(sessions, session) }
-		s
-	}
 }
 
 object Node {

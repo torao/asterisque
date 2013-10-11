@@ -19,14 +19,33 @@ import com.kazzla.asterisk.{Block, Close, Open, Message}
 // MsgPackCodec
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
+ * MessagePack を使用したコーデックです。
+ *
  * @author Takami Torao
  */
 object MsgPackCodec extends Codec {
-	private[MsgPackCodec] val logger = LoggerFactory.getLogger(classOf[Message])
+	private[this] val logger = LoggerFactory.getLogger(classOf[Message])
+
+	/**
+	 * [[com.kazzla.asterisk.Open]] メッセージを表すメッセージタイプ。
+	 */
 	val TYPE_OPEN:Byte = 1
+
+	/**
+	 * [[com.kazzla.asterisk.Close]] メッセージを表すメッセージタイプ。
+	 */
 	val TYPE_CLOSE:Byte = 2
+
+	/**
+	 * [[com.kazzla.asterisk.Block]] メッセージを表すメッセージタイプ。
+	 */
 	val TYPE_BLOCK:Byte = 3
 
+	/**
+	 * メッセージタイプ + 各パラメータの形式でエンコードします。
+	 * @param packet エンコードするメッセージ
+	 * @return エンコードされたメッセージ
+	 */
 	def encode(packet:Message):ByteBuffer = {
 		val msgpack = new MessagePack()
 		val packer = msgpack.createBufferPacker()

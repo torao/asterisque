@@ -7,11 +7,12 @@ package com.kazzla.asterisk
 
 import java.lang.reflect.{Method, InvocationHandler}
 import java.util.concurrent.Executor
-import java.util.concurrent.atomic.{AtomicReference, AtomicInteger}
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicReference, AtomicInteger}
 import scala.annotation.tailrec
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import org.slf4j.LoggerFactory
+import java.io.IOException
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Session
@@ -23,34 +24,53 @@ import org.slf4j.LoggerFactory
  */
 class Session(val name:String, executor:Executor, service:Object, wire:Wire) {
 
-	import Session.logger
+	import Session._
 
+	/**
+	 * このセッションで生成するパイプの ID に付加するビットマスク。
+	 */
 	private[this] val pipeIdMask:Short = if(wire.isServer) Pipe.UNIQUE_MASK else 0
+
+	/**
+	 * パイプ ID を発行するためのシーケンス。
+	 */
 	private[this] val pipeSequence = new AtomicInteger(0)
+
+	/**
+	 * このセッション上でオープンされているパイプ。
+	 */
 	private[this] val pipes = new AtomicReference[Map[Short, Pipe]](Map())
 
+	/**
+	 * このセッション上で相手側に提供しているサービスのスタブ。
+	 */
 	@volatile
 	private[this] var stub = new Stub(service)
 
 	/**
-	 * セッションがクローズされたときに呼び出されるイベントハンドラ。
+	 * このセッションがクローズされているかを表すフラグ。
+	 */
+	private[this] val closed = new AtomicBoolean(false)
+
+	/**
+	 * このセッションがクローズされたときに呼び出されるイベントハンドラです。
 	 */
 	val onClosed = new EventHandlers[Session]()
 
 	/**
-	 * このセッション上でピアに提供するサービス (function の集合) を設定。
+	 * このセッション上でピアに提供するサービス (function の集合) を設定します。
 	 */
 	def service_=(service:Object) = stub = new Stub(service)
 
-	// ワイヤーにメッセージが到着した時にメッセージをディスパッチ
-	wire.onReceive(m => dispatch(m))
+	// `Wire` にメッセージが到着した時のディスパッチャーを設定してメッセージポンプを開始
+	wire.onReceive ++ dispatch
 	wire.start()
 
 	// ==============================================================================================
 	// パイプのオープン
 	// ==============================================================================================
 	/**
-	 * このセッション上で指定された function とのパイプを作成します。
+	 * このセッション上のピアに対して指定された function とのパイプを作成します。
 	 * @param function function の識別子
 	 * @param params function の実行パラメータ
 	 * @return function とのパイプ
@@ -75,11 +95,11 @@ class Session(val name:String, executor:Executor, service:Object, wire:Wire) {
 	}
 
 	/**
-	 * 指定されたメッセージを受信したときに呼び出されます。
+	 * 指定されたメッセージを受信したときに呼び出されその種類によって処理を分岐します。
 	 */
 	private[this] def dispatch(frame:Message):Unit = {
 		if(logger.isTraceEnabled){
-			logger.trace(s"dispatch($frame)")
+			logger.trace(s"dispatch:$frame")
 		}
 		frame match {
 			case open:Open =>
@@ -97,16 +117,23 @@ class Session(val name:String, executor:Executor, service:Object, wire:Wire) {
 		}
 	}
 
+	// ==============================================================================================
+	// パイプの構築
+	// ==============================================================================================
 	/**
-	 * ピアから指定された Open メッセージを受信したときに呼び出されます。
+	 * ピアから受信した Open メッセージに対応するパイプを構築します。オープンに成功した場合は新しく構築されたパイプ
+	 * を返します。
 	 */
 	@tailrec
 	private[this] def create(open:Open):Option[Pipe] = {
 		val map = pipes.get()
+		// 既に使用されているパイプ ID が指定された場合はエラーとしてすぐ終了
 		if(map.contains(open.pipeId)){
+			logger.debug(s"duplicate pipe-id specified: ${open.pipeId}")
 			post(Close(open.pipeId, null, s"duplicate pipe-id specified: ${open.pipeId}"))
 			return None
 		}
+		// 新しいパイプを構築して登録
 		val pipe = new Pipe(open.pipeId, this)
 		if(pipes.compareAndSet(map, map + (pipe.id -> pipe))){
 			return Some(pipe)
@@ -114,6 +141,9 @@ class Session(val name:String, executor:Executor, service:Object, wire:Wire) {
 		create(open)
 	}
 
+	// ==============================================================================================
+	// パイプの構築
+	// ==============================================================================================
 	/**
 	 * ピアに対して Open メッセージを送信するためのパイプを生成します。
 	 */
@@ -130,8 +160,11 @@ class Session(val name:String, executor:Executor, service:Object, wire:Wire) {
 		create(function, params:_*)
 	}
 
+	// ==============================================================================================
+	// パイプの破棄
+	// ==============================================================================================
 	/**
-	 * 指定されたパイプがクローズされたときに呼び出されます。
+	 * このセッションが保持しているパイプのエントリから該当するパイプを切り離します。
 	 */
 	@tailrec
 	private[asterisk] final def destroy(pipeId:Short):Unit = {
@@ -141,25 +174,39 @@ class Session(val name:String, executor:Executor, service:Object, wire:Wire) {
 		}
 	}
 
+	// ==============================================================================================
+	// メッセージの送信
+	// ==============================================================================================
 	/**
 	 * ピアに対して指定されたメッセージを送信します。
 	 */
-	private[asterisk] def post(frame:Message):Unit = {
+	@volatile
+	private[asterisk] var post:(Message)=>Unit = { frame =>
 		wire.send(frame)
 		if(logger.isTraceEnabled){
-			logger.trace(s"post($frame)")
+			logger.trace(s"post:$frame")
 		}
 	}
 
+	// ==============================================================================================
+	// セッションのクローズ
+	// ==============================================================================================
 	/**
 	 * このセッションをクローズします。
 	 */
-	def close():Unit = {
+	def close():Unit = if(closed.compareAndSet(false, true)){
 		logger.trace(s"close():$name")
-		// TODO 実装まだ
 
+		// 以降のメッセージ送信をすべて例外に変更して送信を終了
+		post = { _ => throw new IOException(s"session $name closed") }
+
+		// 残っているすべてのパイプに Close メッセージを送信
+		pipes.get().values.foreach{ _.close(new IOException(s"session $name closed")) }
+
+		// Wire のクローズ
 		wire.close()
 
+		// セッションのクローズを通知
 		onClosed(this)
 	}
 
@@ -175,6 +222,9 @@ class Session(val name:String, executor:Executor, service:Object, wire:Wire) {
 
 		logger.debug(s"binding ${service.getClass.getSimpleName} as service of $name")
 
+		/**
+		 * サービスインスタンスから抽出した function 番号が定義されているメソッドのマップ。
+		 */
 		private[this] val functions = service.getClass.getInterfaces.map{ i =>
 			i.getDeclaredMethods.collect {
 				case m if m.getAnnotation(classOf[Export]) != null =>
@@ -184,33 +234,58 @@ class Session(val name:String, executor:Executor, service:Object, wire:Wire) {
 			}
 		}.flatten.toMap
 
-		def call(pipe:Pipe, open:Open):Unit = {
-			functions.get(open.function) match {
-				case Some(method) =>
-					val r = new Runnable {
-						def run() {
-							Session.sessions.set(Session.this)
-							Pipe.pipes.set(pipe)
-							try {
-								val params = Session.mapParameters(method.getParameterTypes, open.params:_*)
-								val result = method.invoke(service, params:_*)
-								pipe.close(result)
-							} catch {
-								case ex:Throwable =>
-									logger.debug(s"on call ${method.getSimpleName} with parameter ${open.params}", ex)
-									pipe.close(ex)
-							} finally {
-								Pipe.pipes.remove()
-								Session.sessions.remove()
-							}
-						}
-					}
-					executor.execute(r)   // TODO アノテーションで別スレッドか同期実行かを選べるようにしたい
-				case None =>
-					logger.debug(s"unexpected function call: ${open.function} is not defined on class ${service.getClass.getSimpleName}")
-					pipe.close(new NoSuchMethodException(open.function.toString))
+		// ============================================================================================
+		// function の呼び出し
+		// ============================================================================================
+		/**
+		 * 指定されたパイプを使用して function の呼び出しを行います。
+		 * @param pipe 呼び出しに使用するパイプ
+		 * @param open 呼び出しの Open メッセージ
+		 */
+		def call(pipe:Pipe, open:Open):Unit = functions.get(open.function) match {
+			case Some(method) =>
+				// TODO アノテーションで別スレッドか同期実行かを選べるようにしたい
+				executor.execute(new Runnable {
+					def run() = call(pipe, open, method)
+				})
+			case None =>
+				logger.debug(s"unexpected function call: ${open.function} is not defined on class ${service.getClass.getSimpleName}")
+				pipe.close(new NoSuchMethodException(open.function.toString))
+		}
+
+		// ============================================================================================
+		// function の呼び出し
+		// ============================================================================================
+		/**
+		 * 指定されたパイプを使用して function の呼び出しを行います。
+		 * @param pipe 呼び出しに使用するパイプ
+		 * @param open 呼び出しの Open メッセージ
+		 * @param method 呼び出し対象のメソッド
+		 */
+		private[this] def call(pipe:Pipe, open:Open, method:Method)():Unit = {
+			Session.sessions.set(Session.this)
+			Pipe.pipes.set(pipe)
+			try {
+
+				// メソッドのパラメータを適切な型に変換
+				val params = method.getParameterTypes.zip(open.params).map{ case (t, v) =>
+					TypeMapper.appropriateValue(v, t).asInstanceOf[Object]
+				}.toList.toArray
+
+				// メソッドの呼び出し
+				val result = method.invoke(service, params:_*)
+				pipe.close(result)
+
+			} catch {
+				case ex:Throwable =>
+					logger.debug(s"on call ${method.getSimpleName} with parameter ${open.params}", ex)
+					pipe.close(ex)
+			} finally {
+				Pipe.pipes.remove()
+				Session.sessions.remove()
 			}
 		}
+
 	}
 
 	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -231,6 +306,16 @@ class Session(val name:String, executor:Executor, service:Object, wire:Wire) {
 			}
 		}
 
+		// ============================================================================================
+		// リモートメソッドの呼び出し
+		// ============================================================================================
+		/**
+		 * リモートメソッドを呼び出します。
+		 * @param proxy プロキシオブジェクト
+		 * @param method 呼び出し対象のメソッド
+		 * @param args メソッドの引数
+		 * @return 返し値
+		 */
 		def invoke(proxy:Any, method:Method, args:Array[AnyRef]):AnyRef = {
 			val export = method.getAnnotation(classOf[Export])
 			if(export == null){
@@ -268,17 +353,16 @@ object Session {
 
 	class RemoteException(msg:String) extends RuntimeException(msg)
 
-	// ==============================================================================================
-	// 型変換
-	// ==============================================================================================
 	/**
-	 * 呼び出しパラメータを指定された型に適切な値へ変換します。
-	 * @param types 想定する呼び出しパラメータの型
-	 * @param params リモートから渡された呼び出しパラメータ値
-	 * @return 呼び出しに使用するパラメータ値
+	 * メソッドからデバッグ用の名前を取得するための拡張。
+	 * @param method メソッド
 	 */
-	private[Session] def mapParameters(types:Array[Class[_]], params:Any*):Array[Object] = {
-		types.zip(params).map{ case (t, v) => TypeMapper.appropriateValue(v, t).asInstanceOf[Object] }.toList.toArray
+	private[Session] implicit class RichMethod(method:Method){
+		def getSimpleName:String = {
+			method.getDeclaringClass.getSimpleName + "." + method.getName + "(" + method.getParameterTypes.map { p =>
+				p.getSimpleName
+			}.mkString(",") + "):" + method.getReturnType.getSimpleName
+		}
 	}
 
 }

@@ -15,11 +15,18 @@ import scala.Some
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
  * Message codec implementation using Java object serialization.
+ * A Message will encode to 2 byte binary length and serialized binary.
  *
  * @author Takami Torao
  */
 object JavaCodec extends Codec {
 
+	/**
+	 * Java シリアライゼーションを使用してメッセージをエンコードします。
+	 * メッセージは 2 バイトの長さとシリアライズされたバイナリに変換されます。
+	 * @param msg エンコードするメッセージ
+	 * @return エンコードされたメッセージ
+	 */
 	def encode(msg:Message):ByteBuffer = {
 		val baos = new ByteArrayOutputStream()
 		baos.write(Array[Byte](0, 0))
@@ -37,6 +44,11 @@ object JavaCodec extends Codec {
 		buffer
 	}
 
+	/**
+	 * Java シリアライゼーションを使用してメッセージをデコードします。
+	 * @param buffer デコードするメッセージ
+	 * @return デコードしたメッセージ
+	 */
 	def decode(buffer:ByteBuffer):Option[Message] = try {
 		if(buffer.remaining() < 2){
 			None

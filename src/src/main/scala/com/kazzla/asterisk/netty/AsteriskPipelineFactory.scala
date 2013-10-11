@@ -15,7 +15,7 @@ import org.jboss.netty.buffer.{ChannelBuffer, ChannelBuffers}
 import org.jboss.netty.handler.codec.frame.FrameDecoder
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.{Promise, Future}
-import java.net.SocketAddress
+import java.net.{InetSocketAddress, SocketAddress}
 import com.kazzla.asterisk
 import com.kazzla.asterisk._
 import java.io.Closeable
@@ -112,7 +112,11 @@ class AsteriskPipelineFactory(codec:Codec, isServer:Boolean, sslContext:Option[S
 
 	private[netty] case class NettyWire(address:SocketAddress, override val isServer:Boolean, override val tls:Future[Option[SSLSession]], context:ChannelHandlerContext) extends Wire {
 
-		override val peerName = address.getName
+		override val peerName = address match {
+			case i:InetSocketAddress =>
+				s"${i.getAddress.getHostAddress}:${i.getPort}"
+			case s => s.toString
+		}
 
 		def send(m:Message):Unit = {
 			val ch = context.getChannel
