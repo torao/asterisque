@@ -10,15 +10,16 @@ import scala.collection._
 import javax.net.ssl.SSLSession
 import java.util.concurrent.atomic.AtomicBoolean
 import org.slf4j.LoggerFactory
+import java.io.Closeable
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Wire
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
- * Session より先に生成します。
+ * [[com.kazzla.asterisk.Message]] のシリアライズ/デシリアライズを行い通信経路に転送するクラスです。
  * @author Takami Torao
  */
-trait Wire {
+trait Wire extends Closeable {
 	import Wire._
 
 	/**
