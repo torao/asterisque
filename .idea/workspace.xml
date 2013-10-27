@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" name="Default" comment="" />
+    <list default="true" id="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" name="Default" comment="">
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Wire.scala" afterPath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Wire.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/WireSpec.scala" afterPath="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/WireSpec.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+    </list>
     <ignored path="asterisk.iws" />
     <ignored path=".idea/workspace.xml" />
     <file path="/Dummy.txt" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1382819184324" ignored="false" />
@@ -13,9 +17,9 @@
     <file path="/Session.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1381517816071" ignored="false" />
     <file path="/package.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1381518102378" ignored="false" />
     <file path="/Pipe.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1381507813715" ignored="false" />
-    <file path="/EventHandlers.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1381520877963" ignored="false" />
+    <file path="/EventHandlers.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1382830227903" ignored="false" />
     <file path="/BirpcChannelPipelineFactory.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1378535276746" ignored="false" />
-    <file path="/Wire.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1381886626606" ignored="false" />
+    <file path="/Wire.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1382831747927" ignored="false" />
     <file path="/Node.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1381273720368" ignored="false" />
     <file path="/AsteriskPipelineFactory.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1381515564729" ignored="false" />
     <file path="/Sample.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1381264288309" ignored="false" />
@@ -50,6 +54,7 @@
     <file path="/Bridge.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1381272303853" ignored="false" />
     <file path="/TypeMapper.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1381517147958" ignored="false" />
     <file path="/EventHandlerSpec.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1381519591442" ignored="false" />
+    <file path="/WireSpec.scala" changelist="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" time="1382830142806" ignored="false" />
     <option name="TRACKING_ENABLED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -64,7 +69,8 @@
     <disable_hints />
   </component>
   <component name="DebuggerManager">
-    <breakpoint_any>
+    <ui_properties default_suspend_policy="SuspendAll" default_condition_enabled="true" />
+    <breakpoint_any default_suspend_policy="SuspendAll" default_condition_enabled="true">
       <breakpoint>
         <option name="NOTIFY_CAUGHT" value="true" />
         <option name="NOTIFY_UNCAUGHT" value="true" />
@@ -100,6 +106,7 @@
         <option name="LOG_MESSAGE" value="" />
       </breakpoint>
     </breakpoint_any>
+    <line_breakpoints default_suspend_policy="SuspendAll" default_condition_enabled="true" />
     <breakpoint_rules />
     <ui_properties />
   </component>
@@ -112,8 +119,11 @@
       <file leaf-file-name="Wire.scala" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Wire.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="9" column="31" selection-start="297" selection-end="297" vertical-scroll-proportion="0.14610389">
-              <folding />
+            <state line="80" column="70" selection-start="2166" selection-end="2166" vertical-scroll-proportion="0.33228347">
+              <folding>
+                <element signature="n#!!doc" expanded="true" />
+                <element signature="e#198#239#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -136,7 +146,6 @@
   <component name="IdeDocumentHistory">
     <option name="changedFiles">
       <list>
-        <option value="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Wire.scala" />
         <option value="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/Pipe.scala" />
         <option value="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/codec/Codec.scala" />
         <option value="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/codec/JavaCodec.scala" />
@@ -150,8 +159,9 @@
         <option value="$PROJECT_DIR$/src/src/test/scala/com/kazzla/asterisk/EventHandlerSpec.scala" />
         <option value="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/EventHandlers.scala" />
         <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/codec/MsgPackCodec.scala" />
-        <option value="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/WireSpec.scala" />
+        <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/EventHandlers.scala" />
         <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Wire.scala" />
+        <option value="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/WireSpec.scala" />
       </list>
     </option>
   </component>
@@ -266,6 +276,36 @@
               <option name="myItemId" value="asterisk" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="WireSpec.scala" />
+              <option name="myItemType" value="org.jetbrains.plugins.scala.components.ScalaDefsProjectViewProvider$ScalaFileTreeNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisk" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisk" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="test" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="scala" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisk" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
           </PATH>
           <PATH>
             <PATH_ELEMENT>
@@ -337,8 +377,8 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="codec" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+              <option name="myItemId" value="Message.scala" />
+              <option name="myItemType" value="org.jetbrains.plugins.scala.components.ScalaDefsProjectViewProvider$ScalaFileTreeNode" />
             </PATH_ELEMENT>
           </PATH>
           <PATH>
@@ -399,7 +439,7 @@
       <recent name="$PROJECT_DIR$/src" />
     </key>
   </component>
-  <component name="RunManager" selected="Specs2.EventHandlerSpec">
+  <component name="RunManager" selected="Specs2.PipeWireSpec">
     <configuration default="false" name="Sample" type="Application" factoryName="Application" temporary="true">
       <option name="MAIN_CLASS_NAME" value="com.kazzla.asterisk.Sample" />
       <option name="VM_PARAMETERS" />
@@ -412,25 +452,6 @@
       <option name="PASS_PARENT_ENVS" value="true" />
       <module name="asterisk" />
       <envs />
-      <RunnerSettings RunnerId="Debug">
-        <option name="DEBUG_PORT" value="" />
-        <option name="TRANSPORT" value="0" />
-        <option name="LOCAL" value="true" />
-      </RunnerSettings>
-      <ConfigurationWrapper RunnerId="Debug" />
-      <method />
-    </configuration>
-    <configuration default="false" name="MsgPackCodecSpec" type="Specs2RunConfiguration" factoryName="Specs2" temporary="true">
-      <module name="asterisk" />
-      <setting name="path" value="com.kazzla.asterisk.codec.MsgPackCodecSpec" />
-      <setting name="package" value="" />
-      <setting name="vmparams" value="" />
-      <setting name="params" value="" />
-      <setting name="workingDirectory" value="$PROJECT_DIR$" />
-      <setting name="searchForTest" value="Across module dependencies" />
-      <setting name="testName" value="" />
-      <setting name="testKind" value="Class" />
-      <setting name="showProgressMessages" value="true" />
       <RunnerSettings RunnerId="Debug">
         <option name="DEBUG_PORT" value="" />
         <option name="TRANSPORT" value="0" />
@@ -476,6 +497,25 @@
     <configuration default="false" name="EventHandlerSpec" type="Specs2RunConfiguration" factoryName="Specs2" temporary="true">
       <module name="asterisk" />
       <setting name="path" value="com.kazzla.asterisk.EventHandlerSpec" />
+      <setting name="package" value="" />
+      <setting name="vmparams" value="" />
+      <setting name="params" value="" />
+      <setting name="workingDirectory" value="$PROJECT_DIR$" />
+      <setting name="searchForTest" value="Across module dependencies" />
+      <setting name="testName" value="" />
+      <setting name="testKind" value="Class" />
+      <setting name="showProgressMessages" value="true" />
+      <RunnerSettings RunnerId="Debug">
+        <option name="DEBUG_PORT" value="" />
+        <option name="TRANSPORT" value="0" />
+        <option name="LOCAL" value="true" />
+      </RunnerSettings>
+      <ConfigurationWrapper RunnerId="Debug" />
+      <method />
+    </configuration>
+    <configuration default="false" name="PipeWireSpec" type="Specs2RunConfiguration" factoryName="Specs2" temporary="true">
+      <module name="asterisk" />
+      <setting name="path" value="com.kazzla.asterisk.PipeWireSpec" />
       <setting name="package" value="" />
       <setting name="vmparams" value="" />
       <setting name="params" value="" />
@@ -595,18 +635,18 @@
     </configuration>
     <list size="5">
       <item index="0" class="java.lang.String" itemvalue="Application.Sample" />
-      <item index="1" class="java.lang.String" itemvalue="Specs2.MsgPackCodecSpec" />
-      <item index="2" class="java.lang.String" itemvalue="Specs2.Specs2 in 'scala'" />
-      <item index="3" class="java.lang.String" itemvalue="Specs2.MessageSpec" />
-      <item index="4" class="java.lang.String" itemvalue="Specs2.EventHandlerSpec" />
+      <item index="1" class="java.lang.String" itemvalue="Specs2.Specs2 in 'scala'" />
+      <item index="2" class="java.lang.String" itemvalue="Specs2.MessageSpec" />
+      <item index="3" class="java.lang.String" itemvalue="Specs2.EventHandlerSpec" />
+      <item index="4" class="java.lang.String" itemvalue="Specs2.PipeWireSpec" />
     </list>
     <recent_temporary>
       <list size="5">
-        <item index="0" class="java.lang.String" itemvalue="Specs2.EventHandlerSpec" />
-        <item index="1" class="java.lang.String" itemvalue="Specs2.MessageSpec" />
-        <item index="2" class="java.lang.String" itemvalue="Specs2.Specs2 in 'scala'" />
-        <item index="3" class="java.lang.String" itemvalue="Application.Sample" />
-        <item index="4" class="java.lang.String" itemvalue="Specs2.MsgPackCodecSpec" />
+        <item index="0" class="java.lang.String" itemvalue="Specs2.PipeWireSpec" />
+        <item index="1" class="java.lang.String" itemvalue="Specs2.EventHandlerSpec" />
+        <item index="2" class="java.lang.String" itemvalue="Specs2.MessageSpec" />
+        <item index="3" class="java.lang.String" itemvalue="Specs2.Specs2 in 'scala'" />
+        <item index="4" class="java.lang.String" itemvalue="Application.Sample" />
       </list>
     </recent_temporary>
     <configuration name="&lt;template&gt;" type="WebApp" default="true" selected="false">
@@ -643,27 +683,27 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="0" width="1680" height="1050" extended-state="0" />
-    <editor active="false" />
+    <editor active="true" />
     <layout>
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="JetGradle" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="SBT Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.30357143" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.30357143" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="1" side_tool="true" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="true" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.24159664" sideWeight="0.5" order="11" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.23011015" sideWeight="0.6964286" order="6" side_tool="false" content_ui="tabs" x="1080" y="45" width="408" height="952" />
       <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="SLIDING" type="SLIDING" visible="false" weight="0.4" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="true" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.2001224" sideWeight="0.6964286" order="1" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.2001224" sideWeight="0.6964286" order="1" side_tool="false" content_ui="combo" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32983193" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
-      <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32983193" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
-      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.24159664" sideWeight="0.5" order="11" side_tool="false" content_ui="tabs" />
       <window_info id="Dependency Viewer" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.43382353" sideWeight="0.5" order="12" side_tool="false" content_ui="tabs" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="5" side_tool="false" content_ui="combo" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
@@ -734,16 +774,6 @@
     <option name="FILTER_TARGETS" value="false" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Pipe.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="50" column="0" selection-start="1457" selection-end="1457" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/codec/Codec.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="66" column="18" selection-start="2121" selection-end="2121" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/codec/JavaCodec.scala">
       <provider selected="true" editor-type-id="text-editor">
         <state line="17" column="27" selection-start="611" selection-end="611" vertical-scroll-proportion="0.0" />
@@ -779,16 +809,6 @@
         <state line="24" column="53" selection-start="1003" selection-end="1003" vertical-scroll-proportion="0.0" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/MessageSpec.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="27" column="40" selection-start="856" selection-end="856" vertical-scroll-proportion="0.5163934" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/EventHandlers.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="65" column="32" selection-start="1957" selection-end="1957" vertical-scroll-proportion="1.3937008" />
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/EventHandlerSpec.scala">
       <provider selected="true" editor-type-id="text-editor">
         <state line="58" column="3" selection-start="1294" selection-end="1294" vertical-scroll-proportion="1.2755905" />
@@ -804,15 +824,50 @@
         <state line="91" column="34" selection-start="2664" selection-end="2664" vertical-scroll-proportion="0.0" />
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/MessageSpec.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="26" column="9" selection-start="811" selection-end="811" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Message.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="31" column="11" selection-start="1200" selection-end="1200" vertical-scroll-proportion="0.33333334">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar:///opt/scala-2.10.2/lib/scala-library.jar!/scala/collection/LinearSeqOptimized.class">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="1" column="6" selection-start="31" selection-end="31" vertical-scroll-proportion="0.024590164">
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/WireSpec.scala">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="9" column="11" selection-start="242" selection-end="242" vertical-scroll-proportion="0.11811024" />
+        <state line="78" column="26" selection-start="2424" selection-end="2424" vertical-scroll-proportion="0.023622047">
+          <folding>
+            <element signature="e#198#223#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/EventHandlers.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="32" column="5" selection-start="1051" selection-end="1051" vertical-scroll-proportion="-0.14173229">
+          <folding />
+        </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Wire.scala">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="9" column="31" selection-start="297" selection-end="297" vertical-scroll-proportion="0.14610389">
-          <folding />
+        <state line="80" column="70" selection-start="2166" selection-end="2166" vertical-scroll-proportion="0.33228347">
+          <folding>
+            <element signature="n#!!doc" expanded="true" />
+            <element signature="e#198#239#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>

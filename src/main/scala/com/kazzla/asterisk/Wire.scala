@@ -10,7 +10,7 @@ import scala.collection._
 import javax.net.ssl.SSLSession
 import java.util.concurrent.atomic.AtomicBoolean
 import org.slf4j.LoggerFactory
-import java.io.Closeable
+import java.io.{IOException, Closeable}
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Wire
@@ -86,6 +86,7 @@ trait Wire extends Closeable {
 	/**
 	 * 指定されたメッセージを送信します。
 	 * @param msg 送信するメッセージ
+	 * @throws java.io.IOException この `Wire` が既にクローズされている場合
 	 */
 	def send(msg:Message):Unit
 
@@ -96,11 +97,15 @@ trait Wire extends Closeable {
 	 * 下層のネットワーク実装からメッセージを受信したときに呼び出します。
 	 * @param msg 受信したメッセージ
 	 */
-	protected def receive(msg:Message):Unit = if(active.get()) {
-		onReceive(msg)
-	} else buffer.synchronized {
-		buffer.append(msg)
-		logger.debug(s"message buffered on closed wire: $msg")
+	protected def receive(msg:Message):Unit = if(! isClosed){
+		if(active.get()) {
+			onReceive(msg)
+		} else buffer.synchronized {
+			buffer.append(msg)
+			logger.debug(s"message buffered on deactive wire: $msg")
+		}
+	} else {
+		logger.debug(s"message disposed on closed wire: $msg")
 	}
 
 	// ==============================================================================================
@@ -123,8 +128,8 @@ trait Wire extends Closeable {
 	 * この `Wire` 上でのメッセージ配信を停止します。
 	 * 停止中に受信したメッセージは内部のバッファに保持され次回開始したときに通知されます。
 	 */
-	def stop():Unit = {
-		active.compareAndSet(true, false)
+	def stop():Unit = if(active.compareAndSet(true, false)){
+		/* */
 	}
 
 	// ==============================================================================================
@@ -154,13 +159,17 @@ object Wire {
 		val w1 = new Wire {
 			var f:(Message)=>Unit = null
 			val isServer = false
-			def send(m:Message) { f(m) }
+			def send(m:Message) = if(isClosed){
+				throw new IOException("pipe closed")
+			} else { f(m) }
 		}
 		lazy val w2 = new Wire {
 			val isServer = ! w1.isServer
-			def send(m:Message) { w1.onReceive(m) }
+			def send(m:Message) = if(isClosed){
+				throw new IOException("pipe closed")
+			} else { w1.receive(m) }
 		}
-		w1.f = { m => w2.onReceive(m) }
+		w1.f = { m => w2.receive(m) }
 		(w1, w2)
 	}
 
