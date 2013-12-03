@@ -9,7 +9,10 @@ import scala.concurrent._
 import scala.concurrent.duration._
 import org.specs2.Specification
 import org.specs2.execute.Result
-import org.specs2.matcher.MatchResult
+import java.io.{File, IOException}
+import org.slf4j.LoggerFactory
+import java.text.DateFormat
+import java.security.cert.X509Certificate
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // WireSpec
@@ -19,7 +22,7 @@ import org.specs2.matcher.MatchResult
 */
 abstract class WireSpec extends Specification { def is = s2"""
 Wire should:
-either server or not flag. $e0
+have either server or not flag. $e0
 have correct close status. $e1
 have correct active/deactive status. $e2
 transfer messages duplex. $e3
@@ -34,12 +37,12 @@ have correct peer name. $e9
 	/**
 	 * subclass should pair of transmission endpoint as tuple of wires.
 	*/
-	def wires[T](f:(Wire,Wire)=>Result):Result
+	def wires(f:(Wire,Wire)=>Result):Result
 
-	def secureWire[T](f:(Wire)=>Result):Result = skipped
+	def secureWire(f:(Wire)=>Result):Result = skipped
 
 	def e0 = wires{ (w1, w2) =>
-		(w1.isServer !=== w2.isServer)
+		w1.isServer !=== w2.isServer
 	}
 	
 	def e1 = wires{ (w1, w2) =>
@@ -110,7 +113,7 @@ have correct peer name. $e9
 		w1.send(msg(1))
 		w1.send(msg(2))
 		Await.result(p2.future, Limit)
-		val receiveAll = (r.length === 3)
+		val receiveAll = r.length === 3
 		notReceiveBeforeStart and receiveAfterStart and receiveAll
 	}
 
@@ -125,14 +128,33 @@ have correct peer name. $e9
 		w2.onReceive ++ { _ => count += 1 }
 		w2.start()
 		w1.send(Open(7, 0))
-		w2.close()
-		w1.send(Open(7, 1))
 		Thread.sleep(500)
-		count === 1
+		w2.close()
+		try {
+			w1.send(Open(7, 1))
+			Thread.sleep(500)
+			count === 1
+		} catch {
+			case ex:IOException => skipped
+		}
 	}
 
 	def e8 = secureWire { w =>
-		Await.result(w.tls, Limit)
+		val session = Await.result(w.tls, Limit)
+		session match {
+			case Some(s) =>
+				val logger = LoggerFactory.getLogger(getClass)
+				logger.info(s"ID: ${s.getId.map{ b => "%02X".format(b & 0xFF) }.mkString}")
+				logger.info(s"CipherSuite: ${s.getCipherSuite}")
+				logger.info(s"CreationTime: ${DateFormat.getDateTimeInstance.format(s.getCreationTime)}")
+				logger.info(s"LastAccessedTime: ${DateFormat.getDateTimeInstance.format(s.getLastAccessedTime)}")
+				logger.info(s"Peer: ${s.getPeerHost}:${s.getPeerPort} ${s.getPeerPrincipal}")
+				s.getPeerCertificates.foreach{ c =>
+					logger.info(s"  ${c.asInstanceOf[X509Certificate].getSubjectDN.getName}")
+				}
+			case None =>
+				throw new Exception("session not started for secure wire")
+		}
 		success
 	}
 
@@ -144,8 +166,8 @@ have correct peer name. $e9
 
 }
 
-class PipeWireSpec extends WireSpec {
-	def wires[T](f:(Wire,Wire)=>Result):Result = {
+class PipeWireSpec1 extends WireSpec {
+	def wires(f:(Wire,Wire)=>Result):Result = {
 		val w = Wire.newPipe()
 		using(w._1){ w1 =>
 			using(w._2){ w2 =>
@@ -153,4 +175,27 @@ class PipeWireSpec extends WireSpec {
 			}
 		}
 	}
+}
+
+class PipeWireSpec2 extends PipeWireSpec1 {
+	override def wires(f:(Wire,Wire)=>Result):Result = {
+		super.wires{ (w1, w2) => f(w2, w1) }
+	}
+}
+
+class LoadKeyStoreSpec extends Specification{ def is = s2"""
+loadKeyStore() should:
+load key-store with correct passwords. $e1
+throw exception if incorrect passowrds. $e2
+"""
+
+	def e1 = {
+		val cert = Wire.loadSSLContext(new File("ca/client.jks"), "kazzla", "kazzla", new File("ca/cacert.jks"), "kazzla")
+		cert !=== null
+	}
+
+	def e2 = {
+		Wire.loadSSLContext(new File("ca/client.jks"), "", "", new File("ca/cacert.jks"), "kazzla") must throwA[IOException]
+	}
+
 }

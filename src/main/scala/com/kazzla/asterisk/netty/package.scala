@@ -9,25 +9,4 @@ import javax.net.ssl.{KeyManagerFactory, SSLContext}
 import java.io.{FileInputStream, BufferedInputStream}
 
 package object netty {
-
-	def getSSLContext(file:String, ksPassword:String, pkPassword:String):SSLContext = {
-		import java.security._
-		val algorithm = Option(Security.getProperty("ssl.KeyManagerFactory.algorithm")).getOrElse("SunX509")
-		val keyStore = KeyStore.getInstance("JKS")
-		using(new BufferedInputStream(new FileInputStream(file))){ in =>
-			keyStore.load(in, ksPassword.toCharArray)
-
-			val kmf = KeyManagerFactory.getInstance(algorithm)
-			kmf.init(keyStore, pkPassword.toCharArray)
-
-			/*
-			val tmf = TrustManagerFactory.getInstance(algorithm)
-			tmf.init(keyStore)
-			*/
-
-			val context = SSLContext.getInstance("TLS")
-			context.init(kmf.getKeyManagers, /* tmf.getTrustManagers */ null, null)
-			context
-		}
-	}
 }

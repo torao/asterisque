@@ -6,7 +6,7 @@
 package com.kazzla.asterisk.netty
 
 import org.jboss.netty.channel._
-import javax.net.ssl.{SSLSession, SSLContext}
+import javax.net.ssl.{SSLEngine, SSLSession, SSLContext}
 import org.slf4j.LoggerFactory
 import org.jboss.netty.handler.ssl.SslHandler
 import scala.Some
@@ -18,7 +18,7 @@ import scala.concurrent.{Promise, Future}
 import java.net.{InetSocketAddress, SocketAddress}
 import com.kazzla.asterisk
 import com.kazzla.asterisk._
-import java.io.Closeable
+import java.io.{IOException, Closeable}
 import com.kazzla.asterisk.codec.Codec
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -30,9 +30,8 @@ import com.kazzla.asterisk.codec.Codec
 class AsteriskPipelineFactory(codec:Codec, isServer:Boolean, sslContext:Option[SSLContext], onWireCreate:(Wire)=>Unit) extends ChannelPipelineFactory {
 	private[this] val logger = LoggerFactory.getLogger(classOf[AsteriskPipelineFactory])
 	def getPipeline = {
-		val sslSession = Promise[Option[SSLSession]]()    // SSLハンドシェイク完了用
 		val pipeline = Channels.pipeline()
-		sslContext match {
+		val sslHandler = sslContext match {
 			case Some(s) =>
 				val engine = s.createSSLEngine()
 				engine.setUseClientMode(! isServer)
@@ -41,18 +40,19 @@ class AsteriskPipelineFactory(codec:Codec, isServer:Boolean, sslContext:Option[S
 					logger.trace(s"CipherSuites: ${engine.getEnabledCipherSuites.mkString(",")}")
 					logger.trace(s"Protocols: ${engine.getEnabledProtocols.mkString(",")}")
 				}
-				pipeline.addLast("tls", new SslHandler(engine))   // TODO ハンドシェイクが終わったら SSLSession を参照したい
-				sslSession.success(Some(engine.getSession))       // TODO まだハンドシェイクが終わっていない
+				val handler = new SslHandler(engine)
+				pipeline.addLast("tls", handler)
+				Some(handler)
 			case None =>
-				sslSession.success(None)
+				None
 		}
 		pipeline.addLast("com.kazzla.asterisk.frame.encoder", new MessageEncoder(codec))
 		pipeline.addLast("com.kazzla.asterisk.frame.decoder", new MessageDecoder(codec))
-		pipeline.addLast("com.kazzla.asterisk.service", new WireConnect(sslSession.future))
+		pipeline.addLast("com.kazzla.asterisk.service", new WireConnect(sslHandler))
 		pipeline
 	}
 
-	private[this] class WireConnect(ssl:Future[Option[SSLSession]]) extends SimpleChannelHandler {
+	private[this] class WireConnect(sslHandler:Option[SslHandler]) extends SimpleChannelHandler {
 		private[this] val logger = LoggerFactory.getLogger(classOf[WireConnect])
 
 		@volatile
@@ -60,10 +60,27 @@ class AsteriskPipelineFactory(codec:Codec, isServer:Boolean, sslContext:Option[S
 
 		override def channelConnected(ctx:ChannelHandlerContext, e:ChannelStateEvent):Unit = {
 			assert(wire.isEmpty)
-			wire = Some(NettyWire(e.getChannel.getRemoteAddress, isServer, ssl, ctx))
+			val promise = Promise[Option[SSLSession]]()
+			sslHandler match {
+				case Some(h) =>
+					h.handshake().addListener(new ChannelFutureListener {
+						def operationComplete(future:ChannelFuture) = {
+							val session = h.getEngine.getSession
+							if(session.isValid){
+								promise.success(Some(session))
+								logger.debug(s"tls handlshake finished: ${session.getPeerCertificates.map{ _.getType }}")
+							} else {
+								promise.failure(new Exception("tls handlshake failure: invalid session"))
+								logger.debug("tls handlshake failure: invalid session")
+							}
+						}
+					})
+				case None =>
+					promise.success(None)
+			}
+			wire = Some(NettyWire(e.getChannel.getRemoteAddress, isServer, promise.future, ctx))
 			super.channelConnected(ctx, e)
 
-			// TODO ここで onConnect 呼んでも SSL ハンドシェイクが済んでいないはず
 			onWireCreate(wire.get)
 		}
 
@@ -118,10 +135,12 @@ class AsteriskPipelineFactory(codec:Codec, isServer:Boolean, sslContext:Option[S
 			case s => s.toString
 		}
 
-		def send(m:Message):Unit = {
+		def send(m:Message):Unit = if(! isClosed){
 			val ch = context.getChannel
 			val event = new DownstreamMessageEvent(ch, Channels.future(ch), m, ch.getRemoteAddress)
 			context.sendDownstream(event)
+		} else {
+			throw new IOException(s"cannot send on closed channel: $m")
 		}
 
 		override def close():Unit = if(! isClosed){

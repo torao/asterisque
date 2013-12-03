@@ -7,10 +7,13 @@ package com.kazzla.asterisk
 
 import scala.concurrent.{Future, Promise}
 import scala.collection._
-import javax.net.ssl.SSLSession
+import javax.net.ssl._
 import java.util.concurrent.atomic.AtomicBoolean
 import org.slf4j.LoggerFactory
-import java.io.{IOException, Closeable}
+import java.io._
+import java.security.cert.{CertificateException, X509Certificate}
+import java.security.KeyStore
+import scala.Some
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Wire
@@ -145,6 +148,7 @@ trait Wire extends Closeable {
 }
 
 object Wire {
+	import java.security._
 	private[Wire] val logger = LoggerFactory.getLogger(classOf[Wire])
 
 	// ==============================================================================================
@@ -170,7 +174,106 @@ object Wire {
 			} else { w1.receive(m) }
 		}
 		w1.f = { m => w2.receive(m) }
+		w1.onClosed ++ { _ => w2.close() }
+		w2.onClosed ++ { _ => w1.close() }
 		(w1, w2)
+	}
+
+	// ==============================================================================================
+	// 証明書のロード
+	// ==============================================================================================
+	/**
+	 * 指定された証明書ストアを読み込んで SSL コンテキストを作成するためのユーティリティです。
+	 *
+	 * TrustManager を変更する場合はシステムプロパティ `javax.net.ssl.trustStore` を使用してください。
+	 * http://docs.oracle.com/javase/jp/6/technotes/guides/security/jsse/JSSERefGuide.html#TrustManagerFactory
+	 *
+	 * @param cert 証明書のキーストアファイル
+	 * @param ksPassword 証明書キーストアのパスワード
+	 * @param pkPassword 秘密鍵のパスワード
+	 * @param trust 信頼済み CA 証明書のキーストアファイル
+	 * @param trustPassword 信頼済み CA 証明書キーストアのパスワード
+	 */
+	def loadSSLContext(cert:File, ksPassword:String, pkPassword:String, trust:File, trustPassword:String):SSLContext = {
+
+		val algorithm = Option(Security.getProperty("ssl.KeyManagerFactory.algorithm")).getOrElse("SunX509")
+		val targetKeyStore = loadKeyStore(cert, ksPassword)
+		val kmf = KeyManagerFactory.getInstance(algorithm)
+		kmf.init(targetKeyStore, pkPassword.toCharArray)
+
+		val trustKeyStore = loadKeyStore(trust, trustPassword)
+		val tmf = TrustManagerFactory.getInstance("SunX509")
+		tmf.init(trustKeyStore)
+
+		val context = SSLContext.getInstance("TLS")
+		context.init(kmf.getKeyManagers, tmf.getTrustManagers, null)
+		context
+	}
+
+
+	// ==============================================================================================
+	// キーストアの読み込み
+	// ==============================================================================================
+	/**
+	 * 指定されたファイルからキーストアを読み込むためのユーティリティ関数です。
+	 *
+	 * @param file JSK 形式の KeyStore ファイル
+	 * @param ksPassword KeyStore のパスワード
+	 * @param ksType キーストアのタイプ
+	 */
+	private[this] def loadKeyStore(file:File, ksPassword:String, ksType:String = "JKS"):KeyStore = using(new BufferedInputStream(new FileInputStream(file))){ in =>
+		val keyStore = KeyStore.getInstance(ksType)
+		keyStore.load(in, ksPassword.toCharArray)
+		keyStore
+	}
+
+}
+
+object DummyTrustManager extends X509TrustManager {
+	private[this] val logger = LoggerFactory.getLogger(this.getClass)
+	def getAcceptedIssuers:Array[X509Certificate] = {
+		logger.debug(s"DummyTrustManager.getAcceptedIssuers")
+		Array()
+	}
+
+	def checkClientTrusted(certs:Array[X509Certificate], authType:String) = {
+		logger.debug(s"DummyTrustManager.checkClientTrusted(${certs.mkString("[",",","]")},$authType)")
+	}
+
+	def checkServerTrusted(certs:Array[X509Certificate], authType:String) = {
+		logger.debug(s"DummyTrustManager.checkServerTrusted(${certs.mkString("[",",","]")},$authType)")
+	}
+
+}
+
+class TrustManager extends X509TrustManager {
+
+	private[this] val defaultTrustManager = {
+		val ks = KeyStore.getInstance("JKS")
+		ks.load(new FileInputStream("trustedCerts"), "passphrase".toCharArray)
+
+		val tmf = TrustManagerFactory.getInstance("PKIX")
+		tmf.init(ks)
+		tmf.getTrustManagers.find{ _.isInstanceOf[X509TrustManager] } match {
+			case Some(tm) => tm.asInstanceOf[X509TrustManager]
+			case None => throw new IllegalStateException("x509 certificate not found on default TrustManager")
+		}
+	}
+
+	def checkClientTrusted(chain:Array[X509Certificate], authType:String):Unit = try {
+		defaultTrustManager.checkClientTrusted(chain, authType)
+	} catch {
+		case ex:CertificateException =>
+	}
+
+	def checkServerTrusted(chain:Array[X509Certificate], authType:String):Unit = try {
+		defaultTrustManager.checkServerTrusted(chain, authType)
+	} catch {
+		case ex:CertificateException =>
+	}
+
+	def getAcceptedIssuers:Array[X509Certificate] = {
+		defaultTrustManager.getAcceptedIssuers
 	}
 
 }

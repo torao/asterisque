@@ -60,7 +60,12 @@ object Netty extends Bridge {
 			def operationComplete(future:ChannelFuture) {
 				if(future.isSuccess){
 					logger.debug("operationComplete(success)")
-					promise.success(new Server(address) { override def close() { server.shutdown() } })
+					promise.success(new Server(address) {
+						override def close() {
+							logger.debug("closing netty server bootstrap")
+							server.shutdown()
+						}
+					})
 				} else {
 					logger.debug("operationComplete(failure)")
 					promise.failure(future.getCause)
@@ -73,6 +78,7 @@ object Netty extends Bridge {
 	private[this] def shutdown(bootstrap:Bootstrap):Unit = {
 		ExecutionContext.Implicits.global.execute(new Runnable(){
 			def run(){
+				logger.debug("closing netty client bootstrap")
 				bootstrap.shutdown()
 			}
 		})
