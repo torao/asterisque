@@ -22,7 +22,7 @@ import java.io.IOException
  * @param name このセッションの名前
  * @param executor このセッション上での RPC 処理を実行するためのスレッドプール
  */
-class Session(val name:String, executor:Executor, service:Object, wire:Wire) {
+class Session(val name:String, executor:Executor, service:Object, val wire:Wire) {
 
 	import Session._
 
