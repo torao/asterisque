@@ -10,7 +10,7 @@ resolvers += "Sonatype snapshots" at "http://oss.sonatype.org/content/repositori
 
 // javacOptions ++= Seq("-encoding", "UTF-8")
 
-// scaladocOptions ++= Seq("-encoding", "UTF-8", "-doc-title", "Kazzla 0.1")
+// scaladocOptions ++= Seq("-encoding", "UTF-8", "-doc-title", "Asterisk 0.1")
 
 libraryDependencies ++= Seq(
 	"io.netty" % "netty" % "3.6.6.Final",
