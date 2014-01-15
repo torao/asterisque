@@ -322,7 +322,7 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 				// toString() や hashCode() など Object 型のメソッド呼び出し
 				method.invoke(this, args:_*)
 			} else {
-				val pipe = open(export.value(), args:_*)
+				val pipe = open(export.value(), (if(args==null) Array[AnyRef]() else args):_*)
 				val close = Await.result(pipe.future, Duration.Inf)     // TODO アノテーションで呼び出しタイムアウトの設定
 				if(close.errorMessage != null){
 					throw new Session.RemoteException(close.errorMessage)
