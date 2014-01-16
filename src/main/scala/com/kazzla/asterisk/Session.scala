@@ -62,9 +62,10 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 	 */
 	def service_=(service:Object) = stub = new Stub(service)
 
-	// `Wire` にメッセージが到着した時のディスパッチャーを設定してメッセージポンプを開始
-	wire.onReceive ++ dispatch
-	wire.start()
+	wire.onReceive ++ dispatch        	// `Wire` にメッセージが到着した時のディスパッチャーを設定
+	wire.onClosed ++ { _ => close() } 	// `Wire` がクローズされたときにセッションもクローズ
+	wire.start()                      	// メッセージポンプを開始
+
 
 	// ==============================================================================================
 	// パイプのオープン

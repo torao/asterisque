@@ -16,7 +16,8 @@ import com.kazzla.asterisk.codec.MsgPackCodec
  */
 class SessionSpec extends Specification { def is = s2"""
 Session should:
-call function without parameter: $s01
+bw able to call function with no parameters: $s01
+callback close event when peer wire is closed: $s02
 """
 
 	def s01 = {
@@ -32,5 +33,17 @@ call function without parameter: $s01
 		n0.bind(p0)
 		val s1 = n1.bind(p1)
 		s1.getRemoteInterface(classOf[T0]).hoge() === "hoge"
+	}
+
+	def s02 = {
+		val n0 = Node("node0").codec(MsgPackCodec).build()
+		val n1 = Node("node1").codec(MsgPackCodec).build()
+		val (p0, p1) = Wire.newPipe()
+		val s0 = n0.bind(p0)
+		val s1 = n1.bind(p1)
+		var closed = false
+		s1.onClosed ++ { _ => closed = true }
+		p0.close()
+		p1.isClosed and closed
 	}
 }
