@@ -7,12 +7,9 @@ package com.kazzla.asterisk
 
 import java.util.concurrent.Executors
 import scala.io.Source
-import com.kazzla.asterisk.netty.Netty
 import java.net.InetSocketAddress
 import java.io.PrintWriter
-import scala.util.{Failure, Success}
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Await}
+import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import org.slf4j.LoggerFactory
 
@@ -31,7 +28,7 @@ object Sample {
 					log.info("hoge")
 
 					logger.info("calling log.dump() with line from 0 to 9")
-					val pipe = session.open(30, "hoge")
+					val pipe = session.open(30, "hoge"){ b => None }
 					val out = new PrintWriter(pipe.out)
 					(0 until 10).foreach{ i => out.println(i) }
 					out.close()

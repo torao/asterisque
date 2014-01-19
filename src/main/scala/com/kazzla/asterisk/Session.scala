@@ -45,7 +45,8 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 	 * このセッション上で相手側に提供しているサービスのスタブ。
 	 */
 	@volatile
-	private[this] var stub = new Stub(service)
+	private[this] var stub:MessageReceiver = _
+	service_=(service)
 
 	/**
 	 * このセッションがクローズされているかを表すフラグ。
@@ -58,14 +59,55 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 	val onClosed = new EventHandlers[Session]()
 
 	/**
+	 */
+	def service_=(service:Object) = receiver_=(new Stub(service))
+
+	/**
 	 * このセッション上でピアに提供するサービス (function の集合) を設定します。
 	 */
-	def service_=(service:Object) = stub = new Stub(service)
+	def receiver_=(receiver:MessageReceiver) = stub = receiver
+
+	/**
+	 * セッションに設定できる任意の値。
+	 */
+	private[this] val attribute = new AtomicReference[Map[String,Any]](Map())
 
 	wire.onReceive ++ dispatch        	// `Wire` にメッセージが到着した時のディスパッチャーを設定
 	wire.onClosed ++ { _ => close() } 	// `Wire` がクローズされたときにセッションもクローズ
 	wire.start()                      	// メッセージポンプを開始
 
+	// ==============================================================================================
+	// セッション値の設定
+	// ==============================================================================================
+	/**
+	 * このセッションに任意の値を関連づけます。
+	 * @param name 値の名前
+	 * @param value 値
+	 * @return 置き換えられる前の値
+	 */
+	def setAttribute(name:String, value:Any):Option[Any] = {
+		@tailrec
+		def set():Option[Any] = {
+			val map = attribute.get()
+			val old = map.get(name)
+			if(attribute.compareAndSet(map, map.updated(name, value))){
+				old
+			} else {
+				set()
+			}
+		}
+		set()
+	}
+
+	// ==============================================================================================
+	// セッション値の参照
+	// ==============================================================================================
+	/**
+	 * このセッションに関連づけられている値を参照します。
+	 * @param name 値の名前
+	 * @return 値
+	 */
+	def getAttribute(name:String):Option[Any] = attribute.get().get(name)
 
 	// ==============================================================================================
 	// パイプのオープン
@@ -76,8 +118,27 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 	 * @param params function の実行パラメータ
 	 * @return function とのパイプ
 	 */
-	def open(function:Short, params:AnyRef*):Pipe = {
+	private[asterisk] def openBuffering(function:Short, params:AnyRef*):Pipe = {
+		open(None, function, params:_*)
+	}
+
+	// ==============================================================================================
+	// パイプのオープン
+	// ==============================================================================================
+	/**
+	 * このセッション上のピアに対して指定された function との非同期呼び出しのためのパイプを作成します。
+	 *
+	 * @param function function の識別子
+	 * @param params function の実行パラメータ
+	 * @return function とのパイプ
+	 */
+	def open(function:Short, params:AnyRef*)(blockReceiver:(Block)=>Unit):Pipe = {
+		open(Some(blockReceiver), function, params:_*)
+	}
+
+	private[this] def open(blockReceiver:Option[(Block)=>Unit], function:Short, params:AnyRef*):Pipe = {
 		val pipe = create(function, params:_*)
+		pipe.blockReceiver_=(blockReceiver)
 		post(Open(pipe.id, function, params:_*))
 		pipe
 	}
@@ -104,18 +165,36 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 		}
 		frame match {
 			case open:Open =>
-				create(open).foreach{ pipe => stub.call(pipe, open) }
+				create(open).foreach{ pipe => using(pipe){ stub.receive(open) } }
 			case close:Close[_] =>
 				pipes.get().get(frame.pipeId) match {
-					case Some(pipe) => pipe.close(close)
+					case Some(pipe) =>
+						try {
+							using(pipe){ stub.receive(close) }
+						} finally {
+							pipe.close(close)
+						}
 					case None => logger.debug(s"unknown pipe-id: $close")
 				}
 			case block:Block =>
 				pipes.get().get(frame.pipeId) match {
-					case Some(pipe) => pipe.receiveQueue.put(block)
+					case Some(pipe) => using(pipe){ stub.receive(block) }
 					case None => logger.debug(s"unknown pipe-id: $block")
 				}
 		}
+	}
+
+	/**
+	 * セッションとパイプをスレッドローカルのコンテキストに設定して処理を実行するユーティリティメソッドです。自動的に
+	 * クリーンアップを行います。
+	 */
+	private[this] def using[T](pipe:Pipe)(f: =>T):T = try {
+		Session.sessions.set(this)
+		Pipe.pipes.set(pipe)
+		f
+	} finally {
+		Pipe.pipes.remove()
+		Session.sessions.remove()
 	}
 
 	// ==============================================================================================
@@ -135,7 +214,7 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 			return None
 		}
 		// 新しいパイプを構築して登録
-		val pipe = new Pipe(open.pipeId, this)
+		val pipe = new Pipe(open.pipeId, open.function, this)
 		if(pipes.compareAndSet(map, map + (pipe.id -> pipe))){
 			return Some(pipe)
 		}
@@ -153,7 +232,7 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 		val map = pipes.get()
 		val id = ((pipeSequence.getAndIncrement & 0x7FFF) | pipeIdMask).toShort
 		if(! map.contains(id)){
-			val pipe = new Pipe(id, this)
+			val pipe = new Pipe(id, function, this)
 			if(pipes.compareAndSet(map, map + (pipe.id -> pipe))){
 				return pipe
 			}
@@ -217,7 +296,7 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 	/**
 	 * リフレクションを使用してサービスのメソッド呼び出しを行うためのクラス。
 	 */
-	private[this] class Stub(service:AnyRef) {
+	private[this] class Stub(service:AnyRef) extends MessageReceiver {
 
 		import scala.language.reflectiveCalls
 
@@ -240,18 +319,22 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 		// ============================================================================================
 		/**
 		 * 指定されたパイプを使用して function の呼び出しを行います。
-		 * @param pipe 呼び出しに使用するパイプ
-		 * @param open 呼び出しの Open メッセージ
 		 */
-		def call(pipe:Pipe, open:Open):Unit = functions.get(open.function) match {
-			case Some(method) =>
-				// TODO アノテーションで別スレッドか同期実行かを選べるようにしたい
-				executor.execute(new Runnable {
-					def run() = call(pipe, open, method)
-				})
-			case None =>
-				logger.debug(s"unexpected function call: ${open.function} is not defined on class ${service.getClass.getSimpleName}")
-				pipe.close(new NoSuchMethodException(open.function.toString))
+		def receive = {
+			case open:Open =>
+				val pipe = Pipe().get
+				functions.get(open.function) match {
+					case Some(method) =>
+						// TODO アノテーションで別スレッドか同期実行かを選べるようにしたい
+						executor.execute(new Runnable {
+							def run() = call(pipe, open, method)
+						})
+					case None =>
+						logger.debug(s"unexpected function call: ${open.function} is not defined on class ${service.getClass.getSimpleName}")
+						pipe.close(new NoSuchMethodException(open.function.toString))
+				}
+			case block:Block => Pipe().get.receive(block)
+			case close:Close[_] => None
 		}
 
 		// ============================================================================================
@@ -263,9 +346,7 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 		 * @param open 呼び出しの Open メッセージ
 		 * @param method 呼び出し対象のメソッド
 		 */
-		private[this] def call(pipe:Pipe, open:Open, method:Method)():Unit = {
-			Session.sessions.set(Session.this)
-			Pipe.pipes.set(pipe)
+		private[this] def call(pipe:Pipe, open:Open, method:Method)():Unit = using(pipe){
 			try {
 
 				// メソッドのパラメータを適切な型に変換
@@ -278,12 +359,10 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 				pipe.close(result)
 
 			} catch {
+				case ex:ThreadDeath => throw ex
 				case ex:Throwable =>
 					logger.debug(s"on call ${method.getSimpleName} with parameter ${open.params}", ex)
 					pipe.close(ex)
-			} finally {
-				Pipe.pipes.remove()
-				Session.sessions.remove()
 			}
 		}
 
@@ -323,7 +402,7 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 				// toString() や hashCode() など Object 型のメソッド呼び出し
 				method.invoke(this, args:_*)
 			} else {
-				val pipe = open(export.value(), (if(args==null) Array[AnyRef]() else args):_*)
+				val pipe = openBuffering(export.value(), (if(args==null) Array[AnyRef]() else args):_*)
 				val close = Await.result(pipe.future, Duration.Inf)     // TODO アノテーションで呼び出しタイムアウトの設定
 				if(close.errorMessage != null){
 					throw new Session.RemoteException(close.errorMessage)

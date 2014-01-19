@@ -47,9 +47,11 @@ case class Block(override val pipeId:Short, payload:Array[Byte], offset:Int, len
 	 */
 	def isEOF:Boolean = length == 0
 
-	override def toString = "%s(%d,[%s],%d,%d)".format(getClass.getSimpleName, pipeId, payload.map {
-		b => "%02X".format(b & 0xFF)
-	}.mkString(","), offset, length)
+	override def toString:String = {
+		"%s(%d,[%s],%d,%d)".format(getClass.getSimpleName, pipeId, payload.map {
+			b => "%02X".format(b & 0xFF)
+		}.mkString(","), offset, length)
+	}
 }
 
 object Block {

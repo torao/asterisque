@@ -7,7 +7,7 @@ package com.kazzla.asterisk
 
 import java.io.{IOException, OutputStream, InputStream}
 import java.nio.ByteBuffer
-import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.{BlockingQueue, LinkedBlockingQueue}
 import scala.concurrent.Promise
 import org.slf4j.LoggerFactory
 
@@ -23,12 +23,12 @@ import org.slf4j.LoggerFactory
  *
  * @author Takami Torao
  */
-class Pipe private[asterisk](val id:Short, session:Session) {
+class Pipe private[asterisk](val id:Short, val function:Short, session:Session) {
 
 	/**
 	 * 受信した [[com.kazzla.asterisk.Block]] インスタンスを保持するためのキュー。
 	 */
-	private[asterisk] val receiveQueue = new LinkedBlockingQueue[Block]()
+	private[this] var receiveQueue:Option[BlockingQueue[Block]] = None
 
 	@volatile
 	private[asterisk] var closed = false
@@ -36,6 +36,8 @@ class Pipe private[asterisk](val id:Short, session:Session) {
 	/**
 	 * このパイプが受信したデータをストリームとして参照するための入力ストリームです。ブロックとして到着したデータは
 	 * 内部でバッファリングされ連続したストリームとして参照されます。
+	 * [[com.kazzla.asterisk.Session.open()]] を使用して作成されたパイプのブロックはブロックのハンドラに渡され
+	 * るためこの入力ストリーム経由で取り出すことはできません。
 	 */
 	lazy val in:InputStream = new IS()
 
@@ -51,6 +53,22 @@ class Pipe private[asterisk](val id:Short, session:Session) {
 	 * このパイプが相手側からクローズされた時に [[com.kazzla.asterisk.Close]] を参照するための Future です。
 	 */
 	val future = promise.future
+
+	private[this] var _blockReceiver:Option[(Block)=>Unit] = None
+
+	def blockReceiver_=(f:Option[(Block)=>Unit]):Unit = {
+		_blockReceiver = f
+		receiveQueue = if(f.isDefined){
+			Some(new LinkedBlockingQueue[Block]())
+		} else {
+			None
+		}
+	}
+
+	private[asterisk] def receive(block:Block):Unit = _blockReceiver match {
+		case Some(r) => r(block)
+		case None => receiveQueue.foreach{ _.put(block) }
+	}
 
 	// ==============================================================================================
 	// ブロックの送信
@@ -103,7 +121,7 @@ class Pipe private[asterisk](val id:Short, session:Session) {
 	 * 相手側から受信した Close によってこのパイプを閉じます。
 	 */
 	private[asterisk] def close(close:Close[_]):Unit = {
-		receiveQueue.put(Block.eof(id))
+		receiveQueue.foreach{ _.put(Block.eof(id)) }
 		session.destroy(id)
 		closed = true
 		promise.success(close)
@@ -116,6 +134,9 @@ class Pipe private[asterisk](val id:Short, session:Session) {
 	 * このパイプ上で受信したブロックをストリームとして参照するためのクラス。
 	 */
 	private[this] class IS extends InputStream {
+		if(receiveQueue.isEmpty){
+			throw new IOException("pipe with open(func,param)(receiver) cannot open input stream")
+		}
 		private[this] var processing:Option[ByteBuffer] = None
 		private[this] var isClosed = false
 		def read():Int = processingBuffer match {
@@ -140,7 +161,7 @@ class Pipe private[asterisk](val id:Short, session:Session) {
 				processing
 			} else if(receiveQueue.isEmpty && closed){
 				None
-			} else receiveQueue.take() match {
+			} else receiveQueue.get.take() match {
 				case Block(pipeId, binary, offset, length) =>
 					if(length <= 0){
 						isClosed = true

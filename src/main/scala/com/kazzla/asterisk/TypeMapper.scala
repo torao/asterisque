@@ -37,21 +37,22 @@ object TypeMapper {
 	 * @return 変換結果
 	 */
 	def appropriateValue[T](value:Any, to:Class[T]):T = {
-
-		// 型がおなじ場合は無変換
 		if(value.getClass == to){
+			// 型がおなじ場合は無変換
 			to.cast(value)
-		}
-
-		mapper.get(to) match {
+		} else mapper.get(to) match {
 			case Some(f) =>
 				if(f.isDefinedAt(value)){
-					to.cast(f(value))
+					if(to.isPrimitive){
+						f(value).asInstanceOf[T]   // long.class.cast(java.lang.Long) は例外となるため
+					} else {
+						to.cast(f(value))
+					}
 				} else {
-					throw new Exception(s"type cannot be compatible: $value to ${to.getSimpleName}")
+					throw new Exception(s"type cannot be compatible: $value:${value.getClass.getSimpleName} to ${to.getSimpleName}")
 				}
 			case None =>
-				throw new Exception(s"type cannot be compatible: $value to ${to.getSimpleName}")
+				throw new Exception(s"type cannot be compatible: $value:${value.getClass.getSimpleName} to ${to.getSimpleName}")
 		}
 	}
 
