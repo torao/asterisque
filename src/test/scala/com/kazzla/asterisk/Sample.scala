@@ -12,6 +12,7 @@ import java.io.PrintWriter
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import org.slf4j.LoggerFactory
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object Sample {
 	val logger = LoggerFactory.getLogger(Sample.getClass)
@@ -19,17 +20,17 @@ object Sample {
 
 	object Node1 {
 
-		val ns = Node("NameServer").serve(new NameServer {
+		val ns = Node("NameServer").serve(new SyncService with NameServer {
 			def lookup(name:String):Int = Session() match {
 				case Some(session) =>
 
 					logger.info("calling log.info(\"hoge\")")
-					val log = session.getRemoteInterface(classOf[LogServer])
+					val log = session.bind(classOf[LogServer])
 					log.info("hoge")
 
 					logger.info("calling log.dump() with line from 0 to 9")
-					val pipe = session.open(30, "hoge"){ b => None }
-					val out = new PrintWriter(pipe.out)
+					val pipe = session.open(30).call("hoge")
+					val out = new PrintWriter(new PipeOutputStream(pipe))
 					(0 until 10).foreach{ i => out.println(i) }
 					out.close()
 
@@ -38,7 +39,7 @@ object Sample {
 				case None =>
 					throw new Exception()
 			}
-		}).runOn(executor).build()
+		}).build()
 
 		val server = {
 			val future = ns.listen(new InetSocketAddress(7777), None){ s => None }
@@ -48,7 +49,7 @@ object Sample {
 
 	object Node2 {
 
-		val logging = Node("LoggingServer").serve(new LogServer {
+		val logging = Node("LoggingServer").serve(new SyncService with LogServer {
 			def error(msg:String) { Console.out.print(s"ERROR: $msg\n") }
 			def info(msg:String)  { Console.out.print(s"INFO : $msg\n") }
 			def dump(msg:String):Unit = Pipe() match {
@@ -60,12 +61,12 @@ object Sample {
 				case None =>
 					throw new Exception()
 			}
-		}).runOn(executor).build()
+		}).build()
 
 		val future = logging.connect(new InetSocketAddress(7777), None)
 
 		val session = Await.result(future, Duration.Inf)
-		val ns = session.getRemoteInterface(classOf[NameServer])
+		val ns = session.bind(classOf[NameServer])
 		Console.println(ns.lookup("www.google.com"))
 	}
 
@@ -89,6 +90,6 @@ trait LogServer {
 	def info(msg:String):Unit
 	@Export(20)
 	def error(msg:String):Unit
-	@Export(30)
+	@Export(value=30,stream=true)
 	def dump(msg:String):Unit
 }

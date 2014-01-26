@@ -5,7 +5,6 @@
 */
 package com.kazzla.asterisk
 
-import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicReference
 import scala.annotation.tailrec
 import org.slf4j.LoggerFactory
@@ -13,8 +12,9 @@ import java.net.SocketAddress
 import com.kazzla.asterisk.netty.Netty
 import com.kazzla.asterisk.codec.{MsgPackCodec, Codec}
 import javax.net.ssl.SSLContext
-import scala.util.{Failure, Success}
-import scala.concurrent.{Promise, Future}
+import scala.concurrent.{ExecutionContext, Promise, Future}
+import scala.util.Failure
+import scala.util.Success
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Node
@@ -22,21 +22,20 @@ import scala.concurrent.{Promise, Future}
 /**
  * @author Takami Torao
  */
-class Node private[Node](name:String, executor:Executor, initService:Object, bridge:Bridge, codec:Codec){
+class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:Codec){
 	import Node._
 
 	@volatile
-	private[this] var service = initService
+	private[this] var _service = initService
 
 	private[this] val servers = new AtomicReference(Seq[Server]())
 	private[this] val sessions = new AtomicReference(Seq[Session]())
 
 	val onConnect = new EventHandlers[Session]()
 
-	def service_=(newService:Object):Object = {
-		val old = service
-		service = newService
-		sessions.get().foreach{ _.service_=(newService) }
+	def service_=(newService:Service):Service = {
+		val old = _service
+		_service = newService
 		old
 	}
 
@@ -79,7 +78,7 @@ class Node private[Node](name:String, executor:Executor, initService:Object, bri
 	 */
 	def bind(wire:Wire):Session = {
 		logger.trace(s"bind($wire):$name")
-		val s = new Session(s"$name[${wire.peerName}]", executor, service, wire)
+		val s = new Session(s"$name[${wire.peerName}]", _service, wire)
 		add(sessions, s)
 		s.onClosed ++ { session => remove(sessions, session) }
 		s
@@ -105,22 +104,16 @@ object Node {
 	def apply(name:String):Builder = new Builder(name)
 
 	class Builder private[Node](name:String) {
-		private var executor:Executor = scala.concurrent.ExecutionContext.global
-		private var service:Object = new Object()
+		private var service:Service = new Service {}
 		private var bridge:Bridge = Netty
 		private var codec:Codec = MsgPackCodec
-
-		def runOn(exec:Executor):Builder = {
-			this.executor = executor
-			this
-		}
 
 		def bridge(bridge:Bridge):Builder = {
 			this.bridge = bridge
 			this
 		}
 
-		def serve(service:Object):Builder = {
+		def serve(service:Service):Builder = {
 			this.service = service
 			this
 		}
@@ -130,7 +123,7 @@ object Node {
 			this
 		}
 
-		def build():Node = new Node(name, executor, service, bridge, codec)
+		def build():Node = new Node(name, service, bridge, codec)
 
 	}
 

@@ -57,7 +57,7 @@ have correct peer name. $e9
 	}
 
 	def e3 = wires{ (w1, w2) =>
-		val m1 = Open(1, 2)
+		val m1 = Open(1, 2, Seq[Any]())
 		val m2 = Close(2, "success", null)
 		val p1 = Promise[Message]()
 		val p2 = Promise[Message]()
@@ -82,13 +82,13 @@ have correct peer name. $e9
 		val hs1 = List(H(1), H(2), H(3))
 		hs1.foreach{ w2.onReceive ++ _.h }
 		w2.start()
-		w1.send(Open(0, 0))
+		w1.send(Open(0, 0, Seq[Any]()))
 		hs1.foreach{ _.r }
 		count === hs1.map{ _.n }.sum
 	}
 
 	def e5 = wires{ (w1, w2) =>
-		val msg = Array(Open(5, 0), Block.eof(5), Close(5, "hoge", null))
+		val msg = Array(Open(5, 0, Seq[Any]()), Block.eof(5), Close(5, "hoge", null))
 		val r = new collection.mutable.ArrayBuffer[Message]()
 		val p1 = Promise[Int]()
 		val p2 = Promise[Int]()
@@ -118,20 +118,20 @@ have correct peer name. $e9
 	}
 
 	def e6 = wires{ (w1, w2) =>
-		w1.send(Open(6, 0))
+		w1.send(Open(6, 0, Seq[Any]()))
 		w1.close()
-		w1.send(Open(6, 1)) must throwA[java.io.IOException]
+		w1.send(Open(6, 1, Seq[Any]())) must throwA[java.io.IOException]
 	}
 
 	def e7 = wires{ (w1, w2) =>
 		var count = 0
 		w2.onReceive ++ { _ => count += 1 }
 		w2.start()
-		w1.send(Open(7, 0))
+		w1.send(Open(7, 0, Seq[Any]()))
 		Thread.sleep(500)
 		w2.close()
 		try {
-			w1.send(Open(7, 1))
+			w1.send(Open(7, 1, Seq[Any]()))
 			Thread.sleep(500)
 			count === 1
 		} catch {

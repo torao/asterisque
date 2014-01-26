@@ -36,6 +36,23 @@ object TypeMapper {
 	 * @param to 変換後の値
 	 * @return 変換結果
 	 */
+	def appropriateValues(value:Seq[Any], to:Seq[Class[_]]):Array[Object] = {
+		if(value != null && value.length == to.length){
+			to.zip(value).map{ case ((c,v)) => appropriateValue(v, c).asInstanceOf[Object] }.toArray
+		} else {
+			throw new IllegalArgumentException(s"incompatible parameter size: ${if(value==null) 0 else value.length}, to ${to.length}")
+		}
+	}
+
+	// ==============================================================================================
+	// 適切な型への変換
+	// ==============================================================================================
+	/**
+	 * 指定された値を型の違う同値に変換します。
+	 * @param value 変換する値
+	 * @param to 変換後の値
+	 * @return 変換結果
+	 */
 	def appropriateValue[T](value:Any, to:Class[T]):T = {
 		if(value.getClass == to){
 			// 型がおなじ場合は無変換

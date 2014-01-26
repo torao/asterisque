@@ -9,6 +9,7 @@ import java.io._
 import org.slf4j._
 import java.text.NumberFormat
 import scala.collection.JavaConversions._
+import java.lang.reflect.Method
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // asterisk
@@ -19,6 +20,10 @@ import scala.collection.JavaConversions._
 package object asterisk {
 	import scala.language.reflectiveCalls
 	private[this] val logger = LoggerFactory.getLogger("com.kazzla.asterisk")
+
+	class RemoteException(message:String, ex:Throwable) extends Exception(message, ex) {
+		def this(message:String) = this(message, null)
+	}
 
 	// ==============================================================================================
 	// オブジェクトのクローズ
@@ -96,6 +101,18 @@ package object asterisk {
 		case '\"' => "\\\""
 		case c if ! Character.isDefined(ch) | Character.isISOControl(ch) => f"\\u${c.toInt}%04X"
 		case c => c.toString
+	}
+
+	/**
+	 * メソッドからデバッグ用の名前を取得するための拡張。
+	 * @param method メソッド
+	 */
+	private[asterisk] implicit class RichMethod(method:Method){
+		def getSimpleName:String = {
+			method.getDeclaringClass.getSimpleName + "." + method.getName + "(" + method.getParameterTypes.map { p =>
+				p.getSimpleName
+			}.mkString(",") + "):" + method.getReturnType.getSimpleName
+		}
 	}
 
 }

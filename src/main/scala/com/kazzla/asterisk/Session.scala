@@ -5,14 +5,13 @@
 */
 package com.kazzla.asterisk
 
-import java.lang.reflect.{Method, InvocationHandler}
-import java.util.concurrent.Executor
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicReference, AtomicInteger}
 import scala.annotation.tailrec
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
 import org.slf4j.LoggerFactory
 import java.io.IOException
+import scala.concurrent.{Await, Promise}
+import java.lang.reflect.{Method, InvocationHandler}
+import scala.concurrent.duration.Duration
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Session
@@ -20,11 +19,19 @@ import java.io.IOException
 /**
  * @author Takami Torao
  * @param name このセッションの名前
- * @param executor このセッション上での RPC 処理を実行するためのスレッドプール
  */
-class Session(val name:String, executor:Executor, service:Object, val wire:Wire) {
+class Session(val name:String, defaultService:Service, val wire:Wire) {
 
-	import Session._
+	import Session.logger
+
+	@volatile
+	private[this] var _service = defaultService
+
+	def service_=(s:Service):Service = {
+		val old = _service
+		_service = s
+		old
+	}
 
 	/**
 	 * このセッションで生成するパイプの ID に付加するビットマスク。
@@ -42,30 +49,19 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 	private[this] val pipes = new AtomicReference[Map[Short, Pipe]](Map())
 
 	/**
-	 * このセッション上で相手側に提供しているサービスのスタブ。
-	 */
-	@volatile
-	private[this] var stub:MessageReceiver = _
-	service_=(service)
-
-	/**
 	 * このセッションがクローズされているかを表すフラグ。
 	 */
 	private[this] val closed = new AtomicBoolean(false)
 
 	/**
+	 * このセッション上で新しい接続を受け付けた時に呼び出されるイベントハンドラです。
+	 */
+	val onAccept = new EventHandlers[(Pipe,Open)]()
+
+	/**
 	 * このセッションがクローズされたときに呼び出されるイベントハンドラです。
 	 */
 	val onClosed = new EventHandlers[Session]()
-
-	/**
-	 */
-	def service_=(service:Object) = receiver_=(new Stub(service))
-
-	/**
-	 * このセッション上でピアに提供するサービス (function の集合) を設定します。
-	 */
-	def receiver_=(receiver:MessageReceiver) = stub = receiver
 
 	/**
 	 * セッションに設定できる任意の値。
@@ -82,15 +78,15 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 	/**
 	 * このセッションに任意の値を関連づけます。
 	 * @param name 値の名前
-	 * @param value 値
+	 * @param obj 設定する値
 	 * @return 置き換えられる前の値
 	 */
-	def setAttribute(name:String, value:Any):Option[Any] = {
+	def setAttribute(name:String, obj:Any):Option[Any] = {
 		@tailrec
 		def set():Option[Any] = {
 			val map = attribute.get()
 			val old = map.get(name)
-			if(attribute.compareAndSet(map, map.updated(name, value))){
+			if(attribute.compareAndSet(map, map.updated(name, obj))){
 				old
 			} else {
 				set()
@@ -113,48 +109,12 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 	// パイプのオープン
 	// ==============================================================================================
 	/**
-	 * このセッション上のピアに対して指定された function とのパイプを作成します。
-	 * @param function function の識別子
-	 * @param params function の実行パラメータ
-	 * @return function とのパイプ
-	 */
-	private[asterisk] def openBuffering(function:Short, params:AnyRef*):Pipe = {
-		open(None, function, params:_*)
-	}
-
-	// ==============================================================================================
-	// パイプのオープン
-	// ==============================================================================================
-	/**
 	 * このセッション上のピアに対して指定された function との非同期呼び出しのためのパイプを作成します。
 	 *
 	 * @param function function の識別子
-	 * @param params function の実行パラメータ
 	 * @return function とのパイプ
 	 */
-	def open(function:Short, params:AnyRef*)(blockReceiver:(Block)=>Unit):Pipe = {
-		open(Some(blockReceiver), function, params:_*)
-	}
-
-	private[this] def open(blockReceiver:Option[(Block)=>Unit], function:Short, params:AnyRef*):Pipe = {
-		val pipe = create(function, params:_*)
-		pipe.blockReceiver_=(blockReceiver)
-		post(Open(pipe.id, function, params:_*))
-		pipe
-	}
-
-	// ==============================================================================================
-	// リモートインターフェースの参照
-	// ==============================================================================================
-	/**
-	 * このセッションの相手側となるインターフェースを参照します。
-	 */
-	def getRemoteInterface[T](clazz:Class[T]):T = {
-		clazz.cast(java.lang.reflect.Proxy.newProxyInstance(
-			Thread.currentThread().getContextClassLoader,
-			Array(clazz), new Skeleton(clazz)
-		))
-	}
+	def open[T](function:Short):Pipe.Builder = new Pipe.Builder(this, function)
 
 	/**
 	 * 指定されたメッセージを受信したときに呼び出されその種類によって処理を分岐します。
@@ -163,38 +123,28 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 		if(logger.isTraceEnabled){
 			logger.trace(s"dispatch:$frame")
 		}
-		frame match {
-			case open:Open =>
-				create(open).foreach{ pipe => using(pipe){ stub.receive(open) } }
-			case close:Close[_] =>
-				pipes.get().get(frame.pipeId) match {
-					case Some(pipe) =>
-						try {
-							using(pipe){ stub.receive(close) }
-						} finally {
-							pipe.close(close)
-						}
-					case None => logger.debug(s"unknown pipe-id: $close")
-				}
-			case block:Block =>
-				pipes.get().get(frame.pipeId) match {
-					case Some(pipe) => using(pipe){ stub.receive(block) }
-					case None => logger.debug(s"unknown pipe-id: $block")
-				}
+		val pipe = frame match {
+			case open:Open => create(open)
+			case _ => pipes.get().get(frame.pipeId)
 		}
-	}
-
-	/**
-	 * セッションとパイプをスレッドローカルのコンテキストに設定して処理を実行するユーティリティメソッドです。自動的に
-	 * クリーンアップを行います。
-	 */
-	private[this] def using[T](pipe:Pipe)(f: =>T):T = try {
-		Session.sessions.set(this)
-		Pipe.pipes.set(pipe)
-		f
-	} finally {
-		Pipe.pipes.remove()
-		Session.sessions.remove()
+		pipe match {
+			case Some(p) =>
+				try {
+					Session.using(this, p){
+						_service.dispatch(p, frame)
+					}
+				} catch {
+					case ex:Throwable =>
+						logger.error(s"unexpected error: $frame, closing pipe", ex)
+						post(Close[Any](frame.pipeId, null, s"internal error"))
+						if(ex.isInstanceOf[ThreadDeath]){
+							throw ex
+						}
+				}
+			case None =>
+				logger.debug(s"unknown pipe-id: $frame")
+				post(Close[Any](frame.pipeId, null, s"unknown pipe-id: ${frame.pipeId}"))
+		}
 	}
 
 	// ==============================================================================================
@@ -210,7 +160,7 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 		// 既に使用されているパイプ ID が指定された場合はエラーとしてすぐ終了
 		if(map.contains(open.pipeId)){
 			logger.debug(s"duplicate pipe-id specified: ${open.pipeId}")
-			post(Close(open.pipeId, null, s"duplicate pipe-id specified: ${open.pipeId}"))
+			post(Close[Any](open.pipeId, null, s"duplicate pipe-id specified: ${open.pipeId}"))
 			return None
 		}
 		// 新しいパイプを構築して登録
@@ -228,7 +178,7 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 	 * ピアに対して Open メッセージを送信するためのパイプを生成します。
 	 */
 	@tailrec
-	private[this] def create(function:Short, params:AnyRef*):Pipe = {
+	private[asterisk] final def create(function:Short, params:Seq[Any]):Pipe = {
 		val map = pipes.get()
 		val id = ((pipeSequence.getAndIncrement & 0x7FFF) | pipeIdMask).toShort
 		if(! map.contains(id)){
@@ -237,7 +187,7 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 				return pipe
 			}
 		}
-		create(function, params:_*)
+		create(function, params)
 	}
 
 	// ==============================================================================================
@@ -290,82 +240,17 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 		onClosed(this)
 	}
 
-	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	// Stub
-	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	// ==============================================================================================
+	// リモートインターフェースの参照
+	// ==============================================================================================
 	/**
-	 * リフレクションを使用してサービスのメソッド呼び出しを行うためのクラス。
+	 * このセッションの相手側となるインターフェースを参照します。
 	 */
-	private[this] class Stub(service:AnyRef) extends MessageReceiver {
-
-		import scala.language.reflectiveCalls
-
-		logger.debug(s"binding ${service.getClass.getSimpleName} as service of $name")
-
-		/**
-		 * サービスインスタンスから抽出した function 番号が定義されているメソッドのマップ。
-		 */
-		private[this] val functions = service.getClass.getInterfaces.map{ i =>
-			i.getDeclaredMethods.collect {
-				case m if m.getAnnotation(classOf[Export]) != null =>
-					val id = m.getAnnotation(classOf[Export]).value()
-					logger.debug(s"  function $id to ${m.getSimpleName}")
-					id -> m
-			}
-		}.flatten.toMap
-
-		// ============================================================================================
-		// function の呼び出し
-		// ============================================================================================
-		/**
-		 * 指定されたパイプを使用して function の呼び出しを行います。
-		 */
-		def receive = {
-			case open:Open =>
-				val pipe = Pipe().get
-				functions.get(open.function) match {
-					case Some(method) =>
-						// TODO アノテーションで別スレッドか同期実行かを選べるようにしたい
-						executor.execute(new Runnable {
-							def run() = call(pipe, open, method)
-						})
-					case None =>
-						logger.debug(s"unexpected function call: ${open.function} is not defined on class ${service.getClass.getSimpleName}")
-						pipe.close(new NoSuchMethodException(open.function.toString))
-				}
-			case block:Block => Pipe().get.receive(block)
-			case close:Close[_] => None
-		}
-
-		// ============================================================================================
-		// function の呼び出し
-		// ============================================================================================
-		/**
-		 * 指定されたパイプを使用して function の呼び出しを行います。
-		 * @param pipe 呼び出しに使用するパイプ
-		 * @param open 呼び出しの Open メッセージ
-		 * @param method 呼び出し対象のメソッド
-		 */
-		private[this] def call(pipe:Pipe, open:Open, method:Method)():Unit = using(pipe){
-			try {
-
-				// メソッドのパラメータを適切な型に変換
-				val params = method.getParameterTypes.zip(open.params).map{ case (t, v) =>
-					TypeMapper.appropriateValue(v, t).asInstanceOf[Object]
-				}.toList.toArray
-
-				// メソッドの呼び出し
-				val result = method.invoke(service, params:_*)
-				pipe.close(result)
-
-			} catch {
-				case ex:ThreadDeath => throw ex
-				case ex:Throwable =>
-					logger.debug(s"on call ${method.getSimpleName} with parameter ${open.params}", ex)
-					pipe.close(ex)
-			}
-		}
-
+	def bind[T](clazz:Class[T]):T = {
+		clazz.cast(java.lang.reflect.Proxy.newProxyInstance(
+			Thread.currentThread().getContextClassLoader,
+			Array(clazz), new Skeleton(clazz)
+		))
 	}
 
 	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -400,14 +285,20 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 			val export = method.getAnnotation(classOf[Export])
 			if(export == null){
 				// toString() や hashCode() など Object 型のメソッド呼び出し
+				logger.debug(s"normal method: ${method.getSimpleName}")
 				method.invoke(this, args:_*)
 			} else {
-				val pipe = openBuffering(export.value(), (if(args==null) Array[AnyRef]() else args):_*)
-				val close = Await.result(pipe.future, Duration.Inf)     // TODO アノテーションで呼び出しタイムアウトの設定
-				if(close.errorMessage != null){
-					throw new Session.RemoteException(close.errorMessage)
-				}
-				close.result.asInstanceOf[AnyRef]
+				val promise = Promise[Any]()
+				open[Any](export.value()).onBlock{ block =>
+				// ignore unreceiveable blocks
+					None
+				}.onSuccess{ result =>
+					promise.success(result)
+				}.onFailure{ ex =>
+					promise.failure(ex)
+				}.call((if(args==null) Array[AnyRef]() else args):_*)
+
+				Await.result(promise.future, Duration.Inf).asInstanceOf[AnyRef]
 			}
 		}
 	}
@@ -417,32 +308,60 @@ class Session(val name:String, executor:Executor, service:Object, val wire:Wire)
 object Session {
 	private[Session] val logger = LoggerFactory.getLogger(classOf[Session])
 
-	/**
-	 * サービスの呼び出し中にセッションを参照するためのスレッドローカル変数。
-	 */
-	private[Session] val sessions = new ThreadLocal[Session]()
+	private[this] val sessions = new ThreadLocal[Session]()
 
-	// ==============================================================================================
-	// セッションの参照
-	// ==============================================================================================
-	/**
-	 * 現在のスレッドを実行しているセッションを参照します。
-	 * @return 現在のセッション
-	 */
 	def apply():Option[Session] = Option(sessions.get())
 
-	class RemoteException(msg:String) extends RuntimeException(msg)
-
-	/**
-	 * メソッドからデバッグ用の名前を取得するための拡張。
-	 * @param method メソッド
-	 */
-	private[Session] implicit class RichMethod(method:Method){
-		def getSimpleName:String = {
-			method.getDeclaringClass.getSimpleName + "." + method.getName + "(" + method.getParameterTypes.map { p =>
-				p.getSimpleName
-			}.mkString(",") + "):" + method.getReturnType.getSimpleName
+	private[asterisk] def using[T](session:Session, pipe:Pipe)(f: =>T):T = {
+		val old = sessions.get()
+		sessions.set(session)
+		try {
+			Pipe.using(pipe)(f)
+		} finally {
+			sessions.set(old)
 		}
 	}
+
+	/*
+	class AsyncCall private[Session](useStream:Boolean) {
+		private[this] val prematureBlocks = new LinkedBlockingQueue[Block]()
+		private[Session] val promise = Promise[Any]()
+		private[Session] var _pipe:Pipe = _
+		val result = promise.future
+		def pipe = _pipe
+
+		private[Session] def block(b:Block):Unit = if(useStream){
+			prematureBlocks.synchronized {
+				_onBlock match {
+					case Some(f) => f(b)
+					case None => prematureBlocks.put(b)
+				}
+			}
+		}
+		private[this] var _onBlock:Option[(Block)=>Unit] = None
+		def onBlock(f:(Block)=>Unit) = {
+			prematureBlocks.synchronized {
+				_onBlock match {
+					case Some(_) =>
+						throw new IllegalStateException("onBlock handler is already set")
+					case None =>
+						if(! useStream){
+							throw new IllegalStateException(s"cannot set onBlock handler for a method annotated with @Export(stream=false)")
+						}
+						_onBlock = Some({ block =>
+							try { f(block) } catch {
+								case ex:ThreadDeath => throw ex
+								case ex:Throwable =>
+									logger.error(s"fail to callback for block received: ${f.toString()}", ex)
+							}
+						})
+						while(! prematureBlocks.isEmpty){
+							_onBlock.get.apply(prematureBlocks.take())
+						}
+				}
+			}
+		}
+	}
+	*/
 
 }

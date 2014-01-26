@@ -19,7 +19,7 @@ sealed abstract class Message(val pipeId:Short) extends Serializable
 /**
  * @author Takami Torao
  */
-case class Open(override val pipeId:Short, function:Short, params:Any*) extends Message(pipeId) {
+case class Open(override val pipeId:Short, function:Short, params:Seq[Any]) extends Message(pipeId) {
 	override def toString = s"${getClass.getSimpleName}($pipeId,$function,${debugString(params)})"
 }
 

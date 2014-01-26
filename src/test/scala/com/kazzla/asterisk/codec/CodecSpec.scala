@@ -8,7 +8,6 @@ package com.kazzla.asterisk.codec
 import org.specs2.Specification
 import com.kazzla.asterisk._
 import org.specs2.matcher.MatchResult
-import scala.collection.JavaConversions._
 import com.kazzla.asterisk.Close
 import com.kazzla.asterisk.Open
 import java.util.UUID
@@ -29,24 +28,24 @@ encode and decode supported data-types. $supportedDataTypes
 
 	def encode01 = {
 		Seq[Message](
-			Open(0, 0),
-			Open(0, 1, null),
-			Open(0, 2, true),
-			Open(0, 3, false),
-			Open(0, 4, 0x7F.toByte),
-			Open(0, 5, 0x7FFF.toShort),
-			Open(0, 6, 0x7FFFFFFF),
-			Open(0, 7, 0x7FFFFFFFFFFFFFFFl),
-			Open(0, 8, 0.1.toFloat),
-			Open(0, 9, 0.01),
-			Open(0, 10, ""),
-			Open(0, 11, "ABC"),
-			Open(0, 12, Array()),
-			Open(0, 13, Array(true, false)),
-			Open(0, 14, Array(1, 2, 3)),
-			Open(0, 15, Array(false, -1, "xyz")),
-			Open(0, 16, true, false, 100, "hoge"),
-			Open(0, 17, Map("A"->100,'A'->200,300->'X'), Seq("A",'b',100,false), Array("A",'b',300,true)),
+			Open(0, 0, Seq[Any]()),
+			Open(0, 1, Seq[Any](null)),
+			Open(0, 2, Seq[Any](true)),
+			Open(0, 3, Seq[Any](false)),
+			Open(0, 4, Seq[Any](0x7F.toByte)),
+			Open(0, 5, Seq[Any](0x7FFF.toShort)),
+			Open(0, 6, Seq[Any](0x7FFFFFFF)),
+			Open(0, 7, Seq[Any](0x7FFFFFFFFFFFFFFFl)),
+			Open(0, 8, Seq[Any](0.1.toFloat)),
+			Open(0, 9, Seq[Any](0.01)),
+			Open(0, 10, Seq[Any]("")),
+			Open(0, 11, Seq[Any]("ABC")),
+			Open(0, 12, Seq[Any](Array())),
+			Open(0, 13, Seq[Any](Array(true, false))),
+			Open(0, 14, Seq[Any](Array(1, 2, 3))),
+			Open(0, 15, Seq[Any](Array(false, -1, "xyz"))),
+			Open(0, 16, Seq[Any](true, false, 100, "hoge")),
+			Open(0, 17, Seq[Any](Map("A"->100,'A'->200,300->'X'), Seq("A",'b',100,false), Array("A",'b',300,true))),
 
 			Close(0, null, null),
 			Close(1, -100, null),
@@ -79,7 +78,7 @@ encode and decode supported data-types. $supportedDataTypes
 			Array[Byte](0, 1, 2, 3, 4, 5),
 			UUID.randomUUID()
 		)
-		(types.map{ value => Open(0, 0, value) }.toList ::: types.map{ value => Close(0, value, null) }.toList).map{ msg =>
+		(types.map{ value => Open(0, 0, Seq(value)) }.toList ::: types.map{ value => Close(0, value, null) }.toList).map{ msg =>
 			equals(msg, codec.decode(codec.encode(msg)).get)
 		}.reduceLeft{ _ and _ }
 	}

@@ -84,7 +84,7 @@ object MsgPackCodec extends Codec {
 				val port = unpacker.readShort()
 				val params = decode(unpacker).asInstanceOf[Array[AnyRef]]
 				buffer.position(unpacker.getReadByteCount)
-				Some(Open(pipeId, port, params:_*))
+				Some(Open(pipeId, port, params))
 			case TYPE_CLOSE =>
 				val pipeId = unpacker.readShort()
 				val success = unpacker.readBoolean()

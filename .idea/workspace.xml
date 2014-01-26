@@ -1,9 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="BookmarkManager">
+    <bookmark url="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Pipe.scala" line="1" />
+  </component>
   <component name="ChangeListManager">
     <list default="true" id="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/SessionSpec.scala" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Service.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/codec/CodecSpec.scala" afterPath="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/codec/CodecSpec.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/EventHandlers.scala" afterPath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/EventHandlers.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/com/kazzla/asterisk/Export.java" afterPath="$PROJECT_DIR$/src/main/java/com/kazzla/asterisk/Export.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Message.scala" afterPath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Message.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/codec/MsgPackCodec.scala" afterPath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/codec/MsgPackCodec.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Node.scala" afterPath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Node.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Pipe.scala" afterPath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Pipe.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/Sample.scala" afterPath="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/Sample.scala" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Session.scala" afterPath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Session.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/SessionSpec.scala" afterPath="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/SessionSpec.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/TypeMapper.scala" afterPath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/TypeMapper.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/WireSpec.scala" afterPath="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/WireSpec.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/package.scala" afterPath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/package.scala" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <ignored path="asterisk.iws" />
@@ -69,84 +84,21 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="Session.scala" pinned="false" current="true" current-in-tab="true">
+      <file leaf-file-name="Session.scala" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Session.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="324" column="40" selection-start="10207" selection-end="10207" vertical-scroll-proportion="0.77954143" vertical-offset="4253" max-vertical-offset="5445">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="Sample.scala" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/Sample.scala">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="89" column="6" selection-start="2378" selection-end="2378" vertical-scroll-proportion="0.0" vertical-offset="728" max-vertical-offset="1350">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="SSLTest.scala" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/test/scala/SSLTest.scala">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="22" column="7" selection-start="876" selection-end="876" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="900">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="SSLTest2.scala" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/test/scala/SSLTest2.scala">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="37" column="56" selection-start="1250" selection-end="1250" vertical-scroll-proportion="0.0" vertical-offset="375" max-vertical-offset="1395">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="HowToUseSelfSignedCert.scala" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/test/scala/HowToUseSelfSignedCert.scala">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="113" column="54" selection-start="4192" selection-end="4199" vertical-scroll-proportion="0.0" vertical-offset="1695" max-vertical-offset="2910">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="NettySpec.scala" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/netty/NettySpec.scala">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="19" column="35" selection-start="576" selection-end="576" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="390">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="MessageSpec.scala" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/MessageSpec.scala">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="16" column="6" selection-start="518" selection-end="518" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="645">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="SessionSpec.scala" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/SessionSpec.scala">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="16" column="0" selection-start="524" selection-end="524" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="570">
+            <state line="132" column="0" selection-start="3621" selection-end="3621" vertical-scroll-proportion="0.0" vertical-offset="1731" max-vertical-offset="5535">
               <folding>
-                <element signature="e#198#229#0" expanded="true" />
+                <element signature="e#198#280#0" expanded="true" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Bridge.scala" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Bridge.scala">
+      <file leaf-file-name="Sample.scala" pinned="false" current="true" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/Sample.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="49" column="6" selection-start="1808" selection-end="1808" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="735">
+            <state line="72" column="7" selection-start="2082" selection-end="2082" vertical-scroll-proportion="1.4805825" vertical-offset="0" max-vertical-offset="1350">
               <folding />
             </state>
           </provider>
@@ -155,7 +107,67 @@
       <file leaf-file-name="Wire.scala" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Wire.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="24" column="6" selection-start="816" selection-end="816" vertical-scroll-proportion="0.0" vertical-offset="165" max-vertical-offset="4110">
+            <state line="169" column="0" selection-start="5158" selection-end="5158" vertical-scroll-proportion="0.0" vertical-offset="2166" max-vertical-offset="4110">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="Node.scala" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Node.scala">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="106" column="0" selection-start="3463" selection-end="3463" vertical-scroll-proportion="0.0" vertical-offset="1401" max-vertical-offset="2295">
+              <folding>
+                <element signature="n#!!doc" expanded="true" />
+                <element signature="e#198#248#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="TypeMapper.scala" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/TypeMapper.scala">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="40" column="94" selection-start="1414" selection-end="1414" vertical-scroll-proportion="0.0" vertical-offset="306" max-vertical-offset="2640">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="Pipe.scala" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Pipe.scala">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="81" column="0" selection-start="2934" selection-end="2934" vertical-scroll-proportion="0.0" vertical-offset="1026" max-vertical-offset="4275">
+              <folding>
+                <element signature="n#!!doc" expanded="true" />
+                <element signature="e#201#231#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="ClassLoader.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home/src.zip!/java/lang/ClassLoader.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="357" column="0" selection-start="13586" selection-end="13586" vertical-scroll-proportion="0.0" vertical-offset="4296" max-vertical-offset="32730">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="Launcher.class" pinned="false" current="false" current-in-tab="false">
+        <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home/jre/lib/rt.jar!/sun/misc/Launcher.class">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="46" column="27" selection-start="1714" selection-end="1714" vertical-scroll-proportion="0.0" vertical-offset="501" max-vertical-offset="1155">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="Message.scala" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Message.scala">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="31" column="0" selection-start="1193" selection-end="1193" vertical-scroll-proportion="0.0" vertical-offset="216" max-vertical-offset="1155">
               <folding />
             </state>
           </provider>
@@ -182,8 +194,6 @@
         <option value="$PROJECT_DIR$/src/src/test/scala/com/kazzla/asterisk/MessageSpec.scala" />
         <option value="$PROJECT_DIR$/src/src/test/scala/com/kazzla/asterisk/EventHandlerSpec.scala" />
         <option value="$PROJECT_DIR$/src/src/main/scala/com/kazzla/asterisk/EventHandlers.scala" />
-        <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/codec/MsgPackCodec.scala" />
-        <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/EventHandlers.scala" />
         <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/netty/Netty.scala" />
         <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/netty/package.scala" />
         <option value="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/BridgeSpec.scala" />
@@ -192,11 +202,29 @@
         <option value="$PROJECT_DIR$/src/test/scala/SSLTest2.scala" />
         <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Wire.scala" />
         <option value="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/netty/NettySpec.scala" />
-        <option value="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/WireSpec.scala" />
         <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/netty/AsteriskPipelineFactory.scala" />
         <option value="$PROJECT_DIR$/build.sbt" />
-        <option value="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/SessionSpec.scala" />
+        <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/MessageReceiver.scala" />
+        <option value="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/idl/SampleIDL.scala" />
+        <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Message.scala" />
+        <option value="$PROJECT_DIR$/src/main/java/com/kazzla/asterisk/Export.java" />
+        <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/sync/package.scala" />
+        <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/EventHandlers.scala" />
+        <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/codec/MsgPackCodec.scala" />
+        <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/RemoteException.scala" />
+        <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/sync/Node.scala" />
+        <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/sync/Session.scala" />
+        <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/sync/Pipe.scala" />
+        <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/package.scala" />
+        <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Pipe.scala" />
         <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Session.scala" />
+        <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Node.scala" />
+        <option value="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/Sample.scala" />
+        <option value="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/SessionSpec.scala" />
+        <option value="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/WireSpec.scala" />
+        <option value="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/codec/CodecSpec.scala" />
+        <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/TypeMapper.scala" />
+        <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Service.scala" />
       </list>
     </option>
   </component>
@@ -218,25 +246,52 @@
             <id>Android Lint</id>
           </State>
           <State>
+            <id>Code maturity issues</id>
+          </State>
+          <State>
             <id>Code style issues</id>
           </State>
           <State>
-            <id>Groovy</id>
+            <id>Declaration redundancy</id>
           </State>
           <State>
             <id>Imports</id>
           </State>
           <State>
-            <id>Inheritance issues</id>
+            <id>Internationalization issues</id>
           </State>
           <State>
-            <id>Logging issues</id>
+            <id>J2ME issues</id>
           </State>
           <State>
-            <id>Potentially confusing code constructsGroovy</id>
+            <id>Javadoc issues</id>
+          </State>
+          <State>
+            <id>Memory issues</id>
+          </State>
+          <State>
+            <id>Performance issues</id>
+          </State>
+          <State>
+            <id>Plugin DevKit</id>
+          </State>
+          <State>
+            <id>Probable bugs</id>
+          </State>
+          <State>
+            <id>Properties Files</id>
+          </State>
+          <State>
+            <id>Resource management issues</id>
           </State>
           <State>
             <id>Scala: General</id>
+          </State>
+          <State>
+            <id>XPath</id>
+          </State>
+          <State>
+            <id>XSLT</id>
           </State>
         </expanded-state>
       </profile-state>
@@ -269,6 +324,7 @@
     </navigator>
     <panes>
       <pane id="PackagesPane" />
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <PATH>
@@ -361,7 +417,7 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="BridgeSpec.scala" />
+              <option name="myItemId" value="Sample.scala" />
               <option name="myItemType" value="org.jetbrains.plugins.scala.components.ScalaDefsProjectViewProvider$ScalaFileTreeNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -408,8 +464,34 @@
               <option name="myItemId" value="asterisk" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
+          </PATH>
+          <PATH>
             <PATH_ELEMENT>
-              <option name="myItemId" value="Wire.scala" />
+              <option name="myItemId" value="asterisk" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisk" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="main" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="scala" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisk" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="Pipe.scala" />
               <option name="myItemType" value="org.jetbrains.plugins.scala.components.ScalaDefsProjectViewProvider$ScalaFileTreeNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -438,6 +520,40 @@
               <option name="myItemId" value="asterisk" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="package.scala" />
+              <option name="myItemType" value="org.jetbrains.plugins.scala.components.ScalaDefsProjectViewProvider$ScalaFileTreeNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisk" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisk" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="main" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="scala" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisk" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="Node.scala" />
+              <option name="myItemType" value="org.jetbrains.plugins.scala.components.ScalaDefsProjectViewProvider$ScalaFileTreeNode" />
+            </PATH_ELEMENT>
           </PATH>
           <PATH>
             <PATH_ELEMENT>
@@ -459,7 +575,6 @@
           </PATH>
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -469,7 +584,7 @@
     <property name="options.splitter.main.proportions" value="0.3" />
     <property name="Repository.Attach.JavaDocs" value="true" />
     <property name="recentsLimit" value="5" />
-    <property name="options.lastSelected" value="preferences.sourceCode.Java" />
+    <property name="options.lastSelected" value="Errors" />
     <property name="MemberChooser.sorted" value="false" />
     <property name="last_opened_file_path" value="/opt/scala-2.10.2/lib/scala-reflect.jar!/" />
     <property name="project.structure.side.proportion" value="0.2" />
@@ -493,66 +608,14 @@
       <recent name="$PROJECT_DIR$/docs" />
       <recent name="$PROJECT_DIR$/src/src/main/scala" />
     </key>
+    <key name="MoveClassesOrPackagesDialog.RECENTS_KEY">
+      <recent name="com.kazzla.asterisk" />
+    </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/src" />
     </key>
   </component>
-  <component name="RunManager" selected="Specs2.SessionSpec">
-    <configuration default="false" name="Specs2 in 'scala'" type="Specs2RunConfiguration" factoryName="Specs2" temporary="true">
-      <module name="asterisk" />
-      <setting name="path" value="" />
-      <setting name="package" value="" />
-      <setting name="vmparams" value="" />
-      <setting name="params" value="" />
-      <setting name="workingDirectory" value="$PROJECT_DIR$" />
-      <setting name="searchForTest" value="Across module dependencies" />
-      <setting name="testName" value="" />
-      <setting name="testKind" value="All in package" />
-      <setting name="showProgressMessages" value="true" />
-      <RunnerSettings RunnerId="Debug">
-        <option name="DEBUG_PORT" value="" />
-        <option name="TRANSPORT" value="0" />
-        <option name="LOCAL" value="true" />
-      </RunnerSettings>
-      <ConfigurationWrapper RunnerId="Debug" />
-      <method />
-    </configuration>
-    <configuration default="false" name="SSLTest" type="Application" factoryName="Application" temporary="true">
-      <option name="MAIN_CLASS_NAME" value="SSLTest" />
-      <option name="VM_PARAMETERS" />
-      <option name="PROGRAM_PARAMETERS" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
-      <option name="ALTERNATIVE_JRE_PATH" />
-      <option name="ENABLE_SWING_INSPECTOR" value="false" />
-      <option name="ENV_VARIABLES" />
-      <option name="PASS_PARENT_ENVS" value="true" />
-      <module name="asterisk" />
-      <envs />
-      <RunnerSettings RunnerId="Run" />
-      <ConfigurationWrapper RunnerId="Run" />
-      <method />
-    </configuration>
-    <configuration default="false" name="SSLTest2" type="Application" factoryName="Application" temporary="true">
-      <option name="MAIN_CLASS_NAME" value="SSLTest2" />
-      <option name="VM_PARAMETERS" value="" />
-      <option name="PROGRAM_PARAMETERS" value="" />
-      <option name="WORKING_DIRECTORY" value="file://$PROJECT_DIR$" />
-      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
-      <option name="ALTERNATIVE_JRE_PATH" value="" />
-      <option name="ENABLE_SWING_INSPECTOR" value="false" />
-      <option name="ENV_VARIABLES" />
-      <option name="PASS_PARENT_ENVS" value="true" />
-      <module name="asterisk" />
-      <envs />
-      <RunnerSettings RunnerId="Debug">
-        <option name="DEBUG_PORT" value="" />
-        <option name="TRANSPORT" value="0" />
-        <option name="LOCAL" value="true" />
-      </RunnerSettings>
-      <ConfigurationWrapper RunnerId="Debug" />
-      <method />
-    </configuration>
+  <component name="RunManager" selected="Application.Sample">
     <configuration default="false" name="HowToUseSelfSignedCert" type="Application" factoryName="Application" temporary="true">
       <option name="MAIN_CLASS_NAME" value="HowToUseSelfSignedCert" />
       <option name="VM_PARAMETERS" value="" />
@@ -592,6 +655,64 @@
       <ConfigurationWrapper RunnerId="Debug" />
       <method />
     </configuration>
+    <configuration default="false" name="SessionSpec (1)" type="Specs2RunConfiguration" factoryName="Specs2" temporary="true">
+      <module name="asterisk" />
+      <setting name="path" value="com.kazzla.asterisk.SessionSpec" />
+      <setting name="package" value="" />
+      <setting name="vmparams" value="" />
+      <setting name="params" value="" />
+      <setting name="workingDirectory" value="$PROJECT_DIR$" />
+      <setting name="searchForTest" value="Across module dependencies" />
+      <setting name="testName" value="" />
+      <setting name="testKind" value="Class" />
+      <setting name="showProgressMessages" value="true" />
+      <RunnerSettings RunnerId="Debug">
+        <option name="DEBUG_PORT" value="" />
+        <option name="TRANSPORT" value="0" />
+        <option name="LOCAL" value="true" />
+      </RunnerSettings>
+      <ConfigurationWrapper RunnerId="Debug" />
+      <method />
+    </configuration>
+    <configuration default="false" name="Specs2 in 'scala'" type="Specs2RunConfiguration" factoryName="Specs2" temporary="true">
+      <module name="asterisk" />
+      <setting name="path" value="" />
+      <setting name="package" value="" />
+      <setting name="vmparams" value="" />
+      <setting name="params" value="" />
+      <setting name="workingDirectory" value="$PROJECT_DIR$" />
+      <setting name="searchForTest" value="Across module dependencies" />
+      <setting name="testName" value="" />
+      <setting name="testKind" value="All in package" />
+      <setting name="showProgressMessages" value="true" />
+      <RunnerSettings RunnerId="Debug">
+        <option name="DEBUG_PORT" value="" />
+        <option name="TRANSPORT" value="0" />
+        <option name="LOCAL" value="true" />
+      </RunnerSettings>
+      <ConfigurationWrapper RunnerId="Debug" />
+      <method />
+    </configuration>
+    <configuration default="false" name="Sample" type="Application" factoryName="Application" temporary="true">
+      <option name="MAIN_CLASS_NAME" value="com.kazzla.asterisk.Sample" />
+      <option name="VM_PARAMETERS" />
+      <option name="PROGRAM_PARAMETERS" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
+      <option name="ALTERNATIVE_JRE_PATH" />
+      <option name="ENABLE_SWING_INSPECTOR" value="false" />
+      <option name="ENV_VARIABLES" />
+      <option name="PASS_PARENT_ENVS" value="true" />
+      <module name="asterisk" />
+      <envs />
+      <RunnerSettings RunnerId="Debug">
+        <option name="DEBUG_PORT" value="" />
+        <option name="TRANSPORT" value="0" />
+        <option name="LOCAL" value="true" />
+      </RunnerSettings>
+      <ConfigurationWrapper RunnerId="Debug" />
+      <method />
+    </configuration>
     <configuration default="true" type="#org.jetbrains.idea.devkit.run.PluginConfigurationType" factoryName="Plugin" singleton="true">
       <module name="" />
       <option name="VM_PARAMETERS" value="-Xmx512m -Xms256m -XX:MaxPermSize=250m" />
@@ -618,14 +739,6 @@
       <option name="SHOW_LOGCAT_AUTOMATICALLY" value="true" />
       <method />
     </configuration>
-    <configuration default="true" type="Remote" factoryName="Remote">
-      <option name="USE_SOCKET_TRANSPORT" value="true" />
-      <option name="SERVER_MODE" value="false" />
-      <option name="SHMEM_ADDRESS" value="javadebug" />
-      <option name="HOST" value="localhost" />
-      <option name="PORT" value="5005" />
-      <method />
-    </configuration>
     <configuration default="true" type="Specs2RunConfiguration" factoryName="Specs2">
       <module name="" />
       <setting name="path" value="" />
@@ -637,6 +750,27 @@
       <setting name="testName" value="" />
       <setting name="testKind" value="Class" />
       <setting name="showProgressMessages" value="true" />
+      <method />
+    </configuration>
+    <configuration default="true" type="Remote" factoryName="Remote">
+      <option name="USE_SOCKET_TRANSPORT" value="true" />
+      <option name="SERVER_MODE" value="false" />
+      <option name="SHMEM_ADDRESS" value="javadebug" />
+      <option name="HOST" value="localhost" />
+      <option name="PORT" value="5005" />
+      <method />
+    </configuration>
+    <configuration default="true" type="Applet" factoryName="Applet">
+      <module name="" />
+      <option name="MAIN_CLASS_NAME" />
+      <option name="HTML_FILE_NAME" />
+      <option name="HTML_USED" value="false" />
+      <option name="WIDTH" value="400" />
+      <option name="HEIGHT" value="300" />
+      <option name="POLICY_FILE" value="$APPLICATION_HOME_DIR$/bin/appletviewer.policy" />
+      <option name="VM_PARAMETERS" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
+      <option name="ALTERNATIVE_JRE_PATH" />
       <method />
     </configuration>
     <configuration default="true" type="TestNG" factoryName="TestNG">
@@ -664,19 +798,6 @@
       <envs />
       <properties />
       <listeners />
-      <method />
-    </configuration>
-    <configuration default="true" type="Applet" factoryName="Applet">
-      <module name="" />
-      <option name="MAIN_CLASS_NAME" />
-      <option name="HTML_FILE_NAME" />
-      <option name="HTML_USED" value="false" />
-      <option name="WIDTH" value="400" />
-      <option name="HEIGHT" value="300" />
-      <option name="POLICY_FILE" value="$APPLICATION_HOME_DIR$/bin/appletviewer.policy" />
-      <option name="VM_PARAMETERS" />
-      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
-      <option name="ALTERNATIVE_JRE_PATH" />
       <method />
     </configuration>
     <configuration default="true" type="Application" factoryName="Application">
@@ -733,17 +854,19 @@
       <method />
     </configuration>
     <list size="5">
-      <item index="0" class="java.lang.String" itemvalue="Specs2.Specs2 in 'scala'" />
-      <item index="1" class="java.lang.String" itemvalue="Application.SSLTest" />
-      <item index="2" class="java.lang.String" itemvalue="Application.SSLTest2" />
-      <item index="3" class="java.lang.String" itemvalue="Application.HowToUseSelfSignedCert" />
-      <item index="4" class="java.lang.String" itemvalue="Specs2.SessionSpec" />
+      <item index="0" class="java.lang.String" itemvalue="Application.HowToUseSelfSignedCert" />
+      <item index="1" class="java.lang.String" itemvalue="Specs2.SessionSpec" />
+      <item index="2" class="java.lang.String" itemvalue="Specs2.SessionSpec (1)" />
+      <item index="3" class="java.lang.String" itemvalue="Specs2.Specs2 in 'scala'" />
+      <item index="4" class="java.lang.String" itemvalue="Application.Sample" />
     </list>
     <recent_temporary>
-      <list size="3">
-        <item index="0" class="java.lang.String" itemvalue="Specs2.SessionSpec" />
-        <item index="1" class="java.lang.String" itemvalue="Application.HowToUseSelfSignedCert" />
-        <item index="2" class="java.lang.String" itemvalue="Application.SSLTest2" />
+      <list size="5">
+        <item index="0" class="java.lang.String" itemvalue="Application.Sample" />
+        <item index="1" class="java.lang.String" itemvalue="Specs2.Specs2 in 'scala'" />
+        <item index="2" class="java.lang.String" itemvalue="Specs2.SessionSpec" />
+        <item index="3" class="java.lang.String" itemvalue="Specs2.SessionSpec (1)" />
+        <item index="4" class="java.lang.String" itemvalue="Application.HowToUseSelfSignedCert" />
       </list>
     </recent_temporary>
     <configuration name="&lt;template&gt;" type="WebApp" default="true" selected="false">
@@ -806,9 +929,9 @@
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32959184" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Designer" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
-      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32959184" sideWeight="0.5" order="11" side_tool="false" content_ui="tabs" />
+      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.22551021" sideWeight="0.5" order="11" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
-      <window_info id="Debug" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.36938775" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.31734693" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="1" side_tool="true" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="true" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
@@ -825,7 +948,7 @@
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
       <window_info id="JetGradle" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
-      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32983193" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32892057" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
       <window_info id="Dependency Viewer" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.43382353" sideWeight="0.5" order="12" side_tool="false" content_ui="tabs" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
     </layout>
@@ -851,198 +974,6 @@
     <option name="FILTER_TARGETS" value="false" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/WireSpec.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="153" column="9" selection-start="4560" selection-end="4560" vertical-scroll-proportion="0.0" vertical-offset="2295" max-vertical-offset="3090">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/SSLTest2.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="37" column="56" selection-start="1250" selection-end="1250" vertical-scroll-proportion="0.0" vertical-offset="555" max-vertical-offset="1560">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/HowToUseSelfSignedCert.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="113" column="54" selection-start="4192" selection-end="4199" vertical-scroll-proportion="0.0" vertical-offset="1695" max-vertical-offset="2910">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/netty/NettySpec.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="19" column="35" selection-start="576" selection-end="576" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="465">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home/src.zip!/java/net/SocketInputStream.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="94" column="23" selection-start="2335" selection-end="2335" vertical-scroll-proportion="0.0" vertical-offset="1410" max-vertical-offset="4260">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/BridgeSpec.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="28" column="97" selection-start="894" selection-end="894" vertical-scroll-proportion="0.0" vertical-offset="420" max-vertical-offset="840">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Node.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="101" column="7" selection-start="3369" selection-end="3369" vertical-scroll-proportion="0.0" vertical-offset="1425" max-vertical-offset="2400">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/WireSpec.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="153" column="9" selection-start="4560" selection-end="4560" vertical-scroll-proportion="0.0" vertical-offset="2295" max-vertical-offset="3090">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/SSLTest2.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="37" column="56" selection-start="1250" selection-end="1250" vertical-scroll-proportion="0.0" vertical-offset="555" max-vertical-offset="1560">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/HowToUseSelfSignedCert.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="113" column="54" selection-start="4192" selection-end="4199" vertical-scroll-proportion="0.0" vertical-offset="1695" max-vertical-offset="2910">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/netty/NettySpec.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="19" column="35" selection-start="576" selection-end="576" vertical-scroll-proportion="0.0" vertical-offset="285" max-vertical-offset="465">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home/src.zip!/java/net/SocketInputStream.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="94" column="23" selection-start="2335" selection-end="2335" vertical-scroll-proportion="0.0" vertical-offset="1410" max-vertical-offset="4260">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/BridgeSpec.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="28" column="97" selection-start="894" selection-end="894" vertical-scroll-proportion="0.0" vertical-offset="420" max-vertical-offset="840">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Node.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="101" column="7" selection-start="3369" selection-end="3369" vertical-scroll-proportion="0.0" vertical-offset="1515" max-vertical-offset="2400">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/WireSpec.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="153" column="9" selection-start="4560" selection-end="4560" vertical-scroll-proportion="0.0" vertical-offset="2295" max-vertical-offset="3090">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/SSLTest2.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="37" column="56" selection-start="1250" selection-end="1250" vertical-scroll-proportion="0.0" vertical-offset="555" max-vertical-offset="1560">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/HowToUseSelfSignedCert.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="113" column="54" selection-start="4192" selection-end="4199" vertical-scroll-proportion="0.0" vertical-offset="1695" max-vertical-offset="2910">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/netty/NettySpec.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="19" column="35" selection-start="576" selection-end="576" vertical-scroll-proportion="0.0" vertical-offset="285" max-vertical-offset="465">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home/src.zip!/java/net/SocketInputStream.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="94" column="23" selection-start="2335" selection-end="2335" vertical-scroll-proportion="0.0" vertical-offset="1410" max-vertical-offset="4260">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/BridgeSpec.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="28" column="97" selection-start="894" selection-end="894" vertical-scroll-proportion="0.0" vertical-offset="420" max-vertical-offset="840">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Node.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="101" column="7" selection-start="3369" selection-end="3369" vertical-scroll-proportion="0.0" vertical-offset="1515" max-vertical-offset="2400">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/netty/AsteriskPipelineFactory.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="117" column="35" selection-start="4392" selection-end="4392" vertical-scroll-proportion="0.0" vertical-offset="1755" max-vertical-offset="3075" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/build.sbt">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="12" column="72" selection-start="372" selection-end="372" vertical-scroll-proportion="0.0" vertical-offset="180" max-vertical-offset="435" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/WireSpec.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="153" column="9" selection-start="4560" selection-end="4560" vertical-scroll-proportion="0.0" vertical-offset="2295" max-vertical-offset="3090">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/SSLTest2.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="37" column="56" selection-start="1250" selection-end="1250" vertical-scroll-proportion="0.0" vertical-offset="555" max-vertical-offset="1560">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/HowToUseSelfSignedCert.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="113" column="54" selection-start="4192" selection-end="4199" vertical-scroll-proportion="0.0" vertical-offset="1695" max-vertical-offset="2910">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/netty/NettySpec.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="19" column="35" selection-start="576" selection-end="576" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="465">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home/src.zip!/java/net/SocketInputStream.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="94" column="23" selection-start="2335" selection-end="2335" vertical-scroll-proportion="0.0" vertical-offset="1410" max-vertical-offset="4260">
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/BridgeSpec.scala">
       <provider selected="true" editor-type-id="text-editor">
         <state line="28" column="97" selection-start="894" selection-end="894" vertical-scroll-proportion="0.0" vertical-offset="420" max-vertical-offset="840">
@@ -1060,16 +991,6 @@
         <state line="2" column="7" selection-start="75" selection-end="75" vertical-scroll-proportion="0.055658627" vertical-offset="0" max-vertical-offset="0" />
       </provider>
     </entry>
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home/src.zip!/java/lang/Object.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="382" column="29" selection-start="17643" selection-end="17643" vertical-scroll-proportion="0.33333334" vertical-offset="0" max-vertical-offset="0" />
-      </provider>
-    </entry>
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home/jre/lib/rt.jar!/sun/misc/Unsafe.class">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="327" column="21" selection-start="9831" selection-end="9831" vertical-scroll-proportion="0.7606383" vertical-offset="0" max-vertical-offset="0" />
-      </provider>
-    </entry>
     <entry file="jar:///opt/scala-2.10.2/lib/scala-library.jar!/scala/collection/AbstractIterator.class">
       <provider selected="true" editor-type-id="text-editor">
         <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="0" />
@@ -1077,26 +998,12 @@
     </entry>
     <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home/src.zip!/java/net/SocketInputStream.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="94" column="23" selection-start="2335" selection-end="2335" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="0">
-          <folding />
-        </state>
+        <state line="94" column="23" selection-start="2335" selection-end="2335" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="0" />
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/test/scala/HowToUseSelfSignedCert.scala">
       <provider selected="true" editor-type-id="text-editor">
         <state line="113" column="54" selection-start="4192" selection-end="4199" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar:///opt/scala-2.10.2/lib/scala-library.jar!/scala/collection/LinearSeqOptimized.class">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="1" column="6" selection-start="31" selection-end="31" vertical-scroll-proportion="0.028625954" vertical-offset="0" max-vertical-offset="0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/WireSpec.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="153" column="9" selection-start="4560" selection-end="4560" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="0">
           <folding />
         </state>
       </provider>
@@ -1109,20 +1016,6 @@
     <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/netty/AsteriskPipelineFactory.scala">
       <provider selected="true" editor-type-id="text-editor">
         <state line="117" column="35" selection-start="4392" selection-end="4392" vertical-scroll-proportion="0.01618123" vertical-offset="1755" max-vertical-offset="3105" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Node.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="101" column="7" selection-start="3369" selection-end="3369" vertical-scroll-proportion="0.0" vertical-offset="1425" max-vertical-offset="2400">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/Sample.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="89" column="6" selection-start="2378" selection-end="2378" vertical-scroll-proportion="0.0" vertical-offset="728" max-vertical-offset="1350">
-          <folding />
-        </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/test/scala/SSLTest.scala">
@@ -1146,46 +1039,313 @@
         </state>
       </provider>
     </entry>
+    <entry file="jar:///opt/scala-2.10.2/lib/scala-library.jar!/scala/Byte.class">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="1" column="20" selection-start="34" selection-end="34" vertical-scroll-proportion="0.021961933" vertical-offset="0" max-vertical-offset="1965" />
+      </provider>
+    </entry>
+    <entry file="jar://$PROJECT_DIR$/lib/scala-library-2.10.2.jar!/scala/Long.class">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="1" column="19" selection-start="33" selection-end="33" vertical-scroll-proportion="0.021961933" vertical-offset="0" max-vertical-offset="1920" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/MessageReceiver.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="30" column="0" selection-start="1122" selection-end="1122" vertical-scroll-proportion="0.6155951" vertical-offset="0" max-vertical-offset="731">
+          <folding>
+            <element signature="n#!!doc" expanded="false" />
+            <element signature="e#198#229#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/netty/NettySpec.scala">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="19" column="35" selection-start="576" selection-end="576" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="0">
-          <folding />
-        </state>
+        <state line="19" column="35" selection-start="576" selection-end="576" vertical-scroll-proportion="0.2872777" vertical-offset="0" max-vertical-offset="731" />
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/MessageSpec.scala">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="16" column="6" selection-start="518" selection-end="518" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="645">
+        <state line="16" column="6" selection-start="518" selection-end="518" vertical-scroll-proportion="0.2257182" vertical-offset="0" max-vertical-offset="731">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Bridge.scala">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="49" column="6" selection-start="1808" selection-end="1808" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="735">
+        <state line="49" column="6" selection-start="1808" selection-end="1808" vertical-scroll-proportion="0.8358413" vertical-offset="4" max-vertical-offset="735">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Wire.scala">
+    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/codec/JavaCodec.scala">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="24" column="6" selection-start="816" selection-end="816" vertical-scroll-proportion="0.0" vertical-offset="165" max-vertical-offset="4110">
+        <state line="21" column="7" selection-start="694" selection-end="694" vertical-scroll-proportion="0.04103967" vertical-offset="180" max-vertical-offset="1095" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/codec/Codec.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="27" column="6" selection-start="844" selection-end="844" vertical-scroll-proportion="0.33242133" vertical-offset="87" max-vertical-offset="1050" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/com/kazzla/asterisk/Export.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="23" column="33" selection-start="743" selection-end="743" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="360">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/codec/MsgPackCodec.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="86" column="40" selection-start="2491" selection-end="2491" vertical-scroll-proportion="0.0" vertical-offset="879" max-vertical-offset="3180">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/package.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="116" column="0" selection-start="3824" selection-end="3824" vertical-scroll-proportion="0.0" vertical-offset="1032" max-vertical-offset="1740">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/WireSpec.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="129" column="14" selection-start="3762" selection-end="3762" vertical-scroll-proportion="0.0" vertical-offset="2232" max-vertical-offset="2925">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar:///opt/scala-2.10.2/lib/scala-library.jar!/scala/collection/LinearSeqOptimized.class">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="1" column="6" selection-start="31" selection-end="31" vertical-scroll-proportion="0.027675277" vertical-offset="0" max-vertical-offset="585">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/codec/CodecSpec.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="10" column="0" selection-start="303" selection-end="303" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="1800">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home/jre/lib/rt.jar!/sun/misc/Unsafe.class">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="327" column="21" selection-start="9831" selection-end="9831" vertical-scroll-proportion="0.0" vertical-offset="4473" max-vertical-offset="5040">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home/src.zip!/java/lang/Object.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="382" column="29" selection-start="17643" selection-end="17643" vertical-scroll-proportion="0.0" vertical-offset="5196" max-vertical-offset="8055">
+          <folding>
+            <element signature="e#0#25910#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar://$PROJECT_DIR$/lib/specs2_2.10-2.3-SNAPSHOT-sources.jar!/org/specs2/matcher/Expectations.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="32" column="0" selection-start="1316" selection-end="1316" vertical-scroll-proportion="0.0" vertical-offset="291" max-vertical-offset="900">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar://$PROJECT_DIR$/lib/specs2_2.10-2.3-SNAPSHOT-sources.jar!/org/specs2/Specification.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="21" column="0" selection-start="455" selection-end="455" vertical-scroll-proportion="0.0" vertical-offset="36" max-vertical-offset="810">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar://$PROJECT_DIR$/lib/specs2_2.10-2.3-SNAPSHOT-sources.jar!/org/specs2/matcher/Matcher.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="33" column="0" selection-start="996" selection-end="996" vertical-scroll-proportion="0.0" vertical-offset="141" max-vertical-offset="3930">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar://$PROJECT_DIR$/lib/specs2_2.10-2.3-SNAPSHOT-sources.jar!/org/specs2/matcher/AdaptableMatcher.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="8" column="0" selection-start="192" selection-end="192" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="705">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar://$PROJECT_DIR$/lib/specs2_2.10-2.3-SNAPSHOT-sources.jar!/org/specs2/matcher/CanBeEqual.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="15" column="0" selection-start="440" selection-end="440" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="540">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar://$PROJECT_DIR$/lib/specs2_2.10-2.3-SNAPSHOT-sources.jar!/org/specs2/matcher/AnyMatchers.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="184" column="0" selection-start="7033" selection-end="7033" vertical-scroll-proportion="0.0" vertical-offset="2496" max-vertical-offset="4635">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar://$PROJECT_DIR$/lib/specs2_2.10-2.3-SNAPSHOT-sources.jar!/org/specs2/matcher/Expectable.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="20" column="0" selection-start="635" selection-end="635" vertical-scroll-proportion="0.0" vertical-offset="36" max-vertical-offset="1920">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/SessionSpec.scala">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="16" column="0" selection-start="524" selection-end="524" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="570">
+        <state line="35" column="0" selection-start="1079" selection-end="1079" vertical-scroll-proportion="0.0" vertical-offset="213" max-vertical-offset="780">
           <folding>
             <element signature="e#198#229#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
+    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home/src.zip!/java/util/zip/ZipFile.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="312" column="0" selection-start="10979" selection-end="10979" vertical-scroll-proportion="0.0" vertical-offset="3906" max-vertical-offset="11145">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home/src.zip!/java/util/jar/JarFile.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="208" column="0" selection-start="6589" selection-end="6589" vertical-scroll-proportion="0.0" vertical-offset="2406" max-vertical-offset="10620">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home/jre/lib/rt.jar!/sun/misc/URLClassPath.class">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="30" column="27" selection-start="1223" selection-end="1223" vertical-scroll-proportion="0.0" vertical-offset="246" max-vertical-offset="1950">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home/src.zip!/java/security/PrivilegedActionException.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="65" column="0" selection-start="1844" selection-end="1844" vertical-scroll-proportion="0.0" vertical-offset="441" max-vertical-offset="1260">
+          <folding>
+            <element signature="e#0#3244#0" expanded="false" />
+            <element signature="e#2726#2727#0" expanded="false" />
+            <element signature="e#2758#2759#0" expanded="false" />
+            <element signature="e#3053#3054#0" expanded="false" />
+            <element signature="e#3085#3086#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home/src.zip!/java/net/URLClassLoader.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="370" column="0" selection-start="13755" selection-end="13755" vertical-scroll-proportion="0.0" vertical-offset="4611" max-vertical-offset="10905">
+          <folding>
+            <element signature="e#0#30119#0" expanded="false" />
+            <element signature="imports" expanded="false" />
+            <element signature="e#12958#13683#0" expanded="false" />
+            <element signature="e#13664#13665#0" expanded="false" />
+            <element signature="e#21108#21261#0" expanded="false" />
+            <element signature="e#21246#21247#0" expanded="false" />
+            <element signature="e#22178#22473#0" expanded="false" />
+            <element signature="e#22446#22447#0" expanded="false" />
+            <element signature="e#26441#26661#0" expanded="false" />
+            <element signature="e#26642#26643#0" expanded="false" />
+            <element signature="e#27660#27851#0" expanded="false" />
+            <element signature="e#27836#27837#0" expanded="false" />
+            <element signature="e#28663#28846#0" expanded="false" />
+            <element signature="e#28831#28832#0" expanded="false" />
+            <element signature="e#28951#29120#0" expanded="false" />
+            <element signature="e#29105#29106#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home/jre/lib/rt.jar!/sun/misc/Launcher.class">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="46" column="27" selection-start="1714" selection-end="1714" vertical-scroll-proportion="0.0" vertical-offset="501" max-vertical-offset="1155">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home/src.zip!/java/lang/ClassLoader.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="357" column="0" selection-start="13586" selection-end="13586" vertical-scroll-proportion="0.0" vertical-offset="4296" max-vertical-offset="32730">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Message.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="31" column="0" selection-start="1193" selection-end="1193" vertical-scroll-proportion="0.0" vertical-offset="216" max-vertical-offset="1155">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Node.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="106" column="0" selection-start="3463" selection-end="3463" vertical-scroll-proportion="0.0" vertical-offset="1401" max-vertical-offset="2295">
+          <folding>
+            <element signature="n#!!doc" expanded="true" />
+            <element signature="e#198#248#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Session.scala">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="324" column="40" selection-start="10207" selection-end="10207" vertical-scroll-proportion="0.77954143" vertical-offset="4253" max-vertical-offset="5445">
+        <state line="132" column="0" selection-start="3621" selection-end="3621" vertical-scroll-proportion="0.0" vertical-offset="1731" max-vertical-offset="5535">
+          <folding>
+            <element signature="e#198#280#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Wire.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="169" column="0" selection-start="5158" selection-end="5158" vertical-scroll-proportion="0.0" vertical-offset="2166" max-vertical-offset="4110">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Pipe.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="81" column="0" selection-start="2934" selection-end="2934" vertical-scroll-proportion="0.0" vertical-offset="1026" max-vertical-offset="4275">
+          <folding>
+            <element signature="n#!!doc" expanded="true" />
+            <element signature="e#201#231#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Service.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="101" column="0" selection-start="3418" selection-end="3418" vertical-scroll-proportion="0.33333334" vertical-offset="1326" max-vertical-offset="2460">
+          <folding>
+            <element signature="n#!!doc" expanded="true" />
+            <element signature="e#198#228#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/EventHandlers.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="79" column="0" selection-start="2356" selection-end="2356" vertical-scroll-proportion="0.0" vertical-offset="843" max-vertical-offset="1410">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/TypeMapper.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="40" column="94" selection-start="1414" selection-end="1414" vertical-scroll-proportion="0.0" vertical-offset="306" max-vertical-offset="2640">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/Sample.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="72" column="7" selection-start="2082" selection-end="2082" vertical-scroll-proportion="1.4805825" vertical-offset="0" max-vertical-offset="1350">
           <folding />
         </state>
       </provider>
