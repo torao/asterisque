@@ -227,11 +227,12 @@ class Session(val name:String, defaultService:Service, val wire:Wire) {
 	def close():Unit = if(closed.compareAndSet(false, true)){
 		logger.trace(s"close():$name")
 
-		// 以降のメッセージ送信をすべて例外に変更して送信を終了
-		post = { _ => throw new IOException(s"session $name closed") }
-
 		// 残っているすべてのパイプに Close メッセージを送信
-		pipes.get().values.foreach{ _.close(new IOException(s"session $name closed")) }
+		pipes.get().values.foreach{ p => p.close(new IOException(s"session $name closed")) }
+
+		// 以降のメッセージ送信をすべて例外に変更して送信を終了
+		// ※Pipe#close() で Session#post() が呼び出されるためすべてのパイプに Close を投げた後に行う
+		post = { _ => throw new IOException(s"session $name closed") }
 
 		// Wire のクローズ
 		wire.close()
@@ -298,7 +299,7 @@ class Session(val name:String, defaultService:Service, val wire:Wire) {
 					promise.failure(ex)
 				}.call((if(args==null) Array[AnyRef]() else args):_*)
 
-				Await.result(promise.future, Duration.Inf).asInstanceOf[AnyRef]
+				promise.future
 			}
 		}
 	}

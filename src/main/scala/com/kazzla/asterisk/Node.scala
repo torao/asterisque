@@ -104,6 +104,7 @@ object Node {
 	def apply(name:String):Builder = new Builder(name)
 
 	class Builder private[Node](name:String) {
+		import ExecutionContext.Implicits.global
 		private var service:Service = new Service {}
 		private var bridge:Bridge = Netty
 		private var codec:Codec = MsgPackCodec

@@ -6,10 +6,10 @@
 package com.kazzla.asterisk
 
 import org.slf4j.LoggerFactory
-import scala.concurrent.Promise
 import java.io.{IOException, OutputStream, InputStream}
 import java.nio.ByteBuffer
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.atomic.AtomicBoolean
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Pipe
@@ -25,8 +25,7 @@ import java.util.concurrent.LinkedBlockingQueue
  */
 class Pipe private[asterisk](val id:Short, val function:Short, val session:Session) {
 
-	@volatile
-	private[asterisk] var closed = false
+	private[this] val closed = new AtomicBoolean(false)
 
 	private[asterisk] val onBlock = new EventHandlers[Block]()
 	private[asterisk] val onSuccess = new EventHandlers[Any]()
@@ -65,10 +64,12 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	 * 指定した result 付きで Close を送信しこのパイプを閉じます。
 	 * @param result Close に付加する結果
 	 */
-	def close[T](result:T):Unit = {
+	def close[T](result:T):Unit = if(closed.compareAndSet(false, true)){
 		session.post(Close[T](id, result, null))
 		session.destroy(id)
-		closed = true
+		Pipe.logger.trace(s"pipe $id is closed with success: $result")
+	} else {
+		Pipe.logger.debug(s"pipe $id already closed: $result")
 	}
 
 	// ==============================================================================================
@@ -78,10 +79,12 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	 * 指定した例外付きで Close を送信しパイプを閉じます。
 	 * @param ex Close に付加する例外
 	 */
-	def close(ex:Throwable):Unit = {
+	def close(ex:Throwable):Unit = if(closed.compareAndSet(false, true)){
 		session.post(Close[AnyRef](id, null, ex.toString))
 		session.destroy(id)
-		closed = true
+		Pipe.logger.trace(s"pipe $id is closed with failure: $ex")
+	} else {
+		Pipe.logger.debug(s"pipe $id already closed: $ex")
 	}
 
 	// ==============================================================================================
@@ -90,14 +93,16 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	/**
 	 * 相手側から受信した Close によってこのパイプを閉じます。
 	 */
-	private[asterisk] def close(close:Close[_]):Unit = {
+	private[asterisk] def close(close:Close[_]):Unit = if(closed.compareAndSet(false, true)){
 		if(close.errorMessage != null){
 			onFailure(new RemoteException(close.errorMessage))
 		} else {
 			onSuccess(close.result)
 		}
 		session.destroy(id)
-		closed = true
+		Pipe.logger.trace(s"pipe $id is closed by peer: $close")
+	} else {
+		Pipe.logger.debug(s"pipe $id already closed: $close")
 	}
 }
 

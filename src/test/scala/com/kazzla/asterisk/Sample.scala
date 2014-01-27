@@ -20,7 +20,7 @@ object Sample {
 
 	object Node1 {
 
-		val ns = Node("NameServer").serve(new SyncService with NameServer {
+		val ns = Node("NameServer").serve(new Service with NameServer {
 			def lookup(name:String):Int = Session() match {
 				case Some(session) =>
 
@@ -49,7 +49,7 @@ object Sample {
 
 	object Node2 {
 
-		val logging = Node("LoggingServer").serve(new SyncService with LogServer {
+		val logging = Node("LoggingServer").serve(new Service with LogServer {
 			def error(msg:String) { Console.out.print(s"ERROR: $msg\n") }
 			def info(msg:String)  { Console.out.print(s"INFO : $msg\n") }
 			def dump(msg:String):Unit = Pipe() match {

@@ -8,6 +8,8 @@ package com.kazzla.asterisk
 import org.specs2.Specification
 import com.kazzla.asterisk.codec.MsgPackCodec
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration.Duration
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // SessionSpec
@@ -23,17 +25,17 @@ callback close event when peer wire is closed: $s02
 
 	def s01 = {
 		trait T0 {
-			@Export(0) def hoge():String
+			@Export(0) def hoge():Future[String]
 		}
-		class C0 extends SyncService with T0 {
-			def hoge = "hoge"
+		class C0 extends Service with T0 {
+			def hoge() = Future("hoge")
 		}
 		val n0 = Node("node0").codec(MsgPackCodec).serve(new C0).build()
 		val n1 = Node("node1").codec(MsgPackCodec).build()
 		val (p0, p1) = Wire.newPipe()
 		n0.bind(p0)
 		val s1 = n1.bind(p1)
-		s1.bind(classOf[T0]).hoge() === "hoge"
+		Await.result(s1.bind(classOf[T0]).hoge(), Duration.Inf) === "hoge"
 	}
 
 	def s02 = {
