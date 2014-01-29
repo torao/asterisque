@@ -89,9 +89,8 @@ trait Wire extends Closeable {
 	/**
 	 * 指定されたメッセージを送信します。
 	 * @param msg 送信するメッセージ
-	 * @throws java.io.IOException この `Wire` が既にクローズされている場合
 	 */
-	def send(msg:Message):Unit
+	def send(msg:Message):Future[Unit]
 
 	// ==============================================================================================
 	// メッセージの受信
@@ -163,15 +162,21 @@ object Wire {
 		val w1 = new Wire {
 			var f:(Message)=>Unit = null
 			val isServer = false
-			def send(m:Message) = if(isClosed){
-				throw new IOException("pipe closed")
-			} else { f(m) }
+			def send(m:Message) = (if(isClosed){
+				Promise.failed(new IOException("pipe closed"))
+			} else {
+				f(m)
+				Promise.successful(())
+			}).future
 		}
 		lazy val w2 = new Wire {
 			val isServer = ! w1.isServer
-			def send(m:Message) = if(isClosed){
-				throw new IOException("pipe closed")
-			} else { w1.receive(m) }
+			def send(m:Message) = (if(isClosed){
+				Promise.failed(new IOException("pipe closed"))
+			} else {
+				w1.receive(m)
+				Promise.successful(())
+			}).future
 		}
 		w1.f = { m => w2.receive(m) }
 		w1.onClosed ++ { _ => w2.close() }
