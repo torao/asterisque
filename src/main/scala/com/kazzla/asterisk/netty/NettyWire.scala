@@ -6,12 +6,14 @@
 package com.kazzla.asterisk.netty
 
 import java.net.{InetSocketAddress, SocketAddress}
-import scala.concurrent.Future
+import scala.concurrent.{Promise, Future}
 import javax.net.ssl.SSLSession
 import io.netty.channel.ChannelHandlerContext
 import com.kazzla.asterisk.{Message, Wire}
 import java.io.IOException
 import org.slf4j.LoggerFactory
+import io.netty.util.concurrent.GenericFutureListener
+import io.netty.util.concurrent.{Future => NFuture}
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // NettyWire
@@ -31,21 +33,25 @@ private[netty] case class NettyWire(address:SocketAddress, override val isServer
 		case s => s.toString
 	}
 
-	def send(m:Message):Unit = if(! isClosed){
+	def send(m:Message):Future[Unit] = (if(! isClosed){
 		NettyWire.logger.trace(s"$sym: send($m)")
+		val promise = Promise[Unit]()
 		val ch = context.channel()
 		val future = ch.write(m)
 		ch.flush()
-		future.sync()
-		if(! future.isSuccess){
-			if(future.cause() != null){
-				throw future.cause()
+		future.addListener(new GenericFutureListener[NFuture[Any]] {
+			def operationComplete(future:NFuture[Any]): Unit = {
+				if(future.isSuccess){
+					promise.success(())
+				} else {
+					promise.failure(future.cause())
+				}
 			}
-			throw new IOException(s"$sym: send operation failure: $m")
-		}
+		})
+		promise
 	} else {
-		throw new IOException(s"$sym: cannot send on closed channel: $m")
-	}
+		Promise.failed(new IOException(s"$sym: cannot send on closed channel: $m"))
+	}).future
 
 	override def close():Unit = if(! isClosed){
 		NettyWire.logger.trace(s"$sym: close()")

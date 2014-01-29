@@ -29,7 +29,7 @@ callback on receive. $e25
 transfer messages duplex. $e3
 append and remove onReceive handlers. $e4
 buffers all received messages before start. $e5
-throw IOException from send() if wire closed. $e6
+results IOException from future of send() if wire closed. $e6
 not dispatch any message from receive() if wire closed. $e7
 be able to refer TLS/SSL session. $e8
 have correct peer name. $e9
@@ -77,8 +77,8 @@ have correct peer name. $e9
 		w2.onReceive ++ { m => p2.success(m) }
 		w1.start()
 		w2.start()
-		w1.send(m1)
-		w2.send(m2)
+		Await.result(w1.send(m1), Limit)
+		Await.result(w2.send(m2), Limit)
 		(Await.result(p1.future, Limit) === m2) and (Await.result(p2.future, Limit) === m1)
 	}
 
@@ -132,7 +132,7 @@ have correct peer name. $e9
 	def e6 = wires{ (w1, w2) =>
 		w1.send(Open(6, 0, Seq[Any]()))
 		w1.close()
-		w1.send(Open(6, 1, Seq[Any]())) must throwA[java.io.IOException]
+		Await.result(w1.send(Open(6, 1, Seq[Any]())), Limit) must throwA[java.io.IOException]
 	}
 
 	def e7 = wires{ (w1, w2) =>
