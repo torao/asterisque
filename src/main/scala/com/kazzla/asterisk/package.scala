@@ -10,6 +10,7 @@ import org.slf4j._
 import java.text.NumberFormat
 import scala.collection.JavaConversions._
 import java.lang.reflect.Method
+import java.security.cert.{X509Certificate, Certificate}
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // asterisk
@@ -70,7 +71,7 @@ package object asterisk {
 	def debugString(value:Any):String = value match {
 		case null => "null"
 		case i:Boolean => i.toString
-		case i:Number => NumberFormat.getNumberInstance.format(i)
+		case i:Number => i.toString
 		case i:Char => s"\'${escape(i)}\'"
 		case i:String => i.map{ escape }.mkString("\"", "", "\"")
 		case i:Map[_,_] => i.map{ case (k, v) => s"${debugString(k)}:${debugString(v)}" }.mkString("{", ",", "}")
@@ -112,6 +113,19 @@ package object asterisk {
 			method.getDeclaringClass.getSimpleName + "." + method.getName + "(" + method.getParameterTypes.map { p =>
 				p.getSimpleName
 			}.mkString(",") + "):" + method.getReturnType.getSimpleName
+		}
+	}
+
+	private[asterisk] implicit class RichLogger(l:Logger){
+		def dump(c:Certificate):Unit = if(l.isTraceEnabled){
+			logger.trace(s"Algorithm: ${c.getPublicKey.getAlgorithm}")
+			c match {
+				case x:X509Certificate =>
+					l.trace(s"Issuer : ${x.getIssuerX500Principal.getName}")
+					l.trace(s"Subject: ${x.getSubjectX500Principal.getName}")
+					l.trace(s"Valid  : ${x.getNotAfter}")
+				case _ => None
+			}
 		}
 	}
 

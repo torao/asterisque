@@ -17,11 +17,13 @@ import org.slf4j.LoggerFactory
 // NettyWire
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
+ * Netty を使用した Wire 実装です。
+ *
  * @author Takami Torao
  */
 private[netty] case class NettyWire(address:SocketAddress, override val isServer:Boolean, override val tls:Future[Option[SSLSession]], context:ChannelHandlerContext) extends Wire {
 
-	private[this] def sym = if(isServer) "S" else "C"
+	private[this] lazy val sym = if(isServer) "S" else "C"
 
 	override val peerName = address match {
 		case i:InetSocketAddress =>
@@ -46,7 +48,7 @@ private[netty] case class NettyWire(address:SocketAddress, override val isServer
 	}
 
 	override def close():Unit = if(! isClosed){
-		NettyWire.logger.trace(s"$sym: close")
+		NettyWire.logger.trace(s"$sym: close()")
 		context.channel().close()
 		super.close()
 	}
