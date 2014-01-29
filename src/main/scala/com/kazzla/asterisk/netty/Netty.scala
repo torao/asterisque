@@ -5,15 +5,18 @@
 */
 package com.kazzla.asterisk.netty
 
+import com.kazzla.asterisk._
+import com.kazzla.asterisk.codec.Codec
+import io.netty.bootstrap.{ServerBootstrap, Bootstrap}
+import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.socket.nio.{NioServerSocketChannel, NioSocketChannel}
+import io.netty.channel.ChannelOption
+import io.netty.util.concurrent.GenericFutureListener
+import io.netty.util.concurrent.{Future => NFuture}
 import java.net.SocketAddress
 import javax.net.ssl.SSLContext
-import org.jboss.netty.bootstrap.{Bootstrap, ServerBootstrap, ClientBootstrap}
-import scala.concurrent.{ExecutionContext, Promise, Future}
-import com.kazzla.asterisk._
-import org.jboss.netty.channel.socket.nio.{NioServerSocketChannelFactory, NioClientSocketChannelFactory}
 import org.slf4j.LoggerFactory
-import org.jboss.netty.channel.{ChannelFuture, ChannelFutureListener}
-import com.kazzla.asterisk.codec.Codec
+import scala.concurrent.{Future, Promise}
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Netty
@@ -25,22 +28,27 @@ object Netty extends Bridge {
 	private[this] val logger = LoggerFactory.getLogger(getClass)
 
 	def connect(codec:Codec, address:SocketAddress, sslContext:Option[SSLContext]):Future[Wire] = {
-		val client = new ClientBootstrap(new NioClientSocketChannelFactory())
+		val group = new NioEventLoopGroup()
+		val client = new Bootstrap()
 		val promise = Promise[Wire]()
 		val factory = new AsteriskPipelineFactory(codec, false, sslContext, { wire =>
 			logger.debug(s"onConnect($wire)")
 			wire.onClosed ++ { w => shutdown(client) }
 			promise.success(wire)
 		})
-		client.setPipelineFactory(factory)
-		val future = client.connect(address)
-		future.addListener(new ChannelFutureListener {
-			def operationComplete(future:ChannelFuture) {
+		client
+			.group(group)
+			.channel(classOf[NioSocketChannel])
+			.remoteAddress(address)
+			.option(ChannelOption.TCP_NODELAY, java.lang.Boolean.TRUE)    // TODO 確認
+			.handler(factory)
+		client.connect(address).addListener(new GenericFutureListener[NFuture[Any]] {
+			def operationComplete(future:NFuture[Any]):Unit = {
 				if(future.isSuccess){
-					logger.debug("operationComplete(success)")
+					logger.debug("connection success")
 				} else {
-					logger.debug("operationComplete(failure)")
-					promise.failure(future.getCause)
+					logger.debug("connection failure")
+					promise.failure(future.cause())
 				}
 			}
 		})
@@ -48,27 +56,36 @@ object Netty extends Bridge {
 	}
 
 	def listen(codec:Codec, address:SocketAddress, sslContext:Option[SSLContext])(onAccept:(Wire)=>Unit):Future[Server] = {
-		val server = new ServerBootstrap(new NioServerSocketChannelFactory())
 		val factory = new AsteriskPipelineFactory(codec, true, sslContext, { wire =>
 			logger.debug(s"onAccept($wire)")
 			onAccept(wire)
 		})
-		server.setPipelineFactory(factory)
-		val future = server.bindAsync(address)
+		val masterGroup = new NioEventLoopGroup()
+		val workerGroup = new NioEventLoopGroup()
+		val server = new ServerBootstrap()
+		server
+			.group(masterGroup, workerGroup)
+			.channel(classOf[NioServerSocketChannel])
+			.localAddress(address)
+			.option(ChannelOption.SO_BACKLOG, java.lang.Integer.valueOf(100))
+			.childOption(ChannelOption.TCP_NODELAY, java.lang.Boolean.TRUE)
+			.childHandler(factory)
+
 		val promise = Promise[Server]()
-		future.addListener(new ChannelFutureListener {
-			def operationComplete(future:ChannelFuture) {
+		server.bind().addListener(new GenericFutureListener[NFuture[Any]] {
+			def operationComplete(future:NFuture[Any]):Unit = {
 				if(future.isSuccess){
 					logger.debug("operationComplete(success)")
 					promise.success(new Server(address) {
 						override def close() {
 							logger.debug("closing netty server bootstrap")
-							server.shutdown()
+							masterGroup.shutdownGracefully()
+							workerGroup.shutdownGracefully()
 						}
 					})
 				} else {
 					logger.debug("operationComplete(failure)")
-					promise.failure(future.getCause)
+					promise.failure(future.cause())
 				}
 			}
 		})
@@ -76,12 +93,14 @@ object Netty extends Bridge {
 	}
 
 	private[this] def shutdown(bootstrap:Bootstrap):Unit = {
-		ExecutionContext.Implicits.global.execute(new Runnable(){
-			def run(){
-				logger.debug("closing netty client bootstrap")
-				bootstrap.shutdown()
-			}
-		})
+		logger.debug("closing netty client bootstrap")
+		bootstrap.group().shutdownGracefully()
+	}
+
+	private[this] def shutdown(bootstrap:ServerBootstrap):Unit = {
+		logger.debug("closing netty server bootstrap")
+		bootstrap.group().shutdownGracefully()
+		bootstrap.childGroup().shutdownGracefully()
 	}
 
 }

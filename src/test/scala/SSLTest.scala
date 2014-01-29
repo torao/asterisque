@@ -4,14 +4,16 @@
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
 
-import java.net.{InetSocketAddress, SocketAddress}
+import io.netty.bootstrap.Bootstrap
+import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.socket.nio.NioSocketChannel
+import io.netty.channel.{SimpleChannelInboundHandler, ChannelOption, ChannelHandlerContext, ChannelInitializer}
+import io.netty.channel.socket.SocketChannel
+import io.netty.handler.codec.http._
+import io.netty.handler.ssl.SslHandler
+import io.netty.util.concurrent.{Future, GenericFutureListener}
+import java.net.InetSocketAddress
 import javax.net.ssl.SSLContext
-import org.jboss.netty.bootstrap.ClientBootstrap
-import org.jboss.netty.channel._
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory
-import org.jboss.netty.handler.codec.http.{HttpMethod, HttpVersion, DefaultHttpRequest, HttpClientCodec}
-import org.jboss.netty.handler.ssl.SslHandler
-import scala.None
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // SSLTest
@@ -23,19 +25,19 @@ import scala.None
 object SSLTest {
 	val context = SSLContext.getDefault
 	def main(args:Array[String]):Unit = {
-		val pipelineFactory = new ChannelPipelineFactory {
-			def getPipeline:ChannelPipeline = {
-				val pipeline = Channels.pipeline()
+		val pipelineFactory = new ChannelInitializer[SocketChannel] {
+			override def initChannel(ch:SocketChannel) = {
+				val pipeline = ch.pipeline()
 				val engine = context.createSSLEngine()
 				engine.setUseClientMode(true)
 				pipeline.addLast("tls", new SslHandler(engine))
 				pipeline.addLast("http", new HttpClientCodec())
-				pipeline.addLast("app", new SimpleChannelHandler {
-					override def channelConnected(ctx:ChannelHandlerContext, e:ChannelStateEvent):Unit = {
+				pipeline.addLast("app", new SimpleChannelInboundHandler[DefaultHttpMessage]() {
+					override def channelActive(ctx:ChannelHandlerContext):Unit = {
 						System.out.println(engine.getEnabledCipherSuites.mkString("[",",","]"))
 						System.out.println(engine.getEnabledProtocols.mkString("[",",","]"))
-						pipeline.get("tls").asInstanceOf[SslHandler].handshake().addListener(new ChannelFutureListener {
-							def operationComplete(future:ChannelFuture) = {
+						pipeline.get("tls").asInstanceOf[SslHandler].handshakeFuture().addListener(new GenericFutureListener[Future[Any]] {
+							def operationComplete(future:Future[Any]):Unit = {
 								val session = engine.getSession
 								System.out.println(session.getCipherSuite)
 								System.out.println(session.getValueNames.mkString("[",",","]"))
@@ -44,22 +46,24 @@ object SSLTest {
 							}
 						})
 						val req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/")
-						req.setHeader("Connection", "close")
-						req.setHeader("Host", "www.google.com")
-						val ch = ctx.getChannel
-						val event = new DownstreamMessageEvent(ch, Channels.future(ch), req, ch.getRemoteAddress)
-						ctx.sendDownstream(event)
+						req.headers().set("Connection", "close")
+						req.headers().set("Host", "www.google.com")
+						ctx.channel().write(req)
 					}
-					override def messageReceived(ctx:ChannelHandlerContext, e:MessageEvent):Unit = {
-						val msg = e.getMessage
-						System.out.println(msg)
+					override def channelRead0(ctx:ChannelHandlerContext, res:DefaultHttpMessage):Unit = {
+						System.out.println(res)
 					}
 				})
-				pipeline
 			}
 		}
-		val client = new ClientBootstrap(new NioClientSocketChannelFactory())
-		client.setPipelineFactory(pipelineFactory)
-		client.connect(new InetSocketAddress("www.google.com", 443))
+		val group = new NioEventLoopGroup()
+		val client = new Bootstrap()
+		client
+			.group(group)
+			.channel(classOf[NioSocketChannel])
+			.remoteAddress(new InetSocketAddress("www.google.com", 443))
+			.option(ChannelOption.TCP_NODELAY, java.lang.Boolean.TRUE)    // TODO 確認
+			.handler(pipelineFactory)
+		client.connect()
 	}
 }

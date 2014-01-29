@@ -25,6 +25,7 @@ Wire should:
 have either server or not flag. $e0
 have correct close status. $e1
 have correct active/deactive status. $e2
+callback on receive. $e25
 transfer messages duplex. $e3
 append and remove onReceive handlers. $e4
 buffers all received messages before start. $e5
@@ -54,6 +55,17 @@ have correct peer name. $e9
 		(w1.isActive must beFalse) and (w2.isActive must beFalse) and
 		{ w1.start(); w1.isActive must beTrue  } and { w2.start(); w2.isActive must beTrue  } and
 		{ w1.stop();  w1.isActive must beFalse } and { w2.stop();  w2.isActive must beFalse }
+	}
+
+	def e25 = wires{ (w1, w2) =>
+		LoggerFactory.getLogger(classOf[WireSpec]).info("------------------")
+		val m = Open(0, 0, Seq())
+		val p = Promise[Message]()
+		w2.onReceive ++ { m => p.success(m) }
+		w1.start()
+		w2.start()
+		w1.send(m)
+		Await.result(p.future, Limit) === m
 	}
 
 	def e3 = wires{ (w1, w2) =>
