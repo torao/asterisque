@@ -7,7 +7,7 @@ package com.kazzla.asterisk
 
 import java.net.InetSocketAddress
 import scala.concurrent._
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 import org.specs2.Specification
 import org.specs2.execute.Result
 import com.kazzla.asterisk.codec.MsgPackCodec
@@ -29,17 +29,25 @@ Bridge should:
 abstract class BridgeWireSpec(client:Option[SSLContext], server:Option[SSLContext]) extends WireSpec {
 	def bridge:Bridge
 
+	private[this] val waitLimit = Duration.apply(10, SECONDS)
+
 	def wires(fx:(Wire,Wire)=>Result) = synchronized {
-		val b = bridge
-		val p2 = Promise[Wire]()
-		val s = b.listen(MsgPackCodec, new InetSocketAddress("localhost", 39888), server){ w => p2.success(w) }
-		using(Await.result(s, Duration.Inf)){ _ =>
-			val f = b.connect(MsgPackCodec, new InetSocketAddress("localhost", 39888), client)
-			using(Await.result(f, Duration.Inf)){ w1 =>
-				using(Await.result(p2.future, Duration.Inf)){ w2 =>
-					fx(w1, w2)
+		try {
+			val b = bridge
+			val p2 = Promise[Wire]()
+			val s = b.listen(MsgPackCodec, new InetSocketAddress("localhost", 39888), server){ w => p2.success(w) }
+			using(Await.result(s, waitLimit)){ _ =>
+				val f = b.connect(MsgPackCodec, new InetSocketAddress("localhost", 39888), client)
+				using(Await.result(f, waitLimit)){ w1 =>
+					using(Await.result(p2.future, waitLimit)){ w2 =>
+						fx(w1, w2)
+					}
 				}
 			}
+		} catch {
+			case ex:Throwable =>
+				ex.printStackTrace()
+				failure
 		}
 	}
 
