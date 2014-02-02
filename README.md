@@ -24,7 +24,7 @@ $ ./sbt package
 
 Or, you can also run following sample code without build.
 
-```scala:Sample.scala
+```scala
 import com.kazzla.asterisk._
 import java.net.InetSocketAddress
 import scala.concurrent.{Await,Future,Promise}
