@@ -16,9 +16,11 @@ Getting Started
 To build asterisk\* JAR library, you may clone asterisk\* GitHub repository and build `asterisk_2.10-0.1.jar` by
 `sbt package`.
 
-    $ git clone https://github.com/torao/asterisk.git
-    $ cd asterisk
-    $ ./sbt package
+```sh
+$ git clone https://github.com/torao/asterisk.git
+$ cd asterisk
+$ ./sbt package
+```
 
 Or, you can also run following sample code without build.
 
@@ -71,13 +73,14 @@ object SampleImpl {
 
 Run from sbt.
 
-    $ ./sbt run
-    [info] Set current project to asterisk (in build file:/Users/torao/git/asterisk/)
-    [info] Compiling 1 Scala source to /Users/torao/git/asterisk/target/scala-2.10/classes...
-    [info] Running SampleImpl
-    hello, asterisk
-    [success] Total time: 11 s, completed 2014/02/03 5:53:31
-
+```sh
+$ ./sbt run
+[info] Set current project to asterisk (in build file:/Users/torao/git/asterisk/)
+[info] Compiling 1 Scala source to /Users/torao/git/asterisk/target/scala-2.10/classes...
+[info] Running SampleImpl
+hello, asterisk
+[success] Total time: 11 s, completed 2014/02/03 5:53:31
+```
 
 License
 =======
