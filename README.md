@@ -22,7 +22,7 @@ $ cd asterisk
 $ ./sbt package
 ```
 
-Or, you can also run following sample code by `sbt run` without build.
+Or, you can also run directory following sample code of bi-directional RPC by using `sbt run`.
 
 ```scala
 import com.kazzla.asterisk._
@@ -31,8 +31,9 @@ import scala.concurrent.{Await,Future,Promise}
 import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util._
-// 1) Define scala trait or java interface as IDL those every methods has @Export(function-id) and Future return type
-//    to agree interface statically between client and server.
+// 1) Define scala traits or java interfaces as IDL, those every methods
+//    has @Export(function-id) and Future return type to agree strict interface
+//    statically between client and server.
 trait Sample1 {
   @Export(10)
   def greeting(name:String):Future[String]
