@@ -1,7 +1,7 @@
-Asterisk\*
+Asterisque\*
 ========
 
-Asterisk\* is lightweight bidirectional RPC with asynchronous messaging framework, protocol and implementation.
+Asterisque\* is lightweight bidirectional RPC with asynchronous messaging framework, protocol and implementation for P2P distributed system.
 
 Documents
 =========
@@ -9,6 +9,7 @@ Documents
 * [Motive](http://prezi.com/ia6rjvjrhe6d/asterisk-motivation/)
 * [Brain Storming](http://prezi.com/ktjdnfshx8dv/asterisk-brain-storming/)
 * [Introduction](docs/introduction.md)
+* [Developer Guide](docs/developerguide.md)
 
 Getting Started
 ===============
@@ -94,4 +95,4 @@ hello, *asterisk*
 
 License
 =======
-All sources and related resources are available [Apache License Version 2.0](LICENSE).
+All sources and related resources are available under [Apache License Version 2.0](LICENSE).
