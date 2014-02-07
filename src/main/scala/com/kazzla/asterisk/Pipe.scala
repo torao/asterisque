@@ -10,6 +10,7 @@ import java.io.{IOException, OutputStream, InputStream}
 import java.nio.ByteBuffer
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicBoolean
+import scala.util.{Failure, Success, Try}
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Pipe
@@ -145,6 +146,10 @@ object Pipe {
 		def onFailure(f:(Throwable)=>Unit):Builder = {
 			_onFailure ++ f
 			this
+		}
+		def onComplete(f:(Try[Any])=>Unit):Builder = {
+			onSuccess{ r => f(Success(r)) }
+			onFailure{ ex => f(Failure(ex)) }
 		}
 
 		def call(params:Any*):Pipe = {

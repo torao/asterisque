@@ -18,6 +18,21 @@ object Sample {
 	val logger = LoggerFactory.getLogger(Sample.getClass)
 	val executor = Executors.newCachedThreadPool()
 
+	trait NameServer {
+		@Export(10)
+		def lookup(name:String):Int
+	}
+
+	trait LogServer {
+		@Export(10)
+		def info(msg:String):Unit
+		@Export(20)
+		def error(msg:String):Unit
+		@Export(value=30,stream=true)
+		def dump(msg:String):Unit
+	}
+
+
 	object Node1 {
 
 		val ns = Node("NameServer").serve(new Service with NameServer {
@@ -78,18 +93,4 @@ object Sample {
 		executor.shutdown()
 	}
 
-}
-
-trait NameServer {
-	@Export(10)
-	def lookup(name:String):Int
-}
-
-trait LogServer {
-	@Export(10)
-	def info(msg:String):Unit
-	@Export(20)
-	def error(msg:String):Unit
-	@Export(value=30,stream=true)
-	def dump(msg:String):Unit
 }

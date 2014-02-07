@@ -14,7 +14,7 @@ Documents
 Getting Started
 ===============
 
-To build asterisk\* JAR library, you may clone asterisk\* GitHub repository and build `asterisk_2.10-0.1.jar` by
+To build asterisque\* JAR library, you may clone asterisque\* GitHub repository and build `asterisk_2.10-0.1.jar` by
 `sbt package`.
 
 ```sh
@@ -23,7 +23,7 @@ $ cd asterisk
 $ ./sbt package
 ```
 
-Or, you can also run directory following sample code of bi-directional RPC by using `sbt run`.
+Or, you can also run directory by using `sbt run` to specify following sample code of bi-directional RPC.
 
 ```scala
 import com.kazzla.asterisk._
@@ -32,9 +32,9 @@ import scala.concurrent.{Await,Future,Promise}
 import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util._
-// 1) Define scala traits or java interfaces as IDL, those every methods
-//    has @Export(function-id) and Future return type to agree strict interface
-//    statically between client and server.
+// 1) Define scala trait or java interface as IDL those every methods has
+//    @Export(function-id) and Future return type to agree interface statically
+//    between client and server.
 trait Sample1 {
   @Export(10)
   def greeting(name:String):Future[String]
@@ -60,11 +60,11 @@ class Sample2Impl extends Service with Sample2 {
   def surround(text:String) = Promise.successful(s"*$text*").future
 }
 object SampleImpl {
-  // 3) Instantiate client and server nodes that use Netty as messenger bridge.
-  val node1 = Node("node 1").serve(new Sample1Impl).bridge(netty.Netty).build()
-  val node2 = Node("node 2").serve(new Sample2Impl).bridge(netty.Netty).build()
-  def close() = Seq(node1,node2).foreach{ _.shutdown() }
   def main(args:Array[String]):Unit = {
+    // 3) Instantiate client and server nodes that use Netty as messenger bridge.
+    val node1 = Node("node 1").serve(new Sample1Impl).bridge(netty.Netty).build()
+    val node2 = Node("node 2").serve(new Sample2Impl).bridge(netty.Netty).build()
+    def close() = Seq(node1,node2).foreach{ _.shutdown() }
     // 4) The server listen on port 9999 without any action in accept.
     node1.listen(new InetSocketAddress(9999)){ _ => None }
     // 5) Client retrieve `Future[Session]` by connecting to server port 9999.
