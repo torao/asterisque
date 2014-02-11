@@ -10,7 +10,8 @@ import java.io.{IOException, OutputStream, InputStream}
 import java.nio.ByteBuffer
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicBoolean
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.Promise
+import com.kazzla.asterisk.async.Source
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Pipe
@@ -24,13 +25,16 @@ import scala.util.{Failure, Success, Try}
  *
  * @author Takami Torao
  */
-class Pipe private[asterisk](val id:Short, val function:Short, val session:Session) {
+class Pipe private[asterisk](val id:Short, val function:Short, val session:Session) extends Attributes {
 
 	private[this] val closed = new AtomicBoolean(false)
 
 	private[asterisk] val onBlock = new EventHandlers[Block]()
-	private[asterisk] val onSuccess = new EventHandlers[Any]()
-	private[asterisk] val onFailure = new EventHandlers[Throwable]()
+
+	private[this] val promise = Promise[Any]()
+	lazy val future = promise.future
+
+	lazy val blocks = new Blocks()
 
 	// ==============================================================================================
 	// ブロックの送信
@@ -38,17 +42,7 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	/**
 	 * 指定されたバイナリデータを Block として送信します。
 	 */
-	def block(buffer:Array[Byte]):Unit = block(buffer, 0, buffer.length)
-
-	// ==============================================================================================
-	// ブロックの送信
-	// ==============================================================================================
-	/**
-	 * 指定されたバイナリデータを Block として送信します。
-	 */
-	def block(buffer:Array[Byte], offset:Int, length:Int):Unit = {
-		session.post(Block(id, buffer, offset, length))
-	}
+	private[this] def block(buffer:Array[Byte], offset:Int, length:Int):Unit = block(Block(id, buffer, offset, length))
 
 	// ==============================================================================================
 	// ブロックの受信
@@ -56,7 +50,7 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	/**
 	 * 指定された Block を受信したときに呼び出されます。
 	 */
-	private[asterisk] def block(block:Block):Unit = onBlock(block)
+	private[this] def block(block:Block):Unit = session.post(block)
 
 	// ==============================================================================================
 	// パイプのクローズ
@@ -67,6 +61,7 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	 */
 	def close[T](result:T):Unit = if(closed.compareAndSet(false, true)){
 		session.post(Close[T](id, result, null))
+		promise.success(result)
 		session.destroy(id)
 		Pipe.logger.trace(s"pipe $id is closed with success: $result")
 	} else {
@@ -82,6 +77,7 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	 */
 	def close(ex:Throwable):Unit = if(closed.compareAndSet(false, true)){
 		session.post(Close[AnyRef](id, null, ex.toString))
+		promise.failure(ex)
 		session.destroy(id)
 		Pipe.logger.trace(s"pipe $id is closed with failure: $ex")
 	} else {
@@ -96,14 +92,127 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	 */
 	private[asterisk] def close(close:Close[_]):Unit = if(closed.compareAndSet(false, true)){
 		if(close.errorMessage != null){
-			onFailure(new RemoteException(close.errorMessage))
+			val ex = new RemoteException(close.errorMessage)
+			promise.failure(ex)
 		} else {
-			onSuccess(close.result)
+			promise.success(close.result)
 		}
 		session.destroy(id)
 		Pipe.logger.trace(s"pipe $id is closed by peer: $close")
 	} else {
 		Pipe.logger.debug(s"pipe $id already closed: $close")
+	}
+
+	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	// Block
+	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	/**
+	 * パイプに対してブロック送受信 (ストリーム) 操作をおこなうためのクラス。
+	 * メッセージ配信スレッド内でハンドラを設定する必要があります。
+	 */
+	class Blocks private[Pipe]() extends Source[Block] {
+
+		/**
+		 * このパイプにハンドラが設定される前に受信したブロックを保持するためのキュー。
+		 */
+		// private[this] val premature = new LinkedBlockingQueue[Block]()
+
+		// @volatile
+		// private[this] var handler:Option[(Block)=>Unit] = None
+		private[this] var _useStream = false
+
+		/**
+		 * このパイプに対するブロック出力を `OutputStream` として行います。ストリームに対する出力データがバッファ
+		 * サイズに達するか `flush()` が実行されると [[Block]] として送信されます。
+		 * このストリームへの出力操作は I/O ブロックを受けません。
+		 */
+		lazy val out:PipeOutputStream = new PipeOutputStream(Pipe.this)
+
+		/**
+		 * このパイプが受信したブロックを `InputStream` として参照します。
+		 * @@[[com.kazzla.asterisk.Export]](stream=true) 宣言されているメソッドのパイプのみ使用することが
+		 * 出来ます。
+		 */
+		lazy val in:PipeInputStream = if(_useStream){
+			val is = new PipeInputStream()
+			foreach(is)
+			is
+		} else {
+			throw new IOException(s"pipe $id is not declared as stream=true")
+		}
+
+		private[this] def receive(block:Block):Unit = synchronized{
+			if(block.isEOF){
+				finish()
+			} else {
+				sequence(block)
+			}
+			// handler match {
+			// 	case Some(h) => h(block)
+			// 	case None => premature.put(block)
+			// }
+		}
+
+		/**
+		 * 受信したブロックを受け取るハンドラを設定します。
+		 * @@[[com.kazzla.asterisk.Export]](stream=true) 宣言されているメソッドのパイプのみ使用することが
+		 * 出来ます。
+		 */
+		/*
+		def receive(f:(Block)=>Unit):Pipe = if(! _useStream){
+			throw new IOException(s"block streaming is not available on function declared as stream=false")
+		} else synchronized {
+			handler match {
+				case Some(_) =>
+					throw new IOException(s"other handler is already handling blocks")
+				case None =>
+					while(! premature.isEmpty){
+						f(premature.take())
+					}
+					handler = Some(f)
+			}
+			Pipe.this
+		}
+
+		def >> (f:(Block)=>Unit):Unit = receive(f)
+		*/
+
+		// ============================================================================================
+		// ブロックの送信
+		// ============================================================================================
+		/**
+		 * 指定されたバイナリデータを Block として送信します。
+		 */
+		def sendEOF():Unit = block(Block.eof(Pipe.this.id))
+
+		// ============================================================================================
+		// ブロックの送信
+		// ============================================================================================
+		/**
+		 * 指定されたバイナリデータを Block として送信します。
+		 */
+		def send(buffer:Array[Byte]):Unit = block(buffer, 0, buffer.length)
+
+		// ============================================================================================
+		// ブロックの送信
+		// ============================================================================================
+		/**
+		 * 指定されたバイナリデータを Block として送信します。
+		 */
+		def send(buffer:Array[Byte], offset:Int, length:Int):Unit = Pipe.this.block(buffer, offset, length)
+
+		// ============================================================================================
+		// ブロックの送信
+		// ============================================================================================
+		/**
+		 * 指定されたバイナリデータを Block として送信します。
+		 */
+		def << (buffer:Array[Byte]):Unit = send(buffer)
+
+		private[asterisk] def useStream():Unit = {
+			onBlock ++ receive
+			_useStream = true
+		}
 	}
 }
 
@@ -113,6 +222,11 @@ object Pipe {
 	private[this] val pipes = new ThreadLocal[Pipe]()
 
 	def apply():Option[Pipe] = Option(pipes.get())
+
+	def orElse[T](default: =>T)(f:(Pipe)=>T):T = apply() match {
+		case Some(pipe) => f(pipe)
+		case None => default
+	}
 
 	private[asterisk] def using[T](pipe:Pipe)(f: =>T):T = {
 		val old = pipes.get()
@@ -130,38 +244,6 @@ object Pipe {
 	 */
 	private[asterisk] val UNIQUE_MASK:Short = (1 << 15).toShort
 
-	class Builder private[asterisk](session:Session, function:Short) {
-		private[this] val _onBlock = new EventHandlers[Block]()
-		private[this] val _onSuccess = new EventHandlers[Any]()
-		private[this] val _onFailure = new EventHandlers[Throwable]()
-
-		def onBlock(f:(Block)=>Unit):Builder = {
-			_onBlock ++ f
-			this
-		}
-		def onSuccess(f:(Any)=>Unit):Builder = {
-			_onSuccess ++ f
-			this
-		}
-		def onFailure(f:(Throwable)=>Unit):Builder = {
-			_onFailure ++ f
-			this
-		}
-		def onComplete(f:(Try[Any])=>Unit):Builder = {
-			onSuccess{ r => f(Success(r)) }
-			onFailure{ ex => f(Failure(ex)) }
-		}
-
-		def call(params:Any*):Pipe = {
-			val pipe = session.create(function, params)
-			pipe.onBlock +++ _onBlock
-			pipe.onSuccess +++ _onSuccess
-			pipe.onFailure +++ _onFailure
-			session.post(Open(pipe.id, function, params))
-			pipe
-		}
-	}
-
 }
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -170,7 +252,7 @@ object Pipe {
 /**
  * このパイプ上で受信したブロックをストリームとして参照するためのクラス。
  */
-class PipeInputStream extends InputStream with ((Block) => Unit) {
+class PipeInputStream private[asterisk]() extends InputStream with ((Block) => Unit) {
 
 	/**
 	 * パイプから受信したブロックを Block として保持するためのキュー。
@@ -248,10 +330,19 @@ class PipeInputStream extends InputStream with ((Block) => Unit) {
  * され、フラグメント化されたブロックとして送信されます。
  * このパイプを使用した出力ストリームクラス。出力内容を Block にカプセル化して非同期セッションへ出力する。
  */
-class PipeOutputStream(pipe:Pipe, bufferSize:Int) extends OutputStream {
+class PipeOutputStream private[asterisk](pipe:Pipe, bufferSize:Int) extends OutputStream {
 	def this(pipe:Pipe) = this(pipe, 4 * 1024)
-	private[this] val buffer = ByteBuffer.allocate(bufferSize)
+	private[this] var buffer = ByteBuffer.allocate(bufferSize)
 	private[this] var osClosed = false
+	/**
+	 * 出力バッファサイズを変更します。バッファリングしているデータはすべて [[flush()]] されます。
+	 * @param size 出力バッファサイズ
+	 */
+	def setBufferSize(size:Int):Unit = {
+		flush()
+		assert(buffer.position() == 0)
+		buffer = ByteBuffer.allocate(size)
+	}
 	def write(b:Int):Unit = {
 		ensureWrite(1)
 		buffer.put(b.toByte)
@@ -268,6 +359,7 @@ class PipeOutputStream(pipe:Pipe, bufferSize:Int) extends OutputStream {
 		if(osClosed){
 			throw new IOException(s"unable to write to closed pipe or stream: ${pipe.id}")
 		}
+		// TODO バッファサイズより大きなデータが書き込めない?
 		if(buffer.position() + len > buffer.capacity()){
 			flush()
 		}
@@ -275,15 +367,18 @@ class PipeOutputStream(pipe:Pipe, bufferSize:Int) extends OutputStream {
 	override def flush():Unit = {
 		if(buffer.position() > 0){
 			buffer.flip()
-			val b = new Array[Byte](buffer.remaining())
-			buffer.get(b, 0, b.length)
-			pipe.block(b)
+			while(buffer.hasRemaining){
+				val len = math.min(buffer.remaining(), Block.MaxPayloadSize)
+				val b = new Array[Byte](len)
+				buffer.get(b, 0, b.length)
+				pipe.blocks.send(b)
+			}
 			buffer.clear()
 		}
 	}
 	override def close():Unit = {
 		flush()
-		pipe.block(Array[Byte]())
+		pipe.blocks.send(Array[Byte]())
 		osClosed = true
 	}
 }

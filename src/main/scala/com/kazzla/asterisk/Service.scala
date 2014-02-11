@@ -6,7 +6,7 @@
 package com.kazzla.asterisk
 
 import org.slf4j.LoggerFactory
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Promise, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 import java.io.{IOException, InputStream, OutputStream}
 import java.lang.reflect.Method
@@ -28,7 +28,7 @@ import java.lang.reflect.Method
  *   // サーバ側
  *   class ReverseService extends Service with Reverse {
  *     def reverse(text:String) = {
- *       Future(new String(text.toCharArray.reverse))
+ *       Promise.successful(new String(text.toCharArray.reverse)).future
  *     }
  *   }
  *   Node("reverse").serve(new ReverseService()).build()
@@ -69,6 +69,41 @@ abstract class Service(implicit context:ExecutionContext) {
 	 */
 	private[this] var functions = Map[Short,Function]()
 
+	protected def withPipe[T](f:(Pipe)=>Future[T]):Future[T] = Pipe() match {
+		case Some(pipe) => f(pipe)
+		case None => Promise.failed(new Exception()).future
+	}
+
+	logger.debug(s"binding ${getClass.getSimpleName} as service")
+
+	// ============================================================================================
+	// function の定義
+	// ============================================================================================
+	/**
+	 * サブクラスから function 番号が定義されているメソッドを抽出し同期呼び出し用に定義。
+	 */
+	private[this] def declare(export:Export, m:Method):Unit = {
+		if(m.getReturnType != classOf[Future[_]]){
+			throw new IllegalArgumentException(s"method with @Export annotation must have Future return type: ${m.getSimpleName}")
+		}
+		val id = export.value()
+		val use = export.stream()
+		logger.debug(s"  function $id to ${m.getSimpleName}${if(use) s" (stream)" else ""}")
+		id.toInt accept { args =>
+			val params = TypeMapper.appropriateValues(args, m.getParameterTypes)
+			m.invoke(Service.this, params:_*).asInstanceOf[Future[Any]]
+		} stream use
+	}
+
+	/**
+	 * サブクラスから function 番号が定義されている静的なメソッドを抽出し同期呼び出し用に定義。
+	 */
+	getClass.getInterfaces.foreach{
+		_.getDeclaredMethods.filter{ _.getAnnotation(classOf[Export]) != null }.foreach { m =>
+			declare(m.getAnnotation(classOf[Export]), m)
+		}
+	}
+
 	// ==============================================================================================
 	// メッセージ処理の実行
 	// ==============================================================================================
@@ -81,8 +116,10 @@ abstract class Service(implicit context:ExecutionContext) {
 		case Open(_, _, params) =>
 			functions.get(pipe.function) match {
 				case Some(func) =>
-					pipe.onSuccess ++ { result => func.disconnect(result, null) }
-					pipe.onFailure ++ { ex => func.disconnect(null, ex.toString) }
+					pipe.future.onComplete {
+						case Success(result) => func.disconnect(result, null)
+						case Failure(ex) => func.disconnect(null, ex.toString)
+					}
 					func(params).onComplete {
 						case Success(result) =>
 							pipe.close(result)
@@ -94,7 +131,7 @@ abstract class Service(implicit context:ExecutionContext) {
 					logger.debug(s"function unbound on: ${pipe.function}, $pipe, $msg")
 					pipe.close(new RemoteException(s"function unbound on: ${pipe.function}"))
 			}
-		case block:Block => pipe.block(block)
+		case block:Block => pipe.onBlock(block)
 		case close:Close[_] => pipe.close(close)
 	}
 
@@ -130,34 +167,40 @@ abstract class Service(implicit context:ExecutionContext) {
 
 	}
 
-	logger.debug(s"binding ${getClass.getSimpleName} as service")
-
+	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	// Function
+	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	/**
-	 * サブクラスから function 番号が定義されているメソッドを抽出し同期呼び出し用に定義。
+	 * サービスのファンクション番号に関連づけられている処理の実体。
+	 * @param onAccept ファンクションが呼び出されたときに実行する処理
 	 */
-	private[this] def declare(export:Export, m:Method):Unit = {
-		if(m.getReturnType != classOf[Future[_]]){
-			throw new IllegalArgumentException(s"method with @Export annotation must have Future return type: ${m.getSimpleName}")
+	class Function private[Service](onAccept:(Seq[Any])=>Future[Any]) {
+		private[this] var _onDisconnect:Option[(Any)=>Unit] = None
+		private[this] var _stream = false
+
+		/**
+		 * ピアによって切断されたときの処理を指定します。
+		 */
+		def disconnect(f:(Any)=>Unit):Function = {
+			_onDisconnect = Some(f)
+			this
 		}
-		val id = export.value()
-		val stream = export.stream()
-		logger.debug(s"  function $id to ${m.getSimpleName}${if(stream) s" (stream)" else ""}")
-		id.toInt accept {args =>
-			val pipe = Pipe().get
-			pipe.useStream(pipe.prepareStream(stream)){
-				val params = TypeMapper.appropriateValues(args, m.getParameterTypes)
-				m.invoke(Service.this, params:_*).asInstanceOf[Future[Any]]
+
+		/**
+		 * この処理でストリーム拡張を使用するか。
+		 */
+		def stream(useStream:Boolean):Function = {
+			_stream = useStream
+			this
+		}
+
+		private[Service] def apply(params:Seq[Any]):Future[Any] = {
+			if(_stream){
+				Pipe().foreach{ _.blocks.useStream() }
 			}
+			onAccept(params)
 		}
-	}
-
-	/**
-	 * サブクラスから function 番号が定義されている静的なメソッドを抽出し同期呼び出し用に定義。
-	 */
-	getClass.getInterfaces.foreach{
-		_.getDeclaredMethods.filter{ _.getAnnotation(classOf[Export]) != null }.foreach { m =>
-			declare(m.getAnnotation(classOf[Export]), m)
-		}
+		private[Service] def disconnect(result:Any, error:String) = _onDisconnect.foreach { _(result) }
 	}
 
 	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -172,21 +215,12 @@ abstract class Service(implicit context:ExecutionContext) {
 	 * @param pipe 拡張するパイプ
 	 */
 	protected implicit class PipeStream(pipe:Pipe){
-		private[Service] def prepareStream(us:Boolean):Option[(InputStream,OutputStream)] = if(us){
+		private[this] val Name = "com.kazzla.asterisque.pipe.streams"
+		private[Service] def prepareStream():Unit = {
 			val in = new PipeInputStream()
 			val out = new PipeOutputStream(pipe)
 			pipe.onBlock ++ in
-			Some(in, out)
-		} else {
-			None
-		}
-		private[Service] def useStream[T](s:Option[(InputStream,OutputStream)])(f: =>T):T = {
-			Service.stream.set(s)
-			try {
-				f
-			} finally {
-				Service.stream.set(null)
-			}
+			pipe.setAttribute(Name, (in, out))
 		}
 
 		// ==============================================================================================
@@ -196,7 +230,10 @@ abstract class Service(implicit context:ExecutionContext) {
 		 * パイプによる `Block` 受信をストリームとして参照します。
 		 * @@[[com.kazzla.asterisk.Export]](stream=true) 宣言されているメソッド内からのみ使用することが出来ます。
 		 */
-		def in:InputStream = Service.getStream._1
+		def in:InputStream = pipe.getAttribute(Name) match {
+			case Some((in:PipeInputStream,out:PipeOutputStream)) => in
+			case _ => throw new IOException(s"function is not defined as stream=true")
+		}
 
 		// ==============================================================================================
 		// 出力ストリーム
@@ -204,8 +241,11 @@ abstract class Service(implicit context:ExecutionContext) {
 		/**
 		 * パイプを使用した `Block` 送信をストリームとして行います。
 		 * @@[[com.kazzla.asterisk.Export]](stream=true) 宣言されているメソッド内からのみ使用することが出来ます。
-		*/
-		def out:OutputStream = Service.getStream._2
+		 */
+		def out:OutputStream = pipe.getAttribute(Name) match {
+			case Some((in:PipeInputStream,out:PipeOutputStream)) => out
+			case _ => throw new IOException(s"function is not defined as stream=true")
+		}
 
 	}
 
@@ -213,49 +253,4 @@ abstract class Service(implicit context:ExecutionContext) {
 
 object Service {
 	private[Service] val logger = LoggerFactory.getLogger(classOf[Service])
-
-	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	// Function
-	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	/**
-	 * サービスのファンクション番号に関連づけられている処理の実体。
-	 * @param onAccept ファンクションが呼び出されたときに実行する処理
-	 */
-	class Function private[Service](onAccept:(Seq[Any])=>Future[Any]) {
-
-		/**
-		 * ピアによって切断されたときに呼び出される処理。
-		 */
-		private[this] var _onDisconnect:Option[(Any)=>Unit] = None
-
-		/**
-		 * ピアによって切断されたときの処理を指定します。
-		 */
-		def disconnect(f:(Any)=>Unit):Function = {
-			_onDisconnect = Some(f)
-			this
-		}
-
-		private[Service] def apply(params:Seq[Any]):Future[Any] = onAccept(params)
-		private[Service] def disconnect(result:Any, error:String) = _onDisconnect.foreach { _(result) }
-	}
-
-	/**
-	 * ストリームを保持するための ThreadLocal。
-	 */
-	private[Service] val stream = new ThreadLocal[Option[(InputStream,OutputStream)]]()
-
-	// ============================================================================================
-	// ストリームの参照
-	// ============================================================================================
-	/**
-	 * 現在のスレッドからストリームを参照します。
-	 * @return ストリーム
-	 */
-	private[Service] def getStream:(InputStream,OutputStream) = Option(Service.stream.get()) match {
-		case Some(s) if s.isDefined => s.get
-		case _ =>
-			throw new IOException(s"function is not declared with @${classOf[Export].getSimpleName}(stream=true), or out of scope")
-	}
-
 }

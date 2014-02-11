@@ -21,34 +21,34 @@ import scala.util.{Success, Failure}
  */
 object Sample2 {
 
-	/**
-	 * Service implementation specify `Service` and interface.
-	 */
-	class GreetingServiceImpl extends Service {
-		10 accept { args => Promise.successful(s"hello, ${args(0)}").future }
-		20 accept { args =>
-			scala.concurrent.future {
-				Thread.sleep(3 * 1000)
-				s"hello, ${args(0)}"
-			}
-		}
-	}
+  /**
+   * Service implementation specify `Service` and interface.
+   */
+  class GreetingServiceImpl extends Service {
+    10 accept { args => Promise.successful(s"hello, ${args(0)}").future }
+    20 accept { args =>
+      scala.concurrent.future {
+        Thread.sleep(3 * 1000)
+        s"hello, ${args(0)}"
+      }
+    }
+  }
 
-	def main(args:Array[String]):Unit = {
+  def main(args:Array[String]):Unit = {
 
-		// Server node serves greeting service on port 5330 without any action on accept connection.
-		val server = Node("server").serve(new GreetingServiceImpl()).build()
-		server.listen(new InetSocketAddress("localhost", 5330), None){ _ => None }
+    // Server node serves greeting service on port 5330 without any action on accept connection.
+    val server = Node("server").serve(new GreetingServiceImpl()).build()
+    server.listen(new InetSocketAddress("localhost", 5330), None)
 
-		// Client node connect to server.
-		val client = Node("client").build()
-		client.connect(new InetSocketAddress("localhost", 5330), None).onComplete{
-			case Success(session) =>
-				// Bind known service interface from session, and call greeting service
-				// asynchronously.
-				session.open(20).onSuccess{ result => System.out.println(result) }.call("asterisque")
-			case Failure(ex) => ex.printStackTrace()
-		}
-	}
+    // Client node connect to server.
+    val client = Node("client").build()
+    client.connect(new InetSocketAddress("localhost", 5330), None).onComplete{
+      case Success(session) =>
+        // Bind known service interface from session, and call greeting service
+        // asynchronously.
+        session.open(20, "asterisque").future.onSuccess{ case result => System.out.println(result) }
+      case Failure(ex) => ex.printStackTrace()
+    }
+  }
 
 }

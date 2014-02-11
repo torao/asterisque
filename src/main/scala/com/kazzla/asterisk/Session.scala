@@ -9,9 +9,8 @@ import java.util.concurrent.atomic.{AtomicBoolean, AtomicReference, AtomicIntege
 import scala.annotation.tailrec
 import org.slf4j.LoggerFactory
 import java.io.IOException
-import scala.concurrent.{Await, Promise}
 import java.lang.reflect.{Method, InvocationHandler}
-import scala.concurrent.duration.Duration
+import scala.concurrent.Promise
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Session
@@ -20,10 +19,13 @@ import scala.concurrent.duration.Duration
  * @author Takami Torao
  * @param name このセッションの名前
  */
-class Session(val name:String, defaultService:Service, val wire:Wire) {
+class Session(val name:String, defaultService:Service, val wire:Wire) extends Attributes{
 
 	import Session.logger
 
+	/**
+	 * このセッションで提供しているサービス。
+	 */
 	@volatile
 	private[this] var _service = defaultService
 
@@ -63,47 +65,9 @@ class Session(val name:String, defaultService:Service, val wire:Wire) {
 	 */
 	val onClosed = new EventHandlers[Session]()
 
-	/**
-	 * セッションに設定できる任意の値。
-	 */
-	private[this] val attribute = new AtomicReference[Map[String,Any]](Map())
-
 	wire.onReceive ++ dispatch        	// `Wire` にメッセージが到着した時のディスパッチャーを設定
 	wire.onClosed ++ { _ => close() } 	// `Wire` がクローズされたときにセッションもクローズ
 	wire.start()                      	// メッセージポンプを開始
-
-	// ==============================================================================================
-	// セッション値の設定
-	// ==============================================================================================
-	/**
-	 * このセッションに任意の値を関連づけます。
-	 * @param name 値の名前
-	 * @param obj 設定する値
-	 * @return 置き換えられる前の値
-	 */
-	def setAttribute(name:String, obj:Any):Option[Any] = {
-		@tailrec
-		def set():Option[Any] = {
-			val map = attribute.get()
-			val old = map.get(name)
-			if(attribute.compareAndSet(map, map.updated(name, obj))){
-				old
-			} else {
-				set()
-			}
-		}
-		set()
-	}
-
-	// ==============================================================================================
-	// セッション値の参照
-	// ==============================================================================================
-	/**
-	 * このセッションに関連づけられている値を参照します。
-	 * @param name 値の名前
-	 * @return 値
-	 */
-	def getAttribute(name:String):Option[Any] = attribute.get().get(name)
 
 	// ==============================================================================================
 	// パイプのオープン
@@ -114,7 +78,16 @@ class Session(val name:String, defaultService:Service, val wire:Wire) {
 	 * @param function function の識別子
 	 * @return function とのパイプ
 	 */
-	def open[T](function:Short):Pipe.Builder = new Pipe.Builder(this, function)
+	def open[T](function:Short, params:Any*):Pipe = _open(function, false, params:_*)
+	def openWithStream[T](function:Short, params:Any*):Pipe = _open(function, true, params:_*)
+	def _open[T](function:Short, stream:Boolean, params:Any*):Pipe = {
+		val pipe = create(function, params)
+		if(stream){
+			pipe.blocks.useStream()
+		}
+		post(Open(pipe.id, function, params))
+		pipe
+	}
 
 	/**
 	 * 指定されたメッセージを受信したときに呼び出されその種類によって処理を分岐します。
@@ -289,17 +262,12 @@ class Session(val name:String, defaultService:Service, val wire:Wire) {
 				logger.debug(s"normal method: ${method.getSimpleName}")
 				method.invoke(this, args:_*)
 			} else {
-				val promise = Promise[Any]()
-				open[Any](export.value()).onBlock{ block =>
-				// ignore unreceiveable blocks
-					None
-				}.onSuccess{ result =>
-					promise.success(result)
-				}.onFailure{ ex =>
-					promise.failure(ex)
-				}.call((if(args==null) Array[AnyRef]() else args):_*)
-
-				promise.future
+				// there is no way to receive block in interface binding
+				if(export.stream()){
+					Promise.failed(new UnsupportedOperationException(s"method ${method.getSimpleName} that is declared as stream=true is not able to call by interface binding synchronously")).future
+				} else {
+					open[Any](export.value(), (if(args==null) Array[AnyRef]() else args):_*).future
+				}
 			}
 		}
 	}
@@ -322,47 +290,4 @@ object Session {
 			sessions.set(old)
 		}
 	}
-
-	/*
-	class AsyncCall private[Session](useStream:Boolean) {
-		private[this] val prematureBlocks = new LinkedBlockingQueue[Block]()
-		private[Session] val promise = Promise[Any]()
-		private[Session] var _pipe:Pipe = _
-		val result = promise.future
-		def pipe = _pipe
-
-		private[Session] def block(b:Block):Unit = if(useStream){
-			prematureBlocks.synchronized {
-				_onBlock match {
-					case Some(f) => f(b)
-					case None => prematureBlocks.put(b)
-				}
-			}
-		}
-		private[this] var _onBlock:Option[(Block)=>Unit] = None
-		def onBlock(f:(Block)=>Unit) = {
-			prematureBlocks.synchronized {
-				_onBlock match {
-					case Some(_) =>
-						throw new IllegalStateException("onBlock handler is already set")
-					case None =>
-						if(! useStream){
-							throw new IllegalStateException(s"cannot set onBlock handler for a method annotated with @Export(stream=false)")
-						}
-						_onBlock = Some({ block =>
-							try { f(block) } catch {
-								case ex:ThreadDeath => throw ex
-								case ex:Throwable =>
-									logger.error(s"fail to callback for block received: ${f.toString()}", ex)
-							}
-						})
-						while(! prematureBlocks.isEmpty){
-							_onBlock.get.apply(prematureBlocks.take())
-						}
-				}
-			}
-		}
-	}
-	*/
-
 }

@@ -5,6 +5,8 @@
 */
 package com.kazzla.asterisk
 
+import java.nio.ByteBuffer
+
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Message
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -52,9 +54,13 @@ case class Block(override val pipeId:Short, payload:Array[Byte], offset:Int, len
 			b => "%02X".format(b & 0xFF)
 		}.mkString(","), offset, length)
 	}
+
+	def toByteBuffer:ByteBuffer = ByteBuffer.wrap(payload, offset, length)
 }
 
 object Block {
+
+	val MaxPayloadSize = 0xFFFF - (4 * 1024)
 
 	/**
 	 * EOF ブロックで共用する長さ 0 のバイト配列。

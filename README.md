@@ -32,9 +32,10 @@ import scala.concurrent.{Await,Future,Promise}
 import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util._
-// 1) Define scala trait or java interface as IDL those every methods has
-//    @Export(function-id) and Future return type to agree interface statically
-//    between client and server.
+// 1) Simple implementation is to define scala trait or java interface
+// as IDL to agree interface statically between client and server.
+// Those every methods must has @Export(function-id) annotation and
+// `Future` return type.
 trait Sample1 {
   @Export(10)
   def greeting(name:String):Future[String]
@@ -43,7 +44,9 @@ trait Sample2 {
   @Export(10)
   def surround(text:String):Future[String]
 }
-// 2) Implementation class is used as remote service on server node.
+// 2) Implementation class of interfaces is used as remote service on
+// server node. You may calculate result asynchronously after returning
+// `Future` immediately.
 class Sample1Impl extends Service with Sample1 {
   def greeting(name:String) = Session() match {
     case Some(session) =>
@@ -65,8 +68,8 @@ object SampleImpl {
     val node1 = Node("node 1").serve(new Sample1Impl).bridge(netty.Netty).build()
     val node2 = Node("node 2").serve(new Sample2Impl).bridge(netty.Netty).build()
     def close() = Seq(node1,node2).foreach{ _.shutdown() }
-    // 4) The server listen on port 9999 without any action in accept.
-    node1.listen(new InetSocketAddress(9999)){ _ => None }
+    // 4) The server listen on port 9999 without any action on accept.
+    node1.listen(new InetSocketAddress(9999))
     // 5) Client retrieve `Future[Session]` by connecting to server port 9999.
     val future = node2.connect(new InetSocketAddress(9999))
     val session = Await.result(future, Duration.Inf)

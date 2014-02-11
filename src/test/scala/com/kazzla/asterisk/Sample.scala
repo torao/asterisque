@@ -44,7 +44,7 @@ object Sample {
 					log.info("hoge")
 
 					logger.info("calling log.dump() with line from 0 to 9")
-					val pipe = session.open(30).call("hoge")
+					val pipe = session.open(30, "hoge")
 					val out = new PrintWriter(new PipeOutputStream(pipe))
 					(0 until 10).foreach{ i => out.println(i) }
 					out.close()
@@ -57,7 +57,7 @@ object Sample {
 		}).build()
 
 		val server = {
-			val future = ns.listen(new InetSocketAddress(7777), None){ s => None }
+			val future = ns.listen(new InetSocketAddress(7777), None)
 			Await.result(future, Duration.Inf)
 		}
 	}

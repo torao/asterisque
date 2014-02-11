@@ -39,7 +39,30 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 		old
 	}
 
-	def listen(address:SocketAddress, tls:Option[SSLContext] = None)(onAccept:(Session)=>Unit):Future[Server] = {
+	// ==============================================================================================
+	// 接続受け付けの開始
+	// ==============================================================================================
+	/**
+	 * リモートのノードからの接続を受け付けます。
+	 * @param address バインドアドレス
+	 * @param tls 通信に使用する SSLContext
+	 * @return Server の Future
+	 */
+	def listen(address:SocketAddress, tls:Option[SSLContext] = None):Future[Server] = {
+		listenWithAccept(address, tls){ _ => None }
+	}
+
+	// ==============================================================================================
+	// 接続受け付けの開始
+	// ==============================================================================================
+	/**
+	 * リモートのノードからの接続を受け付けます。
+	 * @param address バインドアドレス
+	 * @param tls 通信に使用する SSLContext
+	 * @param onAccept 接続を受け付けた時に実行する処理
+	 * @return Server の Future
+	 */
+	def listenWithAccept(address:SocketAddress, tls:Option[SSLContext] = None)(onAccept:(Session)=>Unit):Future[Server] = {
 		import scala.concurrent.ExecutionContext.Implicits.global
 		val promise = Promise[Server]()
 		bridge.listen(codec, address, tls){ wire => onAccept(bind(wire)) }.onComplete {
@@ -56,6 +79,15 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 		promise.future
 	}
 
+	// ==============================================================================================
+	// ノードへの接続
+	// ==============================================================================================
+	/**
+	 * 指定されたアドレスの別のノードへ接続を行います。
+	 * @param address 接続するノードのアドレス
+	 * @param tls 通信に使用する SSLContext
+	 * @return 接続により発生した Session の Future
+	 */
 	def connect(address:SocketAddress, tls:Option[SSLContext] = None):Future[Session] = {
 		import scala.concurrent.ExecutionContext.Implicits.global
 		val promise = Promise[Session]()
@@ -93,7 +125,7 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 	def shutdown():Unit = {
 		servers.get().foreach{ _.close() }
 		sessions.get().foreach{ _.close() }
-		logger.debug(s"$name shutting-down; all available ${sessions.get().size} sessions, ${servers.get().size} servers are closed")
+		logger.debug(s"shutting-down $name; all available ${sessions.get().size} sessions, ${servers.get().size} servers are closed")
 	}
 
 }
@@ -114,6 +146,14 @@ object Node {
 			this
 		}
 
+		// ==============================================================================================
+		//
+		// ==============================================================================================
+		/**
+		 * ノードが接続を受け新しいセッションの発生した初期状態でリモートのピアに提供するサービスを指定します。
+		 * このサービスはセッション構築後にセッションごとに変更可能です。
+		 * @param service 初期状態のサービス
+		 */
 		def serve(service:Service):Builder = {
 			this.service = service
 			this

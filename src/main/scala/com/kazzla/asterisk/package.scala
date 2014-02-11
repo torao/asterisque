@@ -11,6 +11,8 @@ import java.text.NumberFormat
 import scala.collection.JavaConversions._
 import java.lang.reflect.Method
 import java.security.cert.{X509Certificate, Certificate}
+import java.util.concurrent.atomic.AtomicReference
+import scala.annotation.tailrec
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // asterisk
@@ -127,6 +129,24 @@ package object asterisk {
 				case _ => None
 			}
 		}
+	}
+
+	trait Attributes {
+		private[this] val attribute = new AtomicReference[Map[String,Any]](Map())
+		def setAttribute(name:String, obj:Any):Option[Any] = {
+			@tailrec
+			def set():Option[Any] = {
+				val map = attribute.get()
+				val old = map.get(name)
+				if(attribute.compareAndSet(map, map.updated(name, obj))){
+					old
+				} else {
+					set()
+				}
+			}
+			set()
+		}
+		def getAttribute(name:String):Option[Any] = attribute.get().get(name)
 	}
 
 }
