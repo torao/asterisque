@@ -31,8 +31,8 @@ case class Open(override val pipeId:Short, function:Short, params:Seq[Any]) exte
 /**
  * @author Takami Torao
  */
-case class Close[T](override val pipeId:Short, result:T, errorMessage:String) extends Message(pipeId) {
-	override def toString = s"${getClass.getSimpleName}($pipeId,${debugString(result)},${debugString(errorMessage)})"
+case class Close(override val pipeId:Short, result:Either[String,Any]) extends Message(pipeId) {
+	override def toString = s"${getClass.getSimpleName}($pipeId,${result.left.map(debugString)},${result.right.map(debugString)})"
 }
 
 /**

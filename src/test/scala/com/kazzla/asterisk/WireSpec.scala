@@ -70,7 +70,7 @@ have correct peer name. $e9
 
 	def e3 = wires{ (w1, w2) =>
 		val m1 = Open(1, 2, Seq[Any]())
-		val m2 = Close(2, "success", null)
+		val m2 = Close(2, Right("success"))
 		val p1 = Promise[Message]()
 		val p2 = Promise[Message]()
 		w1.onReceive ++ { m => p1.success(m) }
@@ -100,7 +100,7 @@ have correct peer name. $e9
 	}
 
 	def e5 = wires{ (w1, w2) =>
-		val msg = Array(Open(5, 0, Seq[Any]()), Block.eof(5), Close(5, "hoge", null))
+		val msg = Array(Open(5, 0, Seq[Any]()), Block.eof(5), Close(5, Right("hoge")))
 		val r = new collection.mutable.ArrayBuffer[Message]()
 		val p1 = Promise[Int]()
 		val p2 = Promise[Int]()

@@ -132,7 +132,7 @@ abstract class Service(implicit context:ExecutionContext) {
 					pipe.close(new RemoteException(s"function unbound on: ${pipe.function}"))
 			}
 		case block:Block => pipe.onBlock(block)
-		case close:Close[_] => pipe.close(close)
+		case close:Close => pipe.close(close)
 	}
 
 	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

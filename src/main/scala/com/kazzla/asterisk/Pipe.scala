@@ -59,8 +59,8 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	 * 指定した result 付きで Close を送信しこのパイプを閉じます。
 	 * @param result Close に付加する結果
 	 */
-	def close[T](result:T):Unit = if(closed.compareAndSet(false, true)){
-		session.post(Close[T](id, result, null))
+	def close(result:Any):Unit = if(closed.compareAndSet(false, true)){
+		session.post(Close(id, Right(result)))
 		promise.success(result)
 		session.destroy(id)
 		Pipe.logger.trace(s"pipe $id is closed with success: $result")
@@ -76,7 +76,7 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	 * @param ex Close に付加する例外
 	 */
 	def close(ex:Throwable):Unit = if(closed.compareAndSet(false, true)){
-		session.post(Close[AnyRef](id, null, ex.toString))
+		session.post(Close(id, Left(ex.toString)))
 		promise.failure(ex)
 		session.destroy(id)
 		Pipe.logger.trace(s"pipe $id is closed with failure: $ex")
@@ -90,12 +90,12 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	/**
 	 * 相手側から受信した Close によってこのパイプを閉じます。
 	 */
-	private[asterisk] def close(close:Close[_]):Unit = if(closed.compareAndSet(false, true)){
-		if(close.errorMessage != null){
-			val ex = new RemoteException(close.errorMessage)
+	private[asterisk] def close(close:Close):Unit = if(closed.compareAndSet(false, true)){
+		if(close.result.isLeft){
+			val ex = new RemoteException(close.result.left.get)
 			promise.failure(ex)
 		} else {
-			promise.success(close.result)
+			promise.success(close.result.right.get)
 		}
 		session.destroy(id)
 		Pipe.logger.trace(s"pipe $id is closed by peer: $close")

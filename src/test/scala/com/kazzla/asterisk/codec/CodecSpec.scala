@@ -47,15 +47,16 @@ encode and decode supported data-types. $supportedDataTypes
 			Open(0, 16, Seq[Any](true, false, 100, "hoge")),
 			Open(0, 17, Seq[Any](Map("A"->100,'A'->200,300->'X'), Seq("A",'b',100,false), Array("A",'b',300,true))),
 
-			Close(0, null, null),
-			Close(1, -100, null),
-			Close(2, "hoge", null),
-			Close(3, Array(), null),
-			Close(4, Array(true, true), null),
-			Close(5, Array(1, 2, 3), null),
-			Close(6, Array(false, -1, "xyz"), null),
-			Close(100, null, ""),
-			Close(101, null, "AAAAAAAAAAAAAAAAA"),
+			Close(0, Right(null)),
+			Close(1, Right(-100)),
+			Close(2, Right("hoge")),
+			Close(3, Right(Array())),
+			Close(4, Right(Array(true, true))),
+			Close(5, Right(Array(1, 2, 3))),
+			Close(6, Right(Array(false, -1, "xyz"))),
+			Close(100, Left(null)),
+			Close(101, Left("")),
+			Close(102, Left("AAAAAAAAAAAAAAAAA")),
 
 			Block(0, Array[Byte]()),
 			Block(1, Array[Byte](0, 1, 2, 3)),
@@ -78,7 +79,7 @@ encode and decode supported data-types. $supportedDataTypes
 			Array[Byte](0, 1, 2, 3, 4, 5),
 			UUID.randomUUID()
 		)
-		(types.map{ value => Open(0, 0, Seq(value)) }.toList ::: types.map{ value => Close(0, value, null) }.toList).map{ msg =>
+		(types.map{ value => Open(0, 0, Seq(value)) }.toList ::: types.map{ value => Close(0, Right(value)) }.toList).map{ msg =>
 			equals(msg, codec.decode(codec.encode(msg)).get)
 		}.reduceLeft{ _ and _ }
 	}
@@ -88,10 +89,12 @@ encode and decode supported data-types. $supportedDataTypes
 			(expected.params zip actual.params).map {
 				case (p1, p2) => equals(p1, p2)
 			}.foldLeft(True){ _ and _ } and (expected.pipeId === actual.pipeId) and (expected.function === actual.function)
-		case (expected:Close[_], actual:Close[_]) =>
+		case (expected:Close, actual:Close) =>
 			(expected.pipeId === actual.pipeId) and
-				equals(expected.result, actual.result) and
-				equals(expected.errorMessage, actual.errorMessage)
+				(expected.result.isRight === actual.result.isRight) and
+				equals(
+					expected.result.right.getOrElse(expected.result.left.get),
+					actual.result.right.getOrElse(actual.result.left.get))
 		case (expected:Block, actual:Block) =>
 			(expected.pipeId === actual.pipeId) and
 			(java.util.Arrays.equals(

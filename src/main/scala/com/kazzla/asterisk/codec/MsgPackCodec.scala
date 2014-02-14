@@ -55,15 +55,11 @@ object MsgPackCodec extends Codec {
 				packer.write(o.pipeId)
 				packer.write(o.function)
 				encode(packer, o.params.toSeq)
-			case c:Close[_] =>
+			case c:Close =>
 				packer.write(TYPE_CLOSE)
 				packer.write(c.pipeId)
-				packer.write(c.errorMessage == null)
-				if(c.errorMessage == null){
-					encode(packer, c.result)
-				} else {
-					encode(packer, c.errorMessage)
-				}
+				packer.write(c.result.isRight)
+				encode(packer, c.result.right.getOrElse(c.result.left.get))
 			case b:Block =>
 				packer.write(TYPE_BLOCK)
 				packer.write(b.pipeId)
@@ -88,13 +84,13 @@ object MsgPackCodec extends Codec {
 			case TYPE_CLOSE =>
 				val pipeId = unpacker.readShort()
 				val success = unpacker.readBoolean()
-				val (result, error) = if(success){
-					(decode(unpacker), null)
+				val result = if(success){
+					Right(decode(unpacker))
 				} else {
-					(null, decode(unpacker).asInstanceOf[String])
+					Left(decode(unpacker).asInstanceOf[String])
 				}
 				buffer.position(unpacker.getReadByteCount)
-				Some(Close(pipeId, result, error))
+				Some(Close(pipeId, result))
 			case TYPE_BLOCK =>
 				val pipeId = unpacker.readShort()
 				val binary = unpacker.readByteArray()

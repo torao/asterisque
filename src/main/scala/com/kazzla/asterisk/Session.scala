@@ -109,14 +109,14 @@ class Session(val name:String, defaultService:Service, val wire:Wire) extends At
 				} catch {
 					case ex:Throwable =>
 						logger.error(s"unexpected error: $frame, closing pipe", ex)
-						post(Close[Any](frame.pipeId, null, s"internal error"))
+						post(Close(frame.pipeId, Left(s"internal error")))
 						if(ex.isInstanceOf[ThreadDeath]){
 							throw ex
 						}
 				}
 			case None =>
 				logger.debug(s"unknown pipe-id: $frame")
-				post(Close[Any](frame.pipeId, null, s"unknown pipe-id: ${frame.pipeId}"))
+				post(Close(frame.pipeId, Left(s"unknown pipe-id: ${frame.pipeId}")))
 		}
 	}
 
@@ -133,7 +133,7 @@ class Session(val name:String, defaultService:Service, val wire:Wire) extends At
 		// 既に使用されているパイプ ID が指定された場合はエラーとしてすぐ終了
 		if(map.contains(open.pipeId)){
 			logger.debug(s"duplicate pipe-id specified: ${open.pipeId}")
-			post(Close[Any](open.pipeId, null, s"duplicate pipe-id specified: ${open.pipeId}"))
+			post(Close(open.pipeId, Left(s"duplicate pipe-id specified: ${open.pipeId}")))
 			return None
 		}
 		// 新しいパイプを構築して登録
