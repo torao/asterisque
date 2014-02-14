@@ -46,23 +46,10 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 	 * リモートのノードからの接続を受け付けます。
 	 * @param address バインドアドレス
 	 * @param tls 通信に使用する SSLContext
-	 * @return Server の Future
-	 */
-	def listen(address:SocketAddress, tls:Option[SSLContext] = None):Future[Server] = {
-		listenWithAccept(address, tls){ _ => None }
-	}
-
-	// ==============================================================================================
-	// 接続受け付けの開始
-	// ==============================================================================================
-	/**
-	 * リモートのノードからの接続を受け付けます。
-	 * @param address バインドアドレス
-	 * @param tls 通信に使用する SSLContext
 	 * @param onAccept 接続を受け付けた時に実行する処理
 	 * @return Server の Future
 	 */
-	def listenWithAccept(address:SocketAddress, tls:Option[SSLContext] = None)(onAccept:(Session)=>Unit):Future[Server] = {
+	def listen(address:SocketAddress, tls:Option[SSLContext] = None)(implicit onAccept:(Session)=>Unit = {_ => None}):Future[Server] = {
 		import scala.concurrent.ExecutionContext.Implicits.global
 		val promise = Promise[Server]()
 		bridge.listen(codec, address, tls){ wire => onAccept(bind(wire)) }.onComplete {
