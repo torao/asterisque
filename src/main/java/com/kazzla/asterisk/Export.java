@@ -21,5 +21,4 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Export {
 	short value();
-	boolean stream() default false;
 }

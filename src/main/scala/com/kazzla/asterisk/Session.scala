@@ -10,7 +10,6 @@ import scala.annotation.tailrec
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.lang.reflect.{Method, InvocationHandler}
-import scala.concurrent.Promise
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Session
@@ -78,14 +77,11 @@ class Session(val name:String, defaultService:Service, val wire:Wire) extends At
 	 * @param function function の識別子
 	 * @return function とのパイプ
 	 */
-	def open[T](function:Short, params:Any*):Pipe = _open(function, false, params:_*)
-	def openWithStream[T](function:Short, params:Any*):Pipe = _open(function, true, params:_*)
-	def _open[T](function:Short, stream:Boolean, params:Any*):Pipe = {
-		val pipe = create(function, params)
-		if(stream){
-			pipe.blocks.useStream()
-		}
-		post(Open(pipe.id, function, params))
+	def open(function:Short, params:Any*)(implicit init:(Pipe)=>Unit = { _ => None }):Pipe = {
+		val pipe = create(function)
+		Pipe.using(pipe){ init(pipe) }
+		pipe.open(params)
+		pipe.ready = true
 		pipe
 	}
 
@@ -116,7 +112,12 @@ class Session(val name:String, defaultService:Service, val wire:Wire) extends At
 				}
 			case None =>
 				logger.debug(s"unknown pipe-id: $frame")
-				post(Close(frame.pipeId, Left(s"unknown pipe-id: ${frame.pipeId}")))
+				frame match {
+					case _:Close =>
+						logger.debug(s"both of sessions unknown pipe #${frame.pipeId}")
+					case _ =>
+						post(Close(frame.pipeId, Left(s"unknown pipe-id: ${frame.pipeId}")))
+				}
 		}
 	}
 
@@ -139,6 +140,7 @@ class Session(val name:String, defaultService:Service, val wire:Wire) extends At
 		// 新しいパイプを構築して登録
 		val pipe = new Pipe(open.pipeId, open.function, this)
 		if(pipes.compareAndSet(map, map + (pipe.id -> pipe))){
+			pipe.ready = true
 			return Some(pipe)
 		}
 		create(open)
@@ -151,7 +153,7 @@ class Session(val name:String, defaultService:Service, val wire:Wire) extends At
 	 * ピアに対して Open メッセージを送信するためのパイプを生成します。
 	 */
 	@tailrec
-	private[asterisk] final def create(function:Short, params:Seq[Any]):Pipe = {
+	private[asterisk] final def create(function:Short):Pipe = {
 		val map = pipes.get()
 		val id = ((pipeSequence.getAndIncrement & 0x7FFF) | pipeIdMask).toShort
 		if(! map.contains(id)){
@@ -160,7 +162,7 @@ class Session(val name:String, defaultService:Service, val wire:Wire) extends At
 				return pipe
 			}
 		}
-		create(function, params)
+		create(function)
 	}
 
 	// ==============================================================================================
@@ -263,11 +265,7 @@ class Session(val name:String, defaultService:Service, val wire:Wire) extends At
 				method.invoke(this, args:_*)
 			} else {
 				// there is no way to receive block in interface binding
-				if(export.stream()){
-					Promise.failed(new UnsupportedOperationException(s"method ${method.getSimpleName} that is declared as stream=true is not able to call by interface binding synchronously")).future
-				} else {
-					open[Any](export.value(), (if(args==null) Array[AnyRef]() else args):_*).future
-				}
+				open(export.value(), (if(args==null) Array[AnyRef]() else args):_*).future
 			}
 		}
 	}

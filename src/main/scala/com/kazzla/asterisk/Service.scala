@@ -8,8 +8,8 @@ package com.kazzla.asterisk
 import org.slf4j.LoggerFactory
 import scala.concurrent.{Promise, ExecutionContext, Future}
 import scala.util.{Failure, Success}
-import java.io.{IOException, InputStream, OutputStream}
 import java.lang.reflect.Method
+import java.nio.ByteBuffer
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Service
@@ -71,7 +71,8 @@ abstract class Service(implicit context:ExecutionContext) {
 
 	protected def withPipe[T](f:(Pipe)=>Future[T]):Future[T] = Pipe() match {
 		case Some(pipe) => f(pipe)
-		case None => Promise.failed(new Exception()).future
+		case None =>
+			Promise.failed(throw new Exception(s"pipe can only refer in caller thread of function")).future
 	}
 
 	logger.debug(s"binding ${getClass.getSimpleName} as service")
@@ -87,22 +88,32 @@ abstract class Service(implicit context:ExecutionContext) {
 			throw new IllegalArgumentException(s"method with @Export annotation must have Future return type: ${m.getSimpleName}")
 		}
 		val id = export.value()
-		val use = export.stream()
-		logger.debug(s"  function $id to ${m.getSimpleName}${if(use) s" (stream)" else ""}")
+		logger.debug(s"  function $id to ${m.getSimpleName}")
 		id.toInt accept { args =>
 			val params = TypeMapper.appropriateValues(args, m.getParameterTypes)
 			m.invoke(Service.this, params:_*).asInstanceOf[Future[Any]]
-		} stream use
-	}
-
-	/**
-	 * サブクラスから function 番号が定義されている静的なメソッドを抽出し同期呼び出し用に定義。
-	 */
-	getClass.getInterfaces.foreach{
-		_.getDeclaredMethods.filter{ _.getAnnotation(classOf[Export]) != null }.foreach { m =>
-			declare(m.getAnnotation(classOf[Export]), m)
 		}
 	}
+
+	// ============================================================================================
+	// function の定義
+	// ============================================================================================
+	/**
+	 * スーパークラス、スーパーインターフェース、自クラスから @Export 宣言されているメソッドを抽出し呼び出し用に
+	 * 定義する。
+	 */
+	private[this] def declare(c:Class[_]):Unit = {
+		c.getMethods.filter{ _.getAnnotation(classOf[Export]) != null }.foreach { m =>
+			declare(m.getAnnotation(classOf[Export]), m)
+		}
+		if(c.getSuperclass != null){
+			declare(c.getSuperclass)
+		}
+		c.getInterfaces.foreach{ declare }
+	}
+
+	// このインスタンスに対するファンクションの定義
+	declare(getClass)
 
 	// ==============================================================================================
 	// メッセージ処理の実行
@@ -176,7 +187,6 @@ abstract class Service(implicit context:ExecutionContext) {
 	 */
 	class Function private[Service](onAccept:(Seq[Any])=>Future[Any]) {
 		private[this] var _onDisconnect:Option[(Any)=>Unit] = None
-		private[this] var _stream = false
 
 		/**
 		 * ピアによって切断されたときの処理を指定します。
@@ -186,67 +196,20 @@ abstract class Service(implicit context:ExecutionContext) {
 			this
 		}
 
-		/**
-		 * この処理でストリーム拡張を使用するか。
-		 */
-		def stream(useStream:Boolean):Function = {
-			_stream = useStream
-			this
-		}
-
-		private[Service] def apply(params:Seq[Any]):Future[Any] = {
-			if(_stream){
-				Pipe().foreach{ _.blocks.useStream() }
-			}
-			onAccept(params)
-		}
+		private[Service] def apply(params:Seq[Any]):Future[Any] = onAccept(params)
 		private[Service] def disconnect(result:Any, error:String) = _onDisconnect.foreach { _(result) }
 	}
 
-	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	// PipeStream
-	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	/**
-	 * サブクラスで実装している同期処理内から送受信するブロックをストリームとして参照することの出来るように
-	 * [[com.kazzla.asterisk.Pipe]] を拡張します。入出力ストリームを参照するにはメソッドのエクスポート宣言で
-	 * @[[com.kazzla.asterisk.Export]](value=nnn,stream=true) のように stream を true に設定する必要が
-	 * あります。
-	 *
-	 * @param pipe 拡張するパイプ
-	 */
-	protected implicit class PipeStream(pipe:Pipe){
-		private[this] val Name = "com.kazzla.asterisque.pipe.streams"
-		private[Service] def prepareStream():Unit = {
-			val in = new PipeInputStream()
-			val out = new PipeOutputStream(pipe)
-			pipe.onBlock ++ in
-			pipe.setAttribute(Name, (in, out))
+	protected implicit class ByteBufferUtil(buffer:ByteBuffer){
+		def getString(charset:String):String = if(buffer.isDirect){
+			val b = new Array[Byte](buffer.remaining())
+			buffer.get(b)
+			new String(b, charset)
+		} else {
+			val str = new String(buffer.array(), buffer.arrayOffset(), buffer.remaining())
+			buffer.position(buffer.position() + buffer.remaining())
+			str
 		}
-
-		// ==============================================================================================
-		// 入力ストリーム
-		// ==============================================================================================
-		/**
-		 * パイプによる `Block` 受信をストリームとして参照します。
-		 * @@[[com.kazzla.asterisk.Export]](stream=true) 宣言されているメソッド内からのみ使用することが出来ます。
-		 */
-		def in:InputStream = pipe.getAttribute(Name) match {
-			case Some((in:PipeInputStream,out:PipeOutputStream)) => in
-			case _ => throw new IOException(s"function is not defined as stream=true")
-		}
-
-		// ==============================================================================================
-		// 出力ストリーム
-		// ==============================================================================================
-		/**
-		 * パイプを使用した `Block` 送信をストリームとして行います。
-		 * @@[[com.kazzla.asterisk.Export]](stream=true) 宣言されているメソッド内からのみ使用することが出来ます。
-		 */
-		def out:OutputStream = pipe.getAttribute(Name) match {
-			case Some((in:PipeInputStream,out:PipeOutputStream)) => out
-			case _ => throw new IOException(s"function is not defined as stream=true")
-		}
-
 	}
 
 }

@@ -34,7 +34,20 @@ trait Source[A] {
 	@volatile
 	private[this] var _count:Long = 0
 
-	def count = _count
+	// TODO 処理設定時に currentCount が 0 でなければ通知漏れの発生として例外にする
+	def currentCount = _count
+
+	private[this] def addOperation(f:(Traverse[A])=>Unit):Unit = {
+		onAddOperation()
+		operations = operations :+ f
+	}
+
+	/**
+	 * オペレーションを追加できるかを
+	 */
+	protected def onAddOperation():Unit = if(currentCount > 0){
+		throw new IllegalStateException(s"unable to add operation, $currentCount elements are already arrived")
+	}
 
 	def map[B](f:(A)=>B):Source[B] = {
 		val src = new Joint[B]()
@@ -44,7 +57,7 @@ trait Source[A] {
 			case Finish() => src.finish()
 			case Failure(cause) => src.failure(cause)
 		}
-		operations = operations :+ g
+		addOperation(g)
 		src
 	}
 
@@ -55,7 +68,7 @@ trait Source[A] {
 				if(f(value)) { src.traverse(t) }
 			case other => src.traverse(other)
 		}
-		operations = operations :+ g
+		addOperation(g)
 		src
 	}
 
@@ -71,7 +84,7 @@ trait Source[A] {
 			case Finish() => src.finish()
 			case Failure(cause) => src.failure(cause)
 		}
-		operations = operations :+ g
+		addOperation(g)
 		src
 	}
 
@@ -82,7 +95,7 @@ trait Source[A] {
 			case Finish() => promise.success(())
 			case Failure(cause) => promise.failure(cause)
 		}
-		operations = operations :+ g
+		addOperation(g)
 		promise.future
 	}
 
@@ -142,7 +155,7 @@ trait Source[A] {
 				}
 			case Failure(cause) => promise.failure(cause)
 		}
-		operations = operations :+ g
+		addOperation(g)
 		promise.future
 	}
 
@@ -194,7 +207,7 @@ trait Source[A] {
 		val g:(Traverse[A])=>Unit = { t =>
 			next.foreach{ _.traverse(t) }
 		}
-		operations = operations :+ g
+		addOperation(g)
 		future
 	}
 
@@ -208,13 +221,13 @@ trait Source[A] {
 	def toList:Future[List[A]] = toBuffer[A].map{ _.toList }
 	def toIterable:Future[Iterable[A]] = toBuffer[A].map{ _.toIterable }
 
-	def count(f:(A)=>Boolean):Future[Int] = foldLeft(0){ (total, elem) => total + (if(f(elem)) 1 else 0) }
+	def count(f:(A)=>Boolean):Future[Long] = foldLeft(0L){ (total, elem) => total + (if(f(elem)) 1 else 0) }
 
 	@deprecated("experimental")
 	def par(implicit ec:ExecutionContext):Source[A] = {
 		val src = new ParallelJoint[A]()
 		val g:(Traverse[A])=>Unit = { src.traverse }
-		operations = operations :+ g
+		addOperation(g)
 		src
 	}
 

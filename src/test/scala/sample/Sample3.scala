@@ -7,7 +7,7 @@ package sample
 
 import com.kazzla.asterisk._
 import java.net.InetSocketAddress
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Future, Await}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Success
 import scala.util.Failure
@@ -21,67 +21,53 @@ import scala.concurrent.duration.Duration
  * @author Takami Torao
  */
 object Sample3 {
-  trait StreamService {
-    @Export(value=10,stream=true)
-    def sum():Future[Int]
-  }
-
   /**
    * Service implementation specify `Service` and interface.
    */
-  class StreamServiceImpl extends Service with StreamService {
-    def sum() = withPipe { pipe =>
-      pipe.blocks.map{ block => block.toByteBuffer.getInt }.sum
+  class MessageService extends Service {
+	  @Export(value=10)
+    def sum():Future[Int] = withPipe { pipe =>
+	    pipe.src.filterNot{ _.isEOF }.map{ _.toByteBuffer.getString("UTF-8").toInt }.sum
     }
-
     20 accept { args =>
       withPipe { pipe =>
-        var count = 0
-        pipe.blocks.foreach { block =>
-          System.out.println(s"C>>S ${new String(block.payload, block.offset, block.length)}")
-          count += 1
-        }.collect{ case _ => count }
+        pipe.src.filterNot{ _.isEOF }.map{ b =>
+	        pipe.sink.send(b.payload, b.offset, b.length)
+        }.count(_=>true)
       }
-    } stream true
+    }
   }
 
   def main(args:Array[String]):Unit = {
 
     // Server node serves greeting service on port 5330 without any action on accept connection.
-    val server = Node("server").serve(new StreamServiceImpl()).build()
+    val server = Node("server").serve(new MessageService()).build()
     server.listen(new InetSocketAddress("localhost", 5330), None)
 
-    // Client node connect to server.
+	  // send "1","2","3","4" to pipe and print received block as string
+	  def send(pipe:Pipe):Pipe = {
+		  Seq(1, 2, 3, 4).map{ n => n.toString.getBytes }.foreach{ b => pipe.sink.send(b) }
+		  pipe.sink.sendEOF()
+		  pipe
+	  }
+		def receive(pipe:Pipe):Unit = {
+			pipe.src.foreach{ b => println(b.getString) }
+		}
+
+	  // Client node connect to server.
     val client = Node("client").build()
     client.connect(new InetSocketAddress("localhost", 5330), None).onComplete{
       case Success(session) =>
+	      // NOTE: Interface binding is not supported in messaging client.
         // Bind known service interface from session, and call greeting service
         // asynchronously.
-        val pipe = session.open(20)
-        (1 to 10).foreach { i => pipe.blocks << i.toString.getBytes }
-        pipe.blocks.sendEOF()
-        val count = Await.result(pipe.future, Duration.Inf)
-        System.out.println(s"Total $count available blocks.")
-        // NOTE: There is no way to receive block if you use interface binding though you can receive result.
-        //       No response returns because server expects EOF.
-        try {
-          session.bind(classOf[StreamService]).sum().onComplete{
-            case Success(c) => System.out.println(s"Total $c available blocks.")
-            case Failure(e) => e.printStackTrace()
-          }
-        } catch {
-          case ex:UnsupportedOperationException => None
-        }
-        // You should specify block receive handler
-        session.openWithStream(10, 10).blocks.foreach { b =>
-          if(!b.isEOF){
-            System.out.println(s"C<<S ${new String(b.payload,b.offset,b.length)}")
-          }
-        }.onComplete { _ =>
-        // You will shutdown client and server if all of your requirement is finish.
-          server.shutdown()
-          client.shutdown()
-        }
+        val p1 = send(session.open(10)(receive))
+	      val p2 = send(session.open(20)(receive))
+	      val sum = Await.result(p1.future, Duration.Inf)
+	      val count = Await.result(p2.future, Duration.Inf)
+	      System.out.println(s"sum=$sum, count=$count")
+        server.shutdown()
+        client.shutdown()
       case Failure(ex) => ex.printStackTrace()
     }
   }

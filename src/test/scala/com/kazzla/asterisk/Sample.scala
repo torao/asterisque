@@ -9,7 +9,7 @@ import java.util.concurrent.Executors
 import scala.io.Source
 import java.net.InetSocketAddress
 import java.io.PrintWriter
-import scala.concurrent.Await
+import scala.concurrent.{Promise, Future, Await}
 import scala.concurrent.duration.Duration
 import org.slf4j.LoggerFactory
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -20,23 +20,23 @@ object Sample {
 
 	trait NameServer {
 		@Export(10)
-		def lookup(name:String):Int
+		def lookup(name:String):Future[Int]
 	}
 
 	trait LogServer {
 		@Export(10)
-		def info(msg:String):Unit
+		def info(msg:String):Future[Unit]
 		@Export(20)
-		def error(msg:String):Unit
-		@Export(value=30,stream=true)
-		def dump(msg:String):Unit
+		def error(msg:String):Future[Unit]
+		@Export(30)
+		def dump(msg:String):Future[Unit]
 	}
 
 
 	object Node1 {
 
 		val ns = Node("NameServer").serve(new Service with NameServer {
-			def lookup(name:String):Int = Session() match {
+			def lookup(name:String):Future[Int] = Session() match {
 				case Some(session) =>
 
 					logger.info("calling log.info(\"hoge\")")
@@ -50,7 +50,7 @@ object Sample {
 					out.close()
 
 					logger.info("returning 100")
-					100
+					Promise.successful(100).future
 				case None =>
 					throw new Exception()
 			}
@@ -65,16 +65,22 @@ object Sample {
 	object Node2 {
 
 		val logging = Node("LoggingServer").serve(new Service with LogServer {
-			def error(msg:String) { Console.out.print(s"ERROR: $msg\n") }
-			def info(msg:String)  { Console.out.print(s"INFO : $msg\n") }
-			def dump(msg:String):Unit = Pipe() match {
-				case Some(pipe) =>
-					Console.out.print(s"DUMP: $msg\n")
-					Source.fromInputStream(pipe.in).getLines().foreach { line =>
+			def error(msg:String):Future[Unit] = {
+				Console.out.print(s"ERROR: $msg\n")
+				Promise.successful(()).future
+			}
+			def info(msg:String):Future[Unit] = {
+				Console.out.print(s"INFO : $msg\n")
+				Promise.successful(()).future
+			}
+			def dump(msg:String):Future[Unit] = withPipe { pipe =>
+				Console.out.print(s"DUMP: $msg\n")
+				val in = pipe.in
+				scala.concurrent.future {
+					Source.fromInputStream(in).getLines().foreach { line =>
 						Console.out.println(line)
 					}
-				case None =>
-					throw new Exception()
+				}
 			}
 		}).build()
 

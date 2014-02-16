@@ -26,15 +26,31 @@ import com.kazzla.asterisk.async.Source
  * @author Takami Torao
  */
 class Pipe private[asterisk](val id:Short, val function:Short, val session:Session) extends Attributes {
+	import Pipe.logger
 
 	private[this] val closed = new AtomicBoolean(false)
 
 	private[asterisk] val onBlock = new EventHandlers[Block]()
+	private[this] val onClosing = new EventHandlers[Boolean]()
 
 	private[this] val promise = Promise[Any]()
 	lazy val future = promise.future
 
-	lazy val blocks = new Blocks()
+	private[asterisk] val signature = s"#${if(session.wire.isServer) "S" else "C"}${id & 0xFFFF}"
+	Pipe.logger.trace(s"$signature: pipe created")
+
+	private[asterisk] var ready = false
+
+	// ==============================================================================================
+	// ブロックの送信
+	// ==============================================================================================
+	/**
+	 * 指定されたバイナリデータを Block として送信します。
+	 */
+	private[asterisk] def open(params:Seq[Any]):Unit = {
+		Pipe.logger.trace(s"$signature: sending open")
+		session.post(Open(id, function, params))
+	}
 
 	// ==============================================================================================
 	// ブロックの送信
@@ -50,7 +66,13 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	/**
 	 * 指定された Block を受信したときに呼び出されます。
 	 */
-	private[this] def block(block:Block):Unit = session.post(block)
+	private[this] def block(block:Block):Unit = {
+		if(logger.isTraceEnabled){ logger.trace(s"$signature: sending block: $block") }
+		if(! ready){
+			throw new IllegalStateException(s"pipe $signature is not opened")
+		}
+		session.post(block)
+	}
 
 	// ==============================================================================================
 	// パイプのクローズ
@@ -60,12 +82,16 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	 * @param result Close に付加する結果
 	 */
 	def close(result:Any):Unit = if(closed.compareAndSet(false, true)){
+		if(! ready){
+			throw new IllegalStateException(s"pipe $signature is not opened")
+		}
+		onClosing(true)
 		session.post(Close(id, Right(result)))
 		promise.success(result)
 		session.destroy(id)
-		Pipe.logger.trace(s"pipe $id is closed with success: $result")
+		Pipe.logger.trace(s"$signature: pipe is closed with success: $result")
 	} else {
-		Pipe.logger.debug(s"pipe $id already closed: $result")
+		Pipe.logger.debug(s"$signature: pipe already closed: $result")
 	}
 
 	// ==============================================================================================
@@ -76,12 +102,16 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	 * @param ex Close に付加する例外
 	 */
 	def close(ex:Throwable):Unit = if(closed.compareAndSet(false, true)){
+		if(! ready){
+			throw new IllegalStateException(s"pipe $signature is not opened")
+		}
+		onClosing(true)
 		session.post(Close(id, Left(ex.toString)))
 		promise.failure(ex)
 		session.destroy(id)
-		Pipe.logger.trace(s"pipe $id is closed with failure: $ex")
+		Pipe.logger.trace(s"$signature: pipe is closed with failure: $ex")
 	} else {
-		Pipe.logger.debug(s"pipe $id already closed: $ex")
+		Pipe.logger.debug(s"$signature: pipe already closed: $ex")
 	}
 
 	// ==============================================================================================
@@ -91,6 +121,7 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	 * 相手側から受信した Close によってこのパイプを閉じます。
 	 */
 	private[asterisk] def close(close:Close):Unit = if(closed.compareAndSet(false, true)){
+		onClosing(false)
 		if(close.result.isLeft){
 			val ex = new RemoteException(close.result.left.get)
 			promise.failure(ex)
@@ -98,120 +129,108 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 			promise.success(close.result.right.get)
 		}
 		session.destroy(id)
-		Pipe.logger.trace(s"pipe $id is closed by peer: $close")
+		Pipe.logger.trace(s"$signature: pipe is closed by peer: $close")
 	} else {
-		Pipe.logger.debug(s"pipe $id already closed: $close")
+		Pipe.logger.debug(s"$signature: pipe already closed: $close")
+	}
+
+	private[this] val _src = new Pipe.MessageSource()
+	onBlock ++ _src
+
+	val src:Source[Block] = _src
+
+	val sink = new MessageSink()
+
+	/**
+	 * このパイプに対するブロック出力を `OutputStream` として行います。ストリームに対する出力データがバッファ
+	 * サイズに達するか `flush()` が実行されると [[Block]] として送信されます。
+	 * このストリームへの出力操作は I/O ブロックを受けません。
+	 */
+	lazy val out:OutputStream = {
+		val _out = new PipeOutputStream(Pipe.this)
+		onClosing ++ { me => if(me) _out.close() else _out.emergencyClose() }
+		_out
+	}
+
+	/**
+	 * このパイプが受信したブロックを `InputStream` として参照します。
+	 * @@[[com.kazzla.asterisk.Export]](stream=true) 宣言されているメソッドのパイプのみ使用することが
+	 * 出来ます。
+	 */
+	private[this] var _in:Option[PipeInputStream] = None
+
+	/**
+	 * このパイプが受信したブロックを `InputStream` として参照します。
+	 * @@[[com.kazzla.asterisk.Export]](stream=true) 宣言されているメソッドのパイプのみ使用することが
+	 * 出来ます。
+	 */
+	lazy val in:InputStream = _in match {
+		case Some(i) => i
+		case None => throw new IOException(s"$signature: useInputStream() is not declared on pipe")
+	}
+
+	/**
+	 * パイプの入力ストリーム [[in]] を使用するために
+	 * このメソッドを呼び出すと受信したブロックのバッファリグが行われますので、入力ストリームを使用する場合のみ呼び出してください。
+	 */
+	def useInputStream():Unit = {
+		Pipe.assertInCall("useInputStream() must be call in caller thread, Ex. session.open(10){_.useInputStream()}, 10.accept{withPipe{pipe=>pipe.useInputStream();...}}")
+		val is = new PipeInputStream(signature)
+		src.foreach(is)
+		_in = Some(is)
+		onClosing ++ { me => if(me) is.close() else if(!is.isClosed){ is(Block.eof(id)) } }
+		logger.trace(s"$signature: prepare internal buffer for messaging that is used for InputStream")
 	}
 
 	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	// Block
+	// MessageSink
 	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	/**
-	 * パイプに対してブロック送受信 (ストリーム) 操作をおこなうためのクラス。
-	 * メッセージ配信スレッド内でハンドラを設定する必要があります。
 	 */
-	class Blocks private[Pipe]() extends Source[Block] {
+	class MessageSink private[Pipe]() {
 
+		// ============================================================================================
+		// ブロックの送信
+		// ============================================================================================
 		/**
-		 * このパイプにハンドラが設定される前に受信したブロックを保持するためのキュー。
+		 * 指定されたバイナリデータを Block として送信します。
 		 */
-		// private[this] val premature = new LinkedBlockingQueue[Block]()
-
-		// @volatile
-		// private[this] var handler:Option[(Block)=>Unit] = None
-		private[this] var _useStream = false
-
-		/**
-		 * このパイプに対するブロック出力を `OutputStream` として行います。ストリームに対する出力データがバッファ
-		 * サイズに達するか `flush()` が実行されると [[Block]] として送信されます。
-		 * このストリームへの出力操作は I/O ブロックを受けません。
-		 */
-		lazy val out:PipeOutputStream = new PipeOutputStream(Pipe.this)
-
-		/**
-		 * このパイプが受信したブロックを `InputStream` として参照します。
-		 * @@[[com.kazzla.asterisk.Export]](stream=true) 宣言されているメソッドのパイプのみ使用することが
-		 * 出来ます。
-		 */
-		lazy val in:PipeInputStream = if(_useStream){
-			val is = new PipeInputStream()
-			foreach(is)
-			is
-		} else {
-			throw new IOException(s"pipe $id is not declared as stream=true")
+		def sendEOF():MessageSink = {
+			block(Block.eof(Pipe.this.id))
+			this
 		}
 
-		private[this] def receive(block:Block):Unit = synchronized{
-			if(block.isEOF){
-				finish()
-			} else {
-				sequence(block)
-			}
-			// handler match {
-			// 	case Some(h) => h(block)
-			// 	case None => premature.put(block)
-			// }
+		// ============================================================================================
+		// ブロックの送信
+		// ============================================================================================
+		/**
+		 * 指定されたバイナリデータを Block として送信します。
+		 */
+		def send(buffer:Array[Byte]):MessageSink = {
+			block(buffer, 0, buffer.length)
+			this
 		}
 
+		// ============================================================================================
+		// ブロックの送信
+		// ============================================================================================
 		/**
-		 * 受信したブロックを受け取るハンドラを設定します。
-		 * @@[[com.kazzla.asterisk.Export]](stream=true) 宣言されているメソッドのパイプのみ使用することが
-		 * 出来ます。
+		 * 指定されたバイナリデータを Block として送信します。
 		 */
-		/*
-		def receive(f:(Block)=>Unit):Pipe = if(! _useStream){
-			throw new IOException(s"block streaming is not available on function declared as stream=false")
-		} else synchronized {
-			handler match {
-				case Some(_) =>
-					throw new IOException(s"other handler is already handling blocks")
-				case None =>
-					while(! premature.isEmpty){
-						f(premature.take())
-					}
-					handler = Some(f)
-			}
-			Pipe.this
+		def send(buffer:Array[Byte], offset:Int, length:Int):MessageSink = {
+			Pipe.this.block(buffer, offset, length)
+			this
 		}
 
-		def >> (f:(Block)=>Unit):Unit = receive(f)
-		*/
-
 		// ============================================================================================
 		// ブロックの送信
 		// ============================================================================================
 		/**
 		 * 指定されたバイナリデータを Block として送信します。
 		 */
-		def sendEOF():Unit = block(Block.eof(Pipe.this.id))
-
-		// ============================================================================================
-		// ブロックの送信
-		// ============================================================================================
-		/**
-		 * 指定されたバイナリデータを Block として送信します。
-		 */
-		def send(buffer:Array[Byte]):Unit = block(buffer, 0, buffer.length)
-
-		// ============================================================================================
-		// ブロックの送信
-		// ============================================================================================
-		/**
-		 * 指定されたバイナリデータを Block として送信します。
-		 */
-		def send(buffer:Array[Byte], offset:Int, length:Int):Unit = Pipe.this.block(buffer, offset, length)
-
-		// ============================================================================================
-		// ブロックの送信
-		// ============================================================================================
-		/**
-		 * 指定されたバイナリデータを Block として送信します。
-		 */
-		def << (buffer:Array[Byte]):Unit = send(buffer)
-
-		private[asterisk] def useStream():Unit = {
-			onBlock ++ receive
-			_useStream = true
+		def << (buffer:Array[Byte]):MessageSink = {
+			send(buffer)
+			this
 		}
 	}
 }
@@ -222,6 +241,12 @@ object Pipe {
 	private[this] val pipes = new ThreadLocal[Pipe]()
 
 	def apply():Option[Pipe] = Option(pipes.get())
+
+	private[asterisk] def assertInCall(msg:String):Unit = {
+		if(pipes.get() == null){
+			throw new IllegalStateException(msg)
+		}
+	}
 
 	def orElse[T](default: =>T)(f:(Pipe)=>T):T = apply() match {
 		case Some(pipe) => f(pipe)
@@ -244,6 +269,26 @@ object Pipe {
 	 */
 	private[asterisk] val UNIQUE_MASK:Short = (1 << 15).toShort
 
+	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	// MessageSource
+	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	/**
+	 * パイプに対してブロック送受信 (ストリーム) 操作をおこなうためのクラス。
+	 * メッセージ配信スレッド内でハンドラを設定する必要があります。
+	 */
+	private[Pipe] class MessageSource private[Pipe]() extends Source[Block] with ((Block)=>Unit) {
+		def apply(block:Block):Unit = synchronized {
+			sequence(block)
+			if(block.isEOF){
+				finish()
+			}
+		}
+		override def onAddOperation() = {
+			Pipe.assertInCall("operation for message passing can only define in caller thread")
+			super.onAddOperation()
+		}
+	}
+
 }
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -252,7 +297,8 @@ object Pipe {
 /**
  * このパイプ上で受信したブロックをストリームとして参照するためのクラス。
  */
-class PipeInputStream private[asterisk]() extends InputStream with ((Block) => Unit) {
+private class PipeInputStream private[asterisk](signature:String) extends InputStream with ((Block) => Unit) {
+	import PipeInputStream.logger
 
 	/**
 	 * パイプから受信したブロックを Block として保持するためのキュー。
@@ -273,8 +319,12 @@ class PipeInputStream private[asterisk]() extends InputStream with ((Block) => U
 	 * インスタンスの利用側によってクローズされたかのフラグ。
 	 */
 	private[this] var closed = false
+	def isClosed = closed
 
 	def apply(block:Block):Unit = if(! closed){
+		if(logger.isTraceEnabled){
+			logger.trace(s"$signature: apply($block) enqueueing specified block message as stream data")
+		}
 		receiveQueue.put(block)
 	}
 
@@ -296,22 +346,31 @@ class PipeInputStream private[asterisk]() extends InputStream with ((Block) => U
 			len
 	}
 
-	override def close():Unit = closed = true
+	override def close():Unit = {
+		closed = true
+		PipeInputStream.logger.trace(s"$signature: close()")
+	}
 
 	private[this] def processingBuffer:Option[ByteBuffer] = {
 		if(eof){
 			None
 		} else if(processing.isDefined && processing.get.hasRemaining){
 			processing
-		} else if(receiveQueue.isEmpty){
-			None
+		//} else if(receiveQueue.isEmpty){
+		//	None
 		} else {
-			val Block(_, binary, offset, length) = receiveQueue.take()
-			if(length <= 0){
+			val block = receiveQueue.take()
+			if(block.isEOF){
+				if(logger.isTraceEnabled){
+					logger.trace(s"$signature: eof detected, closing stream")
+				}
 				eof = true   // EOF 検出
 				None
 			} else {
-				processing = Some(ByteBuffer.wrap(binary, offset, length))
+				if(logger.isTraceEnabled){
+					logger.trace(s"$signature: dequeue block message for stream: $block")
+				}
+				processing = Some(block.toByteBuffer)
 				processing
 			}
 		}
@@ -320,7 +379,9 @@ class PipeInputStream private[asterisk]() extends InputStream with ((Block) => U
 		throw new IOException("stream closed")
 	}
 }
-
+private object PipeInputStream {
+	private[PipeInputStream] val logger = LoggerFactory.getLogger(classOf[PipeInputStream])
+}
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // PipeOutputStream
@@ -330,7 +391,8 @@ class PipeInputStream private[asterisk]() extends InputStream with ((Block) => U
  * され、フラグメント化されたブロックとして送信されます。
  * このパイプを使用した出力ストリームクラス。出力内容を Block にカプセル化して非同期セッションへ出力する。
  */
-class PipeOutputStream private[asterisk](pipe:Pipe, bufferSize:Int) extends OutputStream {
+private class PipeOutputStream private[asterisk](pipe:Pipe, bufferSize:Int) extends OutputStream {
+	import PipeOutputStream.logger
 	def this(pipe:Pipe) = this(pipe, 4 * 1024)
 	private[this] var buffer = ByteBuffer.allocate(bufferSize)
 	private[this] var osClosed = false
@@ -357,7 +419,7 @@ class PipeOutputStream private[asterisk](pipe:Pipe, bufferSize:Int) extends Outp
 	}
 	private[this] def ensureWrite(len:Int):Unit = {
 		if(osClosed){
-			throw new IOException(s"unable to write to closed pipe or stream: ${pipe.id}")
+			throw new IOException(s"${pipe.signature}: unable to write to closed pipe or stream: ${pipe.id}")
 		}
 		// TODO バッファサイズより大きなデータが書き込めない?
 		if(buffer.position() + len > buffer.capacity()){
@@ -365,20 +427,32 @@ class PipeOutputStream private[asterisk](pipe:Pipe, bufferSize:Int) extends Outp
 		}
 	}
 	override def flush():Unit = {
+		if(logger.isTraceEnabled){
+			logger.trace(s"${pipe.signature}: flush()")
+		}
 		if(buffer.position() > 0){
 			buffer.flip()
 			while(buffer.hasRemaining){
 				val len = math.min(buffer.remaining(), Block.MaxPayloadSize)
 				val b = new Array[Byte](len)
 				buffer.get(b, 0, b.length)
-				pipe.blocks.send(b)
+				pipe.sink.send(b)
 			}
 			buffer.clear()
 		}
 	}
-	override def close():Unit = {
+	override def close():Unit = if(! osClosed){
 		flush()
-		pipe.blocks.send(Array[Byte]())
+		pipe.sink.sendEOF()
 		osClosed = true
+		PipeOutputStream.logger.trace(s"${pipe.signature}: close()")
 	}
+	def emergencyClose():Unit = {
+		osClosed = true
+		PipeOutputStream.logger.trace(s"${pipe.signature}: output stream closed by peer")
+	}
+}
+
+private object PipeOutputStream {
+	private[PipeOutputStream] val logger = LoggerFactory.getLogger(classOf[PipeOutputStream])
 }

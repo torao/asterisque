@@ -7,7 +7,7 @@ package sample
 
 import com.kazzla.asterisk.{Node, Service}
 import java.net.InetSocketAddress
-import scala.concurrent.Promise
+import scala.concurrent.{Future, Promise}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Success, Failure}
 
@@ -25,7 +25,7 @@ object Sample2 {
    * Service implementation specify `Service` and interface.
    */
   class GreetingServiceImpl extends Service {
-    10 accept { args => Promise.successful(s"hello, ${args(0)}").future }
+    10 accept { args => Future(s"hello, ${args(0)}") }
     20 accept { args =>
       scala.concurrent.future {
         Thread.sleep(3 * 1000)
@@ -46,7 +46,12 @@ object Sample2 {
       case Success(session) =>
         // Bind known service interface from session, and call greeting service
         // asynchronously.
-        session.open(20, "asterisque").future.onSuccess{ case result => System.out.println(result) }
+        session.open(20, "asterisque").future.onSuccess{
+	        case result =>
+		        System.out.println(result)
+		        server.shutdown()
+		        client.shutdown()
+        }
       case Failure(ex) => ex.printStackTrace()
     }
   }

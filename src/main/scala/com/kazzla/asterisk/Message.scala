@@ -32,7 +32,7 @@ case class Open(override val pipeId:Short, function:Short, params:Seq[Any]) exte
  * @author Takami Torao
  */
 case class Close(override val pipeId:Short, result:Either[String,Any]) extends Message(pipeId) {
-	override def toString = s"${getClass.getSimpleName}($pipeId,${result.left.map(debugString)},${result.right.map(debugString)})"
+	//override def toString = s"${getClass.getSimpleName}($pipeId,${result.left.map(debugString)},${result.right.map(debugString)})"
 }
 
 /**
@@ -56,6 +56,8 @@ case class Block(override val pipeId:Short, payload:Array[Byte], offset:Int, len
 	}
 
 	def toByteBuffer:ByteBuffer = ByteBuffer.wrap(payload, offset, length)
+	def getString:String = new String(payload, offset, length)
+	def getString(charset:String):String = new String(payload, offset, length, charset)
 }
 
 object Block {

@@ -46,7 +46,7 @@ private[netty] class WireConnect(sslHandler:Option[SslHandler], isServer:Boolean
 	 * @param ctx コンテキスト
 	 */
 	override def channelActive(ctx:ChannelHandlerContext):Unit = {
-		logger.trace(s"$sym[$id]: channelActive($ctx)")
+		logger.trace(s"$sym[$id]: channelActive(${ctx.name()})")
 		assert(wire.isEmpty)
 		val promise = Promise[Option[SSLSession]]()
 		sslHandler match {
@@ -83,7 +83,7 @@ private[netty] class WireConnect(sslHandler:Option[SslHandler], isServer:Boolean
 	 * @param ctx コンテキスト
 	 */
 	override def channelInactive(ctx:ChannelHandlerContext):Unit = {
-		logger.trace(s"$sym[$id]: channelInactive($ctx)")
+		logger.trace(s"$sym[$id]: channelInactive(${ctx.name()})")
 		closeWire()
 		super.channelInactive(ctx)
 	}
@@ -98,7 +98,7 @@ private[netty] class WireConnect(sslHandler:Option[SslHandler], isServer:Boolean
 	 * @param msg メッセージ
 	 */
 	override def channelRead0(ctx:ChannelHandlerContext, msg:Message):Unit = {
-		logger.trace(s"$sym[$id]: channelRead0($ctx,$msg)")
+		logger.trace(s"$sym[$id]: channelRead0(${ctx.name()},$msg)")
 		authed {
 			// パイプラインの SSL ハンドラから接続相手の SSL 情報を出力
 			Option(ctx.channel().pipeline().get(classOf[SslHandler])).foreach { s =>
