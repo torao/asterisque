@@ -14,6 +14,8 @@ import javax.net.ssl.SSLSession
 import io.netty.util.concurrent.{Future => NFuture, GenericFutureListener}
 import java.io.IOException
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
+import java.security.cert.X509Certificate
+import java.text.DateFormat
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // WireConnect
@@ -63,6 +65,22 @@ private[netty] class WireConnect(sslHandler:Option[SslHandler], isServer:Boolean
 						} else {
 							promise.failure(new IOException("tls handshake failure: invalid session"))
 							logger.debug(s"$sym[$id]: tls handshake failure: invalid session")
+						}
+						if(logger.isTraceEnabled){
+							val df = DateFormat.getDateTimeInstance
+							session.getPeerCertificates.foreach{
+								case cert:X509Certificate =>
+									logger.trace(s"$sym[$id]:   Serial Number: ${cert.getSerialNumber}")
+									logger.trace(s"$sym[$id]:   Signature Algorithm: ${cert.getSigAlgName}")
+									logger.trace(s"$sym[$id]:   Signature Algorithm OID: ${cert.getSigAlgOID}")
+									logger.trace(s"$sym[$id]:   Issuer Principal Name: ${cert.getIssuerX500Principal.getName}")
+									logger.trace(s"$sym[$id]:   Subject Principal Name: ${cert.getSubjectX500Principal.getName}")
+									logger.trace(s"$sym[$id]:   Expires: ${df.format(cert.getNotBefore)} - ${df.format(cert.getNotAfter)}")
+								case cert =>
+									logger.trace(s"$sym[$id]:   Type: ${cert.getType}")
+									logger.trace(s"$sym[$id]:   Public Key Algorithm: ${cert.getPublicKey.getAlgorithm}")
+									logger.trace(s"$sym[$id]:   Public Key Format: ${cert.getPublicKey.getFormat}")
+							}
 						}
 					}
 				})

@@ -97,7 +97,7 @@ object Netty extends Bridge {
 			.group(masterGroup, workerGroup)
 			.channel(classOf[NioServerSocketChannel])
 			.localAddress(address)
-			.option(ChannelOption.SO_BACKLOG, java.lang.Integer.valueOf(100))
+			.option(ChannelOption.SO_BACKLOG, java.lang.Integer.valueOf(100))   // TODO 外部指定可能な形式に
 			.childOption(ChannelOption.TCP_NODELAY, java.lang.Boolean.TRUE)
 			.childHandler(factory)
 

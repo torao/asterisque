@@ -5,53 +5,55 @@
 */
 package sample
 
-import com.kazzla.asterisk.{Node, Service}
+import com.kazzla.asterisk._
 import java.net.InetSocketAddress
-import scala.concurrent.Future
+import scala.concurrent.{Future, Promise, Await}
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.{Success, Failure}
+import scala.util.Success
+import scala.util.Failure
+import scala.concurrent.duration.Duration
+import scala.io.Source
+import scala.annotation.tailrec
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// Sample2
+// Sample5
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
- * Sample implementation for DSL-based service.
  *
  * @author Takami Torao
  */
-object Sample2 {
+object Sample5 {
 
-  /**
-   * Service implementation specify `Service` and interface.
-   */
-  class GreetingServiceImpl extends Service {
-    10 accept { args => Future(s"hello, ${args(0)}") }
-    20 accept { args =>
-      scala.concurrent.future {
-        Thread.sleep(3 * 1000)
-        s"hello, ${args(0)}"
-      }
-    }
+	def ping(sec:Int)(pipe:Pipe):Future[Any] = {
+		pipe.src.foreach{ b => println(b.getString) }
+		scala.concurrent.future {
+			(0 to sec).foreach{ s =>
+				pipe.sink.send(s.toString.getBytes)
+				Thread.sleep(1000)
+			}
+			sec
+		}
+	}
+
+  class PingService extends Service {
+	  @Export(10)
+	  def p(sec:Int) = withPipe(ping(sec))
   }
 
   def main(args:Array[String]):Unit = {
 
     // Server node serves greeting service on port 5330 without any action on accept connection.
-    val server = Node("server").serve(new GreetingServiceImpl()).build()
+    val server = Node("server").serve(new PingService()).build()
     server.listen(new InetSocketAddress("localhost", 5330), None)
 
-    // Client node connect to server.
+	  // Client node connect to server.
     val client = Node("client").build()
     client.connect(new InetSocketAddress("localhost", 5330), None).onComplete{
       case Success(session) =>
-        // Bind known service interface from session, and call greeting service
-        // asynchronously.
-        session.open(20, "asterisque").onSuccess{
-	        case result =>
-		        System.out.println(result)
-		        server.shutdown()
-		        client.shutdown()
-        }
+	      val future = session.open(10, 10)(ping(10))
+	      System.out.println(Await.result(future, Duration.Inf))
+        server.shutdown()
+        client.shutdown()
       case Failure(ex) => ex.printStackTrace()
     }
   }

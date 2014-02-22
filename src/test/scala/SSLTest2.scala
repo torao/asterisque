@@ -37,7 +37,7 @@ object SSLTest2 {
 		val sslContext = SSLContext.getInstance("TLS")
 		val tmf = TrustManagerFactory.getInstance("SunX509")
 		tmf.init(caks)
-		// sslContext.init(kmf.getKeyManagers, tmf.getTrustManagers, null)
+		// sslContext.onOpen(kmf.getKeyManagers, tmf.getTrustManagers, null)
 		sslContext.init(kmf.getKeyManagers, null, null)
 		sslContext
 	}

@@ -14,6 +14,7 @@ import java.io._
 import java.security.cert.{CertificateException, X509Certificate}
 import java.security.KeyStore
 import scala.Some
+import java.util.concurrent.LinkedBlockingQueue
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Wire
@@ -90,7 +91,7 @@ trait Wire extends Closeable {
 	 * 指定されたメッセージを送信します。
 	 * @param msg 送信するメッセージ
 	 */
-	def send(msg:Message):Future[Unit]
+	def send(msg:Message):Unit
 
 	// ==============================================================================================
 	// メッセージの受信
@@ -158,30 +159,39 @@ object Wire {
 	 * @return パイプ Wire の双方のタプル
 	 */
 	def newPipe():(Wire, Wire) = {
-		import scala.language.reflectiveCalls
-		val w1 = new Wire {
-			var f:(Message)=>Unit = null
-			val isServer = false
-			def send(m:Message) = (if(isClosed){
-				Promise.failed(new IOException("pipe closed"))
-			} else {
-				f(m)
-				Promise.successful(())
-			}).future
+		val queue = new LinkedBlockingQueue[()=>Unit]()
+		val thread = new Thread("PipedWire Message Pump"){
+			override def run() = try {
+				while(true){
+					queue.take().apply()
+				}
+			} catch {
+				case ex:InterruptedException => None
+				case ex:ThreadDeath => throw ex
+				case ex:Throwable => logger.error("piped wired ", ex)
+			}
 		}
-		lazy val w2 = new Wire {
-			val isServer = ! w1.isServer
-			def send(m:Message) = (if(isClosed){
-				Promise.failed(new IOException("pipe closed"))
+
+		lazy val wires = new Array[PipedWire](2)
+		class PipedWire(i:Int) extends Wire {
+			val other = (i + 1) & 0x01
+			val isServer = (i & 0x01) == 0
+			def send(m:Message) = if(isClosed){
+				throw new IOException("pipe closed")
 			} else {
-				w1.receive(m)
-				Promise.successful(())
-			}).future
+				queue.put({ () => wires(other).receive(m) })
+			}
+			//def post(m:Message) = onReceive(m)
+			override def close() = {
+				thread.interrupt()
+				super.close()
+			}
+			onClosed ++ { _ => wires(other).close() }
 		}
-		w1.f = { m => w2.receive(m) }
-		w1.onClosed ++ { _ => w2.close() }
-		w2.onClosed ++ { _ => w1.close() }
-		(w1, w2)
+		wires(0) = new PipedWire(0)
+		wires(1) = new PipedWire(1)
+		thread.start()
+		(wires(0), wires(1))
 	}
 
 	// ==============================================================================================

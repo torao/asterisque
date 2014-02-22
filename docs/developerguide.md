@@ -113,7 +113,7 @@ val session2 = node2.bind(wire2)
 
 #### コンポーネントの構成
 
-以下に asterisque で使用するクラスの構成を挙げます。
+以下に asterisque で使用する主要なクラスの構成を挙げます。アプリケーションが実装しなければならないものは `Service` のサブクラスであり、理解しなければならないものは `Session` と `Service` です。
 
 ![dir](images/biRPC-ClassChart.png)
 
@@ -123,7 +123,7 @@ val session2 = node2.bind(wire2)
 
 * [サンプルコード](https://github.com/torao/asterisk/blob/master/src/test/scala/sample/Sample1.scala)
 
-asterisque での RPC はクライアント/サーバで共有されるインターフェース (`trait`) に基づいて実装することが出来ます。この方法は後述する DSL による実装より厳密で静的型付き言語と親和性が良いため例の多くはこちらの方法を使用します。
+asterisque での RPC はクライアント/サーバで共有される `trait` (インターフェース) に基づいて実装することが出来ます。この方法は後述する DSL による実装より厳密で静的型付き言語と親和性が良いため例の多くはこちらの方法を使用します。
 
 インターフェースによるサービス実装の例として `greeting()` というリモート呼び出し可能なメソッドを一つだけ持つ trait を考えます。
 
@@ -205,11 +205,11 @@ class GreetingServiceImpl extends Service {
 }
 ```
 
-クライアント側でもセッションにファンクション番号を指定してリモートメソッドを呼び出すことが出来ます。`open()` の返値のパイプから Future を参照し呼び出し結果を非同期で参照することが出来ます。
+クライアント側でもセッションにファンクション番号を指定してリモートメソッドを呼び出すことが出来ます。`open()` 返値の Future を参照し呼び出し結果を非同期で参照することが出来ます。
 
 ```scala
-val pipe = session.open(10, "asterisque")
-pipe.future.onComplete{
+val future = session.open(10, "asterisque")
+future.onComplete{
   case Success(result) => System.out.println(result)
   case Failure(ex) => ex.printStackTrace()
 }
@@ -218,47 +218,80 @@ pipe.future.onComplete{
 #### 非同期メッセージングの実装
 
 * [サンプルコード](https://github.com/torao/asterisk/blob/master/src/test/scala/sample/Sample3.scala)
+* [サンプルコード](https://github.com/torao/asterisk/blob/master/src/test/scala/sample/Sample5.scala)
 
-非同期メッセージングの実装は RPC と比べて若干センシティブです。
+非同期メッセージングの実装は RPC と若干設計の見方が変わります。クライアントとサービスで明確な役割の違いがある RPC と違い、非同期メッセージングではピアの両方で `(Pipe)=>Future[Any]` 型の処理を実装してパイプを経由したメッセージの送受信を行います。
 
-##### メッセージの送信
-
-メッセージの送信はパイプに対して送信するブロック (バイト配列) を指定します。サービス実装ではパイプを参照可能な場所がファンクションの呼び出しスレッド内に限定されています。つまり `scala.concurrent.future` などを使用して並列で処理を実行する場合は事前にパイプを取得しておく必要があります。
+例としてメッセージの双方向かつ対等実装の例としてピアに文字列のメッセージを送信し、受信したメッセージを出力する処理を挙げます。
 
 ```scala
-@Export(10)
-def someService():Future[Unit] = withPipe { p1 =>  // OK: ここはファンクションの呼び出しスレッドのため参照が可能
-  // OK: パイプはクローズされていなければ任意のスレッド内でメッセージの送信が可能
-  p1.sink.send(...)
-  scala.concurrent.future{
-    // NG: ファンクションの呼び出しスレッド以外からはパイプを参照できない (ラムダは実行されず failed の Future が返る)
-    withPipe { p2 => p2.sink.send(...) }
-    // OK: パイプはクローズされていなければ任意のスレッド内でメッセージの送信が可能
-    p1.sink.send(...)
+def ping(sec:Int)(pipe:Pipe):Future[Any] = {
+  // set function on receive messages
+  pipe.src.foreach{ b => println(b.getString) }
+  // return Future[Int] immediately, and send ping counter asynchronously
+  scala.concurrent.future {
+    (0 to sec).foreach{ s =>
+      pipe.sink.send(s.toString.getBytes)
+      Thread.sleep(1000)
+    }
+    sec
   }
 }
 ```
 
-クライアント実装では RPC のようなインターフェースバインディングを使用した方法でパイプを取得する手段がないためファンクション番号を指定してパイプを生成します。`session.open(...)` の返値のパイプに対してブロックの送信が可能です。
+クライアント側もサービス側もこの実装はメッセージの配信スレッドによって実行されるため `Future` を返して直ちに終了する必要があります。処理の完了はピアのどちらかが返値の `Future` に結果の値または例外を設定することで相手に伝播し双方のパイプがクローズされます。
+
+この処理はクライアントとサービスの双方で実装として使用することが出来ます (もちろんクライアントとサービスとで異なる実装を指定することも出来ます)。
 
 ```scala
-// OK: oepn() で返ってきたパイプは送信が可能な状態
-val p1 = session.open(10)
-p1.sink.send(...)
-// NG: open 時の初期化ラムダ内ではまだ送信準備が出来ていない
-session.open(20){ p2 => p2.sink.send(...) }
+class PingService extends Service {
+  @Export(100)
+  def p(sec:Int) = withPipe(ping(sec))
+}
+
+val future = session.open(100, 10)(ping(10))
+System.out.println(Await.result(future, Duration.Inf))  // 10
 ```
+
+上記の処理は少し行儀が悪く、先に 10 をカウントした方が `Future` に結果を設定し双方の処理は終了します。従って遅い方は送信エラーを起こすかも知れません。よりスマートな実装では処理のどちらが結果を出すかを決定した方が良いでしょう。相手が結果を設定することが分かっている場合、処理は `pipe.future` を返します。
+
+##### メッセージの送信
+
+パイプの両端でやり取りされるメッセージは単純なバイト配列で表されます。サービス実装側では `withPipe` を用いて呼び出しが行われているパイプを参照することが出来ます。このパイプはクローズされていない限りどのようなスレッドからでも `send()` メソッドを実行してメッセージを送信することが出来ます。
+
+```scala
+@Export(10)
+def someService():Future[Unit] = withPipe { p1 =>
+  p1.sink.send(...)
+  scala.concurrent.future{
+    // NG: 別スレッドからはパイプを参照できない (ラムダは実行されず failed の Future が返る)
+    withPipe { p2 => p2.sink.send(...) }
+    p1.sink.send(...)
+    "bingo!"  // この非同期処理の結果を結果とする
+  }
+}
+```
+
+クライアント実装では RPC のようなインターフェースバインディングを使用した方法でパイプを取得する手段がないためファンクション番号を指定してパイプを生成します。`session.open(...)` のラムダ内で参照できるパイプに対してブロックの送信が可能です。
+
+```scala
+// oepn() で返ってきたパイプは送信が可能な状態
+session.open(10){ pipe =>
+  pipe.sink.send(...)
+  pipe.future   // 相手の処理結果を結果とする
+}
+```
+
+サービス側の実装と同様に `session.open()` で指定するラムダは単一のスレッドで実行されます。時間のかかる処理や大量のメッセージを送信する場合は `scala.concurrent.future` などを使用して非同期で行う必要があります。
 
 ##### メッセージの受信
 
-メッセージの受信はパイプに対して受信時の処理を設定することで行われます。パイプが受信したすべてのブロックをアプリケーションが正しくハンドルできるように、パイプが形成されてブロックを受信していないことが保証されている状態でこの受信処理を設定する必要があります。
+メッセージの受信は `(Pipe)=>Future[Any]` の実行スレッド内でパイプの `src` に対して処理 (コンビネーター) を設定することでメッセージ受信のコールバックを受けることが出来ます。それ以外のスレッドでは受信処理を設定する前にメッセージを受信していないことを保証できないためです。
 
-サービス実装側ではパイプを参照可能なスレッドがブロックの配信も行っており、このスレッド内であれば安全に受信処理を設定することができます。クライアント実装側では `session.open()` のラムダの中でパイプへ受信処理を設定する事が出来ます。
-
-非同期メッセージングを使用するサービス側の実装は以下のように実装することが出来ます (DSL 形式でも可能です)。クライアント側でインターフェースバインディングが使用できないのでトレイトは使用する必要はありません。
+非同期メッセージングを使用するサービス側の実装は以下のように実装することが出来ます (DSL 形式でも可能です)。メッセージングはクライアント側でインターフェースバインディングが使用できないのでトレイトを使用する必要はありません。実装メソッドに直接 `@Export` を指定することが出来ます。
 
 ```scala
-// 受信したすべてのブロックをそのまま返し文字列の数値を加算して結果として返す
+// 受信したすべてのメッセージをそのまま返しつつ文字列の数値を加算して結果として返す
 @Export(10)
 def sum():Future[Int] = withPipe { pipe =>
   pipe.src.filterNot{ _.isEOF }.map{ b =>
@@ -268,31 +301,32 @@ def sum():Future[Int] = withPipe { pipe =>
 }
 ```
 
-サービスの実装では `withPipe` を使用して非同期メッセージングを行うためのパイプを参照することが出来ます。`pipe.src` は push 型の非同期コレクションです。通常のコレクションと同様にパイプに到着したブロックシーケンス及びその終了が伝播する関数を連結します (この関数が実行されるのはブロックが到着した時です)。末端の集約関数はただちに Future を返しますが実際に結果が算出されるのはすべてのブロックを受信し終えた時です。RPC の場合と同様に Promise を用意して `foreach` でループすることも出来ますが、非同期コレクションに定義されているコンビネーターを使用してブロックシーケンスの終了時に結果を算出する非同期コンビネーターを簡潔に記述することが出来ます。
+サービスの実装では `withPipe` を使用して非同期メッセージングを行うためのパイプを参照することが出来ます。`pipe.src` は push 型の非同期コレクションです。通常のコレクションと同様にパイプに到着したブロックシーケンス及び終了が伝播する関数を連結します (この関数が実行されるのはブロックが到着した時です)。末端の集約関数はただちに Future を返しますが実際に結果が算出されるのはすべてのブロックを受信し終えた時です。RPC の場合と同様に Promise を用意して `foreach` でループすることも出来ますが、非同期コレクションに定義されているコンビネーターを使用してブロックシーケンスの終了時に結果を算出する非同期コンビネーターを簡潔に記述することが出来ます。
 
 ```scala
-val pipe = session.open(10){ pipe =>
-  // 受信した文字列を出力 (ここでは受信時の処理定義のみで送信準備は出来ていない)
-  pipe.src.foreach{ b => println(new String(b.payload, b.offset, b.length)) }
+val future = session.open(10){ pipe =>
+  // 受信時に文字列をそのまま出力する処理を指定
+  pipe.src.foreach{ b => println(b.getString) }
+  // "1","2","3","4",EOF を送信
+  Seq(1, 2, 3, 4).map{ n => n.toString.getBytes }.foreach{ b => pipe.sink.send(b) }
+  pipe.sink.sendEOF()
+  pipe.future  // 相手からの Close を結果とする
 }
-// "1","2","3","4" を送信
-Seq(1, 2, 3, 4).map{ n => n.toString.getBytes("UTF-8") }.foreach{ b => pipe.sink.send(b) }
-pipe.sink.sendEOF()
-val sum = Await.result(pipe.future, Duration.Inf) // 1\n2\n3\n4\n
-System.out.println(s"sum=$sum")                   // sum=10
+val sum = Await.result(future, Duration.Inf)   // 1\n2\n3\n4\n
+System.out.println(s"sum=$sum")                // sum=10
 ```
 
-繰り返しになりますがクライアントがパイプをオープンするときやサービスが `scala.concurrent.future{ }` などを使用して別スレッドで処理を行う実装ではパイプの参照位置、受信処理の設定位置に注意してください。これらの違反は例外や failed future の挙動となりますがコンパイルでは分かりません。
+前述の通りサービス側の `withPipe` のラムダとクライアント側の `open()` のラムダは交換可能です。これは接続方向に役割が依存していない事を表しています。
 
 #### 同期ストリーミングの実装
 
 * [サンプルコード](https://github.com/torao/asterisk/blob/master/src/test/scala/sample/Sample4.scala)
 
-メッセージングを使用した擬似的な InputStream, OutputStream を参照して Caller, Callee 間で同期入出力を行うことが出来ます。ストリーミングにもメッセージングと同じ制約があります。
+メッセージングを使用した擬似的な InputStream, OutputStream を参照して Caller, Callee 間で同期入出力を行うことが出来ます。ストリーミングにもメッセージングと同じスレッド制約があります。
 
-入力ストリームを使用する際に注意しなければならないのは、パイプが生成されブロックを受信していないことを保証できる位置で `pipe.useInputStream()` を呼び出さなければならないことです。`useInputStream()` は非同期で到着するブロックを保存するキューを用意します。このキューによってブロックデータを同期で正しく読み込む事が出来ます。
+入力ストリームを使用する際に注意しなければならないのは、パイプが生成されブロックを受信していないことを保証できる位置で `pipe.useInputStream()` を呼び出さなければならないことです。`useInputStream()` は非同期で到着するブロックをストリーム参照するためのキューを用意します。
 
-入力ストリームを使用する予定がないのに `useInputStream()` を使用すべきではありません。使わないキューを用意することは無駄なオーバーヘッドに繋がるりますし、ピアにメモリあふれの攻撃を許す脆弱性をはらむことになります。
+入力ストリームを使用する予定がないのに `useInputStream()` を使用してはいけません。使わないキューを用意することは無駄なオーバーヘッドに繋がるりますし、ピアにメモリあふれの攻撃を許す脆弱性をはらむことになります。
 
 以下は受信したバイナリストリームをエンコードして文字列化するサービスとそれを呼び出すクライアントの例です。
 
@@ -308,27 +342,38 @@ def makeString(charset:String) = withPipe { pipe =>
 }
 
 // client implementation
-val pipe = session.open(10, "UTF-8")
-(0 until 9).foreach{ i => pipe.out.write(i.toString.getBytes("UTF-8")) }
-pipe.out.close()
-val result = Await(pipe, Duration.Info)
+val future = session.open(10, "UTF-8"){ pipe =>
+  scala.concurrent.future {
+    (0 until 9).foreach{ i => pipe.out.write(i.toString.getBytes("UTF-8")) }
+    pipe.out.close()
+  }
+  pipe.future
+}
+val result = Await(future, Duration.Info)
 System.out.println(result)    // 0123456789
 ```
 
-また以下は逆方向で、サービス側に溜まっているログを読み出しローカルに出力する例です。
+また上記の逆の流れとしてサービス側に溜まっているログを読み出しローカルに出力する例は以下のようになります。
 
 ```scala
 // service implementation
 @Export(10)
 def retrieveLogs():Future[Unit] = withPipe { pipe =>
-  (0 until 9).foreach{ i => pipe.out.write(i.toString.getBytes("UTF-8")) }
+  scala.concurrent.future{
+    (0 until 9).foreach{ i => pipe.out.write(i.toString.getBytes("UTF-8")) }
+  }
   Future(())
 }
 
 // client implementation
 // You MUST call useInputStream() to use pipe.in in function caller thread.
-val pipe = session.open(10){ _.useInputStream() }
-Source.fromInputStream("UTF-8").getLines.foreach{ line => log.info(line) }
+session.open(10){ pipe =>
+  pipe.useInputStream()
+  scala.concurrent.future{
+    Source.fromInputStream("UTF-8").getLines.foreach{ line => log.info(line) }
+  }
+  pipe.future
+}
 ```
 
 パイプがクローズされるとき (Future に値が設定されたとき) にストリームもクローズされます。

@@ -7,7 +7,7 @@ package sample
 
 import com.kazzla.asterisk._
 import java.net.InetSocketAddress
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Future, Promise, Await}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Success
 import scala.util.Failure
@@ -23,21 +23,36 @@ import scala.annotation.tailrec
  * @author Takami Torao
  */
 object Sample4 {
+
+	def send(charset:String)(pipe:Pipe):Future[Any] = {
+		scala.concurrent.future {
+			pipe.out.write("日々是良日".getBytes(charset))
+			pipe.out.close()
+		}
+		pipe.future
+	}
+
+	def receive(charset:String)(pipe:Pipe):Future[Any] = {
+		// You MUST call useInputStream() to use pipe.in in function caller thread.
+		pipe.useInputStream()
+		scala.concurrent.future {
+			new String(Source.fromInputStream(pipe.in, charset).buffered.toArray)
+		}
+	}
+
   /**
    * Service implementation specify `Service` and interface.
    */
   class StreamService extends Service {
 	  // encode stream binary to string by specified charset
 	  @Export(value=10)
-    def makeString(charset:String) = withPipe { pipe =>
-      // You MUST call useInputStream() to use pipe.in in function caller thread.
-	    pipe.useInputStream()
-	    scala.concurrent.future {
-		    new String(Source.fromInputStream(pipe.in, charset).buffered.toArray)
-	    }
-    }
+	  def makeString(charset:String) = withPipe(receive(charset))
+	  // encode stream binary to string by specified charset
+	  @Export(value=20)
+	  def sendString(charset:String) = withPipe(send(charset))
+
 	  // echo stream binary and return byte length as result
-    20 accept { args =>
+    30 accept { args =>
       withPipe { pipe =>
 	      // You MUST call useInputStream() to use pipe.in in function caller thread.
 	      pipe.useInputStream()
@@ -69,27 +84,36 @@ object Sample4 {
     client.connect(new InetSocketAddress("localhost", 5330), None).onComplete{
       case Success(session) =>
         // NOTE: Interface binding is not supported in messaging client.
-	      val p1 = session.open(10, "UTF-8")
-	      p1.out.write("日々是良日".getBytes("UTF-8"))
-	      p1.out.close()
-	      System.out.println(Await.result(p1.future, Duration.Inf))  // 日々是良日
+	      val f1 = session.open(10, "UTF-8")(send("UTF-8"))
+	      System.out.println(Await.result(f1, Duration.Inf))  // 日々是良日
 
-	      val p2 = session.open(20){ _.useInputStream() }
-	      val size = util.Random.nextInt(1024 * 1024)
-	      val receive = scala.concurrent.future {
-					var count = 0
-					while(p2.in.read() >= 0) count += 1
-		      count
+	      // Processing is interchangeable regardless of whether either is opened.
+        val f2 = session.open(20, "UTF-8")(receive("UTF-8"))
+	      System.out.println(Await.result(f2, Duration.Inf))  // 日々是良日
+
+	      {
+		      val send = Promise[Int]()
+		      val receive = Promise[Int]()
+		      val f3 = session.open(30){ pipe =>
+			      pipe.useInputStream()
+			      scala.concurrent.future {
+				      var count = 0
+				      while(pipe.in.read() >= 0) count += 1
+				      receive.success(count)
+			      }
+			      scala.concurrent.future {
+				      val size = util.Random.nextInt(1024 * 1024)
+				      (0 until size).foreach{ _ => pipe.out.write(0x00) }
+				      pipe.out.close()    // flush buffer and send eof
+				      send.success(size)
+			      }
+		        pipe.future
+		      }
+		      val receiveCount = Await.result(receive.future, Duration.Inf)
+		      val sendCount = Await.result(send.future, Duration.Inf)
+		      val serverCount = Await.result(f3, Duration.Inf)
+		      System.out.println(s"send=$sendCount, receive=$receiveCount, server-detected=$serverCount")
 	      }
-	      val send = scala.concurrent.future {
-		      (0 until size).foreach{ _ => p2.out.write(0x00) }
-		      p2.out.close()    // flush buffer and send eof
-		      size
-	      }
-	      val receiveCount = Await.result(receive, Duration.Inf)
-	      val sendCount = Await.result(send, Duration.Inf)
-	      val serverCount = Await.result(p2.future, Duration.Inf)
-	      System.out.println(s"send=$sendCount, receive=$receiveCount, server-detected=$serverCount")
         server.shutdown()
         client.shutdown()
       case Failure(ex) => ex.printStackTrace()

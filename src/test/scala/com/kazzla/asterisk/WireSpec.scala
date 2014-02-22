@@ -77,9 +77,11 @@ have correct peer name. $e9
 		w2.onReceive ++ { m => p2.success(m) }
 		w1.start()
 		w2.start()
-		Await.result(w1.send(m1), Limit)
-		Await.result(w2.send(m2), Limit)
-		(Await.result(p1.future, Limit) === m2) and (Await.result(p2.future, Limit) === m1)
+		w1.send(m1)
+		val r2 = Await.result(p2.future, Limit)
+		w2.send(m2)
+		val r1 = Await.result(p1.future, Limit)
+		(r2 === m1) and (r1 === m2)
 	}
 
 	def e4 = wires{ (w1, w2) =>
@@ -132,7 +134,7 @@ have correct peer name. $e9
 	def e6 = wires{ (w1, w2) =>
 		w1.send(Open(6, 0, Seq[Any]()))
 		w1.close()
-		Await.result(w1.send(Open(6, 1, Seq[Any]())), Limit) must throwA[java.io.IOException]
+		w1.send(Open(6, 1, Seq[Any]())) must throwA[java.io.IOException]
 	}
 
 	def e7 = wires{ (w1, w2) =>
@@ -174,7 +176,7 @@ have correct peer name. $e9
 		(w1.peerName !=== null) and (w1.peerName !=== null)
 	}
 
-	val Limit = Duration(10, SECONDS)
+	val Limit = Duration(3, SECONDS)
 
 }
 

@@ -178,7 +178,7 @@ object HowToUseSelfSignedCert {
     val out = new OutputStreamWriter(client.getOutputStream, "UTF-8")
     out.write("GET / HTTP/1.0\r\nHost: www.google.com\r\nConnection: close\r\n\r\n")
     out.flush()
-    Source.fromInputStream(in, "UTF-8").getLines.foreach {
+    Source.fromInputStream(in, "UTF-8").getLines().foreach {
       line => System.out.println(line)
     }
     in.close()

@@ -7,7 +7,7 @@ package sample
 
 import com.kazzla.asterisk.{Node, Service, Export}
 import java.net.InetSocketAddress
-import scala.concurrent.{Promise, Future}
+import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Success, Failure}
 

@@ -7,7 +7,6 @@ package com.kazzla
 
 import java.io._
 import org.slf4j._
-import java.text.NumberFormat
 import scala.collection.JavaConversions._
 import java.lang.reflect.Method
 import java.security.cert.{X509Certificate, Certificate}

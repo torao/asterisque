@@ -10,6 +10,10 @@ import scala.annotation.tailrec
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.lang.reflect.{Method, InvocationHandler}
+import scala.concurrent.{Await, ExecutionContext, Promise, Future}
+import scala.util.{Success, Failure}
+import java.util.concurrent.Executor
+import scala.concurrent.duration.Duration
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Session
@@ -18,7 +22,7 @@ import java.lang.reflect.{Method, InvocationHandler}
  * @author Takami Torao
  * @param name このセッションの名前
  */
-class Session(val name:String, defaultService:Service, val wire:Wire) extends Attributes{
+class Session private[asterisk](val name:String, defaultService:Service, val wire:Wire, messagePump:Executor) extends Attributes{
 
 	import Session.logger
 
@@ -77,12 +81,26 @@ class Session(val name:String, defaultService:Service, val wire:Wire) extends At
 	 * @param function function の識別子
 	 * @return function とのパイプ
 	 */
-	def open(function:Short, params:Any*)(implicit init:(Pipe)=>Unit = { _ => None }):Pipe = {
+	def open(function:Short, params:Any*)(implicit onTransferComplete:(Pipe)=>Future[Any] = { _.future }):Future[Any] = {
+		import ExecutionContext.Implicits.global
+		val promise = Promise[Future[Any]]()
 		val pipe = create(function)
-		Pipe.using(pipe){ init(pipe) }
-		pipe.open(params)
-		pipe.ready = true
-		pipe
+		pipe.open(params, { () =>
+			Session.using(this, pipe){
+				val future = onTransferComplete(pipe) andThen {
+					case Success(result) =>
+						if(! pipe.isClosed){
+							pipe.close(result)
+						}
+					case Failure(ex) =>
+						if(! pipe.isClosed){
+							pipe.close(ex)
+						}
+				}
+				promise.success(future)
+			}
+		})
+		Await.result(promise.future, Duration.Inf)
 	}
 
 	/**
@@ -105,7 +123,7 @@ class Session(val name:String, defaultService:Service, val wire:Wire) extends At
 				} catch {
 					case ex:Throwable =>
 						logger.error(s"unexpected error: $frame, closing pipe", ex)
-						post(Close(frame.pipeId, Left(s"internal error")))
+						post(Close(frame.pipeId, Left(s"internal error")), None)
 						if(ex.isInstanceOf[ThreadDeath]){
 							throw ex
 						}
@@ -116,7 +134,7 @@ class Session(val name:String, defaultService:Service, val wire:Wire) extends At
 					case _:Close =>
 						logger.debug(s"both of sessions unknown pipe #${frame.pipeId}")
 					case _ =>
-						post(Close(frame.pipeId, Left(s"unknown pipe-id: ${frame.pipeId}")))
+						post(Close(frame.pipeId, Left(s"unknown pipe-id: ${frame.pipeId}")), None)
 				}
 		}
 	}
@@ -134,13 +152,12 @@ class Session(val name:String, defaultService:Service, val wire:Wire) extends At
 		// 既に使用されているパイプ ID が指定された場合はエラーとしてすぐ終了
 		if(map.contains(open.pipeId)){
 			logger.debug(s"duplicate pipe-id specified: ${open.pipeId}")
-			post(Close(open.pipeId, Left(s"duplicate pipe-id specified: ${open.pipeId}")))
+			post(Close(open.pipeId, Left(s"duplicate pipe-id specified: ${open.pipeId}")), None)
 			return None
 		}
 		// 新しいパイプを構築して登録
 		val pipe = new Pipe(open.pipeId, open.function, this)
 		if(pipes.compareAndSet(map, map + (pipe.id -> pipe))){
-			pipe.ready = true
 			return Some(pipe)
 		}
 		create(open)
@@ -186,11 +203,16 @@ class Session(val name:String, defaultService:Service, val wire:Wire) extends At
 	 * ピアに対して指定されたメッセージを送信します。
 	 */
 	@volatile
-	private[asterisk] var post:(Message)=>Unit = { frame =>
-		wire.send(frame)
-		if(logger.isTraceEnabled){
-			logger.trace(s"post:$frame")
-		}
+	private[asterisk] var post:(Message, Option[()=>Unit])=>Unit = { (frame, onSend) =>
+		messagePump.execute(new Runnable {
+			override def run(): Unit = {
+				wire.send(frame)
+				if(logger.isTraceEnabled){
+					logger.trace(s"post:$frame")
+				}
+				onSend.foreach{ _() }
+			}
+		})
 	}
 
 	// ==============================================================================================
@@ -207,7 +229,7 @@ class Session(val name:String, defaultService:Service, val wire:Wire) extends At
 
 		// 以降のメッセージ送信をすべて例外に変更して送信を終了
 		// ※Pipe#close() で Session#post() が呼び出されるためすべてのパイプに Close を投げた後に行う
-		post = { _ => throw new IOException(s"session $name closed") }
+		post = { (_,_) => throw new IOException(s"session $name closed") }
 
 		// Wire のクローズ
 		wire.close()
@@ -265,7 +287,7 @@ class Session(val name:String, defaultService:Service, val wire:Wire) extends At
 				method.invoke(this, args:_*)
 			} else {
 				// there is no way to receive block in interface binding
-				open(export.value(), (if(args==null) Array[AnyRef]() else args):_*).future
+				open(export.value(), (if(args==null) Array[AnyRef]() else args):_*)
 			}
 		}
 	}

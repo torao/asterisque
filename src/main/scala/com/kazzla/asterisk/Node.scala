@@ -15,6 +15,7 @@ import javax.net.ssl.SSLContext
 import scala.concurrent.{ExecutionContext, Promise, Future}
 import scala.util.Failure
 import scala.util.Success
+import java.util.concurrent.Executors
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Node
@@ -39,6 +40,8 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 		old
 	}
 
+	private[this] val messagePump = Executors.newSingleThreadExecutor()
+
 	// ==============================================================================================
 	// 接続受け付けの開始
 	// ==============================================================================================
@@ -50,7 +53,7 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 	 * @return Server の Future
 	 */
 	def listen(address:SocketAddress, tls:Option[SSLContext] = None)(implicit onAccept:(Session)=>Unit = {_ => None}):Future[Server] = {
-		import scala.concurrent.ExecutionContext.Implicits.global
+		import ExecutionContext.Implicits.global
 		val promise = Promise[Server]()
 		bridge.listen(codec, address, tls){ wire => onAccept(bind(wire)) }.onComplete {
 			case Success(server) =>
@@ -76,7 +79,7 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 	 * @return 接続により発生した Session の Future
 	 */
 	def connect(address:SocketAddress, tls:Option[SSLContext] = None):Future[Session] = {
-		import scala.concurrent.ExecutionContext.Implicits.global
+		import ExecutionContext.Implicits.global
 		val promise = Promise[Session]()
 		bridge.connect(codec, address, tls).onComplete{
 			case Success(wire) => promise.success(bind(wire))
@@ -97,7 +100,7 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 	 */
 	def bind(wire:Wire):Session = {
 		logger.trace(s"bind($wire):$name")
-		val s = new Session(s"$name[${wire.peerName}]", _service, wire)
+		val s = new Session(s"$name[${wire.peerName}]", _service, wire, messagePump)
 		add(sessions, s)
 		s.onClosed ++ { session => remove(sessions, session) }
 		s
@@ -110,6 +113,7 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 	 * このノード上でアクティブなすべてのサーバ及びセッションがクローズされます。
 	 */
 	def shutdown():Unit = {
+		messagePump.shutdown()
 		servers.get().foreach{ _.close() }
 		sessions.get().foreach{ _.close() }
 		logger.debug(s"shutting-down $name; all available ${sessions.get().size} sessions, ${servers.get().size} servers are closed")

@@ -44,10 +44,12 @@ object Sample {
 					log.info("hoge")
 
 					logger.info("calling log.dump() with line from 0 to 9")
-					val pipe = session.open(30, "hoge")
-					val out = new PrintWriter(new PipeOutputStream(pipe))
-					(0 until 10).foreach{ i => out.println(i) }
-					out.close()
+					session.open(30, "hoge"){ pipe =>
+						val out = new PrintWriter(pipe.out)
+						(0 until 10).foreach{ i => out.println(i) }
+						out.close()
+						pipe.future
+					}
 
 					logger.info("returning 100")
 					Promise.successful(100).future

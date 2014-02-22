@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 ssskoiroha.org.
+ * Copyright (c) 2013 koiroha.org.
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
@@ -29,6 +29,7 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	import Pipe.logger
 
 	private[this] val closed = new AtomicBoolean(false)
+	def isClosed:Boolean = closed.get()
 
 	private[asterisk] val onBlock = new EventHandlers[Block]()
 	private[this] val onClosing = new EventHandlers[Boolean]()
@@ -39,17 +40,16 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	private[asterisk] val signature = s"#${if(session.wire.isServer) "S" else "C"}${id & 0xFFFF}"
 	Pipe.logger.trace(s"$signature: pipe created")
 
-	private[asterisk] var ready = false
-
 	// ==============================================================================================
 	// ブロックの送信
 	// ==============================================================================================
 	/**
 	 * 指定されたバイナリデータを Block として送信します。
 	 */
-	private[asterisk] def open(params:Seq[Any]):Unit = {
+	private[asterisk] def open(params:Seq[Any], f:()=>Unit):Unit = {
 		Pipe.logger.trace(s"$signature: sending open")
-		session.post(Open(id, function, params))
+		val open = Open(id, function, params)
+		session.post(open, Some(f))
 	}
 
 	// ==============================================================================================
@@ -68,10 +68,7 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	 */
 	private[this] def block(block:Block):Unit = {
 		if(logger.isTraceEnabled){ logger.trace(s"$signature: sending block: $block") }
-		if(! ready){
-			throw new IllegalStateException(s"pipe $signature is not opened")
-		}
-		session.post(block)
+		session.post(block, None)
 	}
 
 	// ==============================================================================================
@@ -82,11 +79,8 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	 * @param result Close に付加する結果
 	 */
 	def close(result:Any):Unit = if(closed.compareAndSet(false, true)){
-		if(! ready){
-			throw new IllegalStateException(s"pipe $signature is not opened")
-		}
 		onClosing(true)
-		session.post(Close(id, Right(result)))
+		session.post(Close(id, Right(result)), None)
 		promise.success(result)
 		session.destroy(id)
 		Pipe.logger.trace(s"$signature: pipe is closed with success: $result")
@@ -102,11 +96,8 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	 * @param ex Close に付加する例外
 	 */
 	def close(ex:Throwable):Unit = if(closed.compareAndSet(false, true)){
-		if(! ready){
-			throw new IllegalStateException(s"pipe $signature is not opened")
-		}
 		onClosing(true)
-		session.post(Close(id, Left(ex.toString)))
+		session.post(Close(id, Left(ex.toString)), None)
 		promise.failure(ex)
 		session.destroy(id)
 		Pipe.logger.trace(s"$signature: pipe is closed with failure: $ex")

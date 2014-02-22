@@ -41,7 +41,7 @@ support asynchronous funtion call to a method that implemented by low-level oper
 		trx(new Service{ }, service){ (client, server) =>
 			val text = randomString
 			val promise = Promise[String]()
-			client.open(20, text).future.onSuccess{ case result =>
+			client.open(20, text).onSuccess{ case result =>
 				promise.success(result.asInstanceOf[String])
 			}
 			Await.result(promise.future, Duration.Inf) ===  _reverse(text)
@@ -53,7 +53,7 @@ support asynchronous funtion call to a method that implemented by low-level oper
 		trx(new Service{ }, service){ (client, server) =>
 			val text = randomString
 			val promise = Promise[String]()
-			client.open(10, text).future.onSuccess{ case result => promise.success(result.asInstanceOf[String]) }
+			client.open(10, text).onSuccess{ case result => promise.success(result.asInstanceOf[String]) }
 			Await.result(promise.future, Duration.Inf) ===  _reverse(text)
 		}
 	}

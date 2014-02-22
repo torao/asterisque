@@ -45,13 +45,11 @@ object Sample3 {
     server.listen(new InetSocketAddress("localhost", 5330), None)
 
 	  // send "1","2","3","4" to pipe and print received block as string
-	  def send(pipe:Pipe):Pipe = {
-		  Seq(1, 2, 3, 4).map{ n => n.toString.getBytes }.foreach{ b => pipe.sink.send(b) }
-		  pipe.sink.sendEOF()
-		  pipe
-	  }
-		def receive(pipe:Pipe):Unit = {
+		def receive(pipe:Pipe):Future[Any] = {
 			pipe.src.foreach{ b => println(b.getString) }
+			Seq(1, 2, 3, 4).map{ n => n.toString.getBytes }.foreach{ b => pipe.sink.send(b) }
+			pipe.sink.sendEOF()
+			pipe.future
 		}
 
 	  // Client node connect to server.
@@ -61,10 +59,10 @@ object Sample3 {
 	      // NOTE: Interface binding is not supported in messaging client.
         // Bind known service interface from session, and call greeting service
         // asynchronously.
-        val p1 = send(session.open(10)(receive))
-	      val p2 = send(session.open(20)(receive))
-	      val sum = Await.result(p1.future, Duration.Inf)
-	      val count = Await.result(p2.future, Duration.Inf)
+        val f1 = session.open(10)(receive)
+	      val f2 = session.open(20)(receive)
+	      val sum = Await.result(f1, Duration.Inf)
+	      val count = Await.result(f2, Duration.Inf)
 	      System.out.println(s"sum=$sum, count=$count")
         server.shutdown()
         client.shutdown()
