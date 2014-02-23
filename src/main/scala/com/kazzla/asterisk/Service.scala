@@ -6,7 +6,7 @@
 package com.kazzla.asterisk
 
 import org.slf4j.LoggerFactory
-import scala.concurrent.{Promise, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 import java.lang.reflect.Method
 import java.nio.ByteBuffer
@@ -17,27 +17,33 @@ import java.nio.ByteBuffer
 /**
  * サブクラスの実装により通信相手の [[com.kazzla.asterisk.Node]] に対して提供するサービスを定義します。
  *
- * サービスのインターフェースは非同期処理として実装されます。具体的には @@[[com.kazzla.asterisk.Export]] 宣言
- * された `Future` を返値とするメソッドをサブクラスで実装することでリモート呼び出しを可能にします。
+ * サービスのインターフェースは非同期処理として実装されます。具体的にはアノテーション
+ * @@[[com.kazzla.asterisk.Export]] に function 番号を指定し、`Future` 型を返値とするメソッドをサブクラスで
+ * 実装することでリモート呼び出しを可能にします。
  * {{{
  *   // インターフェース定義
  *   trait Reverse {
  *     @@Export(10)
  *     def reverse(text:String):Future[String]
  *   }
+ *
  *   // サーバ側
  *   class ReverseService extends Service with Reverse {
  *     def reverse(text:String) = {
- *       Promise.successful(new String(text.toCharArray.reverse)).future
+ *       Future(new String(text.toCharArray.reverse))
  *     }
  *   }
  *   Node("reverse").serve(new ReverseService()).build()
+ *
  *   // クライアント側
  *   remote = session.bind(classOf[Reverse])
- *   System.out.println(remote.reverse("hello, world"))   // dlrow ,olleh
+ *   remote.reverse("hello, world") match {
+ *     case Some(result) => System.out.println(result)   // dlrow ,olleh
+ *     case Failure(ex) => ex.printStackTrace()
+ *   }
  * }}}
  *
- * もう一つの方法としてファンクション番号をしていして処理を実装する方法があります。この方法によって動的な定義に
+ * もう一つの方法としてファンクション番号を指定して処理を実装する方法があります。この方法によって動的な定義に
  * 対応することが出来ますが型安全ではありません。
  * {{{
  *   // サーバ側
@@ -46,36 +52,44 @@ import java.nio.ByteBuffer
  *     20 accept { args => ... }
  *   }
  *   // クライアント側
- *   val pipe = session.open(10).onSuccess{ result =>
+ *   session.open(10, "ABS").onSuccess{ result =>
  *     System.out.println(result)   // input: ABC
  *   }.onFailure{ ex =>
  *     ex.printStackTrace()
- *   }.call("ABC")
+ *   }
  * }}}
  *
- * これらのメソッド及び accept 処理はメッセージの順序性を保証するために単一スレッドで呼び出されます。従ってメソッ
- * ド内で時間のかかる処理を行うとスレッドプールを共有するすべてのセッションの処理が停止します。
- * メソッド内からは `Session()`, `Pipe()` を使用してそれぞれこの呼び出しを行っているセッションとパイプに
- * アクセスすることが出来ます。ただしこれらはメソッド内から呼び出した別スレッドには伝播しません。
- * `Close` メッセージを受信した後は呼び出し後にフレームワークによってパイプがクローズされます。
+ * インターフェースの実装メソッド及び accept に指定するラムダはメッセージの順序性を保証するために単一スレッドで
+ * 呼び出されます。このためメソッド内で時間のかかる処理を行うとスレッドプールを共有するすべてのセッションの処理に
+ * 影響を与えます。直ちに結果が確定しない処理を実装する場合は `scala.concurrent.future` などを使用して非同期
+ * 化を行ってください。
  *
  * @author Takami Torao
  */
 abstract class Service(implicit context:ExecutionContext) {
 	import Service._
 
+	logger.debug(s"binding ${getClass.getSimpleName} as service")
+
 	/**
 	 * このサービスに定義されているファンクションのマップ。
 	 */
 	private[this] var functions = Map[Short,Function]()
 
+	// ============================================================================================
+	// パイプの参照
+	// ============================================================================================
+	/**
+	 * 現在の function 処理を実行しているパイプを参照します。実行スレッドが function の呼び出し処理でない場合は
+	 * 直ちに fail した `Future` を返しラムダは実行されません。
+	 * このメソッドは利用可能なパイプを引数のラムダに渡し、ラムダが返す `Future` を返値とします。
+	 * 相手の呼び出しのためにセッションが必要な場合は [[Pipe.session]] で参照することが出来ます。
+	 */
 	protected def withPipe[T](f:(Pipe)=>Future[T]):Future[T] = Pipe() match {
 		case Some(pipe) => f(pipe)
 		case None =>
-			Promise.failed(throw new Exception(s"pipe can only refer in caller thread of function")).future
+			Future.failed(new Exception(s"pipe can only refer in caller thread of function"))
 	}
-
-	logger.debug(s"binding ${getClass.getSimpleName} as service")
 
 	// ============================================================================================
 	// function の定義
@@ -85,7 +99,8 @@ abstract class Service(implicit context:ExecutionContext) {
 	 */
 	private[this] def declare(export:Export, m:Method):Unit = {
 		if(m.getReturnType != classOf[Future[_]]){
-			throw new IllegalArgumentException(s"method with @Export annotation must have Future return type: ${m.getSimpleName}")
+			throw new IllegalArgumentException(
+				s"method with @Export annotation must have Future return type: ${m.getSimpleName}")
 		}
 		val id = export.value()
 		logger.debug(s"  function $id to ${m.getSimpleName}")
@@ -200,6 +215,10 @@ abstract class Service(implicit context:ExecutionContext) {
 		private[Service] def disconnect(result:Any, error:String) = _onDisconnect.foreach { _(result) }
 	}
 
+	/**
+	 * ByteBuffer に関する拡張
+	 * @param buffer ByteBuffer
+	 */
 	protected implicit class ByteBufferUtil(buffer:ByteBuffer){
 		def getString(charset:String):String = if(buffer.isDirect){
 			val b = new Array[Byte](buffer.remaining())

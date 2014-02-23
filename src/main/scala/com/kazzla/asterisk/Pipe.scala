@@ -17,34 +17,69 @@ import com.kazzla.asterisk.async.Source
 // Pipe
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
- * パイプ ID を生成する (つまり Open する) 場合、値の最上位ビットは `Session` を開始した側が 0、相手
- * からの要求を受け取った側が 1 を使用する。これは通信の双方で相手側との合意手順を取らずユニークな ID を生成する
- * ことを目的としている。
- * これはつまり相手から受信、または相手へ送信するデータのパイプ ID の該当ビットはこのパイプ ID のそれと逆転して
- * いなければならないことを意味する。
+ * function に対する呼び出し状態を表すクラスです。function の呼び出し開始から終了までのスコープを持ち、その呼び
+ * 出し結果は `pipe.future` を使用して非同期で参照することができます。またパイプは非同期メッセージングにおける
+ * メッセージの送出先/流入元を表しており同期ストリーミングもパイプを経由して行います。
  *
+ * パイプの ID は `Session` を開始した側 (クライアント側) が最上位ビット 0、相手からの要求を受け取った側 (サー
+ * ビス側) が 1 を持ちます。このルールは通信の双方で相手側との合意手続きなしに重複しないユニークなパイプ ID を
+ * 発行することを目的としています。このため一つのセッションで同時に行う事が出来る呼び出しは最大で 32,768、パイプを
+ * 共有しているピアの双方で 65,536 個までとなります。
+ *
+ * @param id パイプ ID
+ * @param function このパイプの呼び出し先 function 番号
+ * @param session このパイプのセッション
  * @author Takami Torao
  */
 class Pipe private[asterisk](val id:Short, val function:Short, val session:Session) extends Attributes {
 	import Pipe.logger
 
+	/**
+	 * このパイプがクローズされているかどうかを表すアトミックなフラグ。
+	 */
 	private[this] val closed = new AtomicBoolean(false)
+
+	/**
+	 * このパイプがクローズされているときに true を返します。
+	 */
 	def isClosed:Boolean = closed.get()
 
+	/**
+	 * このパイプにブロックが到着した時に呼び出すイベントハンドラ。
+	 * アプリケーションはこのハンドラではなく [[src]] を使用する。
+	 */
 	private[asterisk] val onBlock = new EventHandlers[Block]()
+
+	/**
+	 * このパイプがクローズされたときに呼び出すイベントハンドラ。
+	 * アプリケーションはこのハンドラではなく [[future]] を使用する。
+	 */
 	private[this] val onClosing = new EventHandlers[Boolean]()
 
+	/**
+	 * このパイプがクローズされて確定した結果を通知するための `Promise`。
+	 */
 	private[this] val promise = Promise[Any]()
+
+	/**
+	 * このパイプによる双方の処理で確定した結果 (成功/失敗にかかわらず) を参照するための `Future` です。
+	 * パイプの結果が確定した時点でパイプはクローズされています。
+	 */
 	lazy val future = promise.future
 
+	/**
+	 * どのパイプで何が起きたかをトレースするためのログ出力用のシンボル文字列。
+	 */
 	private[asterisk] val signature = s"#${if(session.wire.isServer) "S" else "C"}${id & 0xFFFF}"
 	Pipe.logger.trace(s"$signature: pipe created")
 
 	// ==============================================================================================
-	// ブロックの送信
+	// Open メッセージの送信
 	// ==============================================================================================
 	/**
-	 * 指定されたバイナリデータを Block として送信します。
+	 * このパイプが示す function 番号に対して指定された引数で Open メッセージを送信します。
+	 * @param params function 呼び出し時の引数
+	 * @param f Open メッセージ送信後に実行する処理
 	 */
 	private[asterisk] def open(params:Seq[Any], f:()=>Unit):Unit = {
 		Pipe.logger.trace(s"$signature: sending open")
@@ -56,7 +91,7 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	// ブロックの送信
 	// ==============================================================================================
 	/**
-	 * 指定されたバイナリデータを Block として送信します。
+	 * 指定されたバイナリデータを非同期メッセージングのメッセージとして Block を送信します。
 	 */
 	private[this] def block(buffer:Array[Byte], offset:Int, length:Int):Unit = block(Block(id, buffer, offset, length))
 
@@ -64,7 +99,7 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	// ブロックの受信
 	// ==============================================================================================
 	/**
-	 * 指定された Block を受信したときに呼び出されます。
+	 * 指定された Block メッセージを非同期メッセージングのメッセージとして送信します。
 	 */
 	private[this] def block(block:Block):Unit = {
 		if(logger.isTraceEnabled){ logger.trace(s"$signature: sending block: $block") }
@@ -75,10 +110,11 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	// パイプのクローズ
 	// ==============================================================================================
 	/**
-	 * 指定した result 付きで Close を送信しこのパイプを閉じます。
+	 * 指定された結果で Close メッセージを送信しパイプを閉じます。
+	 * このメソッドは正常に結果が確定したときの動作です。
 	 * @param result Close に付加する結果
 	 */
-	def close(result:Any):Unit = if(closed.compareAndSet(false, true)){
+	private[asterisk] def close(result:Any):Unit = if(closed.compareAndSet(false, true)){
 		onClosing(true)
 		session.post(Close(id, Right(result)), None)
 		promise.success(result)
@@ -92,10 +128,11 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	// パイプのクローズ
 	// ==============================================================================================
 	/**
-	 * 指定した例外付きで Close を送信しパイプを閉じます。
+	 * 指定した例外で Close を送信しパイプを閉じます。
+	 * このメソッドはエラーが発生したときの動作です。
 	 * @param ex Close に付加する例外
 	 */
-	def close(ex:Throwable):Unit = if(closed.compareAndSet(false, true)){
+	private[asterisk] def close(ex:Throwable):Unit = if(closed.compareAndSet(false, true)){
 		onClosing(true)
 		session.post(Close(id, Left(ex.toString)), None)
 		promise.failure(ex)
@@ -109,7 +146,7 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	// パイプのクローズ
 	// ==============================================================================================
 	/**
-	 * 相手側から受信した Close によってこのパイプを閉じます。
+	 * 相手側から受信した Close メッセージによってこのパイプを閉じます。
 	 */
 	private[asterisk] def close(close:Close):Unit = if(closed.compareAndSet(false, true)){
 		onClosing(false)
@@ -125,11 +162,24 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 		Pipe.logger.debug(s"$signature: pipe already closed: $close")
 	}
 
+	/**
+	 * 非同期メッセージングの Block メッセージ受信を行うメッセージソース。
+	 */
 	private[this] val _src = new Pipe.MessageSource()
+
+	// ブロックを受信したらメッセージソースに通知
 	onBlock ++ _src
 
+	/**
+	 * このパイプによる非同期メッセージングの受信処理を設定する非同期コレクションです。
+	 * この非同期コレクションは処理の呼び出しスレッド内でしか受信処理を設定することが出来ません。
+	 */
 	val src:Source[Block] = _src
 
+	/**
+	 * このパイプに対する非同期メッセージングの送信を行うメッセージシンクです。
+	 * クローズされていないパイプに対してであればどのようなスレッドからでもメッセージの送信を行うことが出来ます。
+	 */
 	val sink = new MessageSink()
 
 	/**
@@ -151,9 +201,10 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	private[this] var _in:Option[PipeInputStream] = None
 
 	/**
-	 * このパイプが受信したブロックを `InputStream` として参照します。
-	 * @@[[com.kazzla.asterisk.Export]](stream=true) 宣言されているメソッドのパイプのみ使用することが
-	 * 出来ます。
+	 * このパイプがメッセージとして受信したバイナリデータを `InputStream` として参照します。
+	 * 非同期で到着するメッセージを同期ストリームで参照するために、入力ストリームを使用する前に [[useInputStream()]]
+	 * を呼び出して内部的なキューを準備しておく必要があります。[[useInputStream()]] を行わず入力ストリームを参照
+	 * した場合は例外となります。
 	 */
 	lazy val in:InputStream = _in match {
 		case Some(i) => i
@@ -161,8 +212,9 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	}
 
 	/**
-	 * パイプの入力ストリーム [[in]] を使用するために
-	 * このメソッドを呼び出すと受信したブロックのバッファリグが行われますので、入力ストリームを使用する場合のみ呼び出してください。
+	 * 非同期で到着するバイナリーデータを [[in]] を使用した同期ストリームとして参照するためのキューを準備します。
+	 * このメソッドを呼び出すと受信したブロックのバッファリグが行われますので、入力ストリームを使用する場合のみ
+	 * 呼び出してください。
 	 */
 	def useInputStream():Unit = {
 		Pipe.assertInCall("useInputStream() must be call in caller thread, Ex. session.open(10){_.useInputStream()}, 10.accept{withPipe{pipe=>pipe.useInputStream();...}}")
@@ -184,7 +236,7 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 		// ブロックの送信
 		// ============================================================================================
 		/**
-		 * 指定されたバイナリデータを Block として送信します。
+		 * メッセージの終了を示す EOF メッセージを非同期メッセージとして送信します。
 		 */
 		def sendEOF():MessageSink = {
 			block(Block.eof(Pipe.this.id))
@@ -195,7 +247,7 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 		// ブロックの送信
 		// ============================================================================================
 		/**
-		 * 指定されたバイナリデータを Block として送信します。
+		 * 指定されたバイナリデータを非同期メッセージとして送信します。
 		 */
 		def send(buffer:Array[Byte]):MessageSink = {
 			block(buffer, 0, buffer.length)
@@ -206,7 +258,7 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 		// ブロックの送信
 		// ============================================================================================
 		/**
-		 * 指定されたバイナリデータを Block として送信します。
+		 * 指定されたバイナリデータを非同期メッセージとして送信します。
 		 */
 		def send(buffer:Array[Byte], offset:Int, length:Int):MessageSink = {
 			Pipe.this.block(buffer, offset, length)
@@ -217,7 +269,7 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 		// ブロックの送信
 		// ============================================================================================
 		/**
-		 * 指定されたバイナリデータを Block として送信します。
+		 * 指定されたバイナリデータを非同期メッセージとして送信します。
 		 */
 		def << (buffer:Array[Byte]):MessageSink = {
 			send(buffer)
@@ -229,10 +281,20 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 object Pipe {
 	private[Pipe] val logger = LoggerFactory.getLogger(classOf[Pipe])
 
+	/**
+	 * スレッドに結びつけられたパイプを参照するためのスレッドローカル。
+	 */
 	private[this] val pipes = new ThreadLocal[Pipe]()
 
+	/**
+	 * 現在のスレッドにむつび付けられているパイプを参照します。
+	 */
 	def apply():Option[Pipe] = Option(pipes.get())
 
+	/**
+	 * 現在のスレッドにパイプが関連づけられていない場合に指定されたメッセージ付きの例外を発生します。
+	 * @param msg 例外メッセージ
+	 */
 	private[asterisk] def assertInCall(msg:String):Unit = {
 		if(pipes.get() == null){
 			throw new IllegalStateException(msg)
@@ -268,12 +330,21 @@ object Pipe {
 	 * メッセージ配信スレッド内でハンドラを設定する必要があります。
 	 */
 	private[Pipe] class MessageSource private[Pipe]() extends Source[Block] with ((Block)=>Unit) {
+
+		/**
+		 * Block メッセージ受信時に呼び出される処理。このインスタンスに設定されているコンビネータ (関数) に転送する。
+		 * @param block 受信したメッセージ
+		 */
 		def apply(block:Block):Unit = synchronized {
 			sequence(block)
 			if(block.isEOF){
 				finish()
 			}
 		}
+
+		/**
+		 * コンビネータの設定を行えるかの評価。パイプが参照できないスレッドの場合は例外となる。
+		 */
 		override def onAddOperation() = {
 			Pipe.assertInCall("operation for message passing can only define in caller thread")
 			super.onAddOperation()
@@ -286,7 +357,7 @@ object Pipe {
 // PipeInputStream
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
- * このパイプ上で受信したブロックをストリームとして参照するためのクラス。
+ * パイプ上で受信した Block メッセージのバイナリデータをストリームとして参照するためのクラス。
  */
 private class PipeInputStream private[asterisk](signature:String) extends InputStream with ((Block) => Unit) {
 	import PipeInputStream.logger
@@ -378,9 +449,10 @@ private object PipeInputStream {
 // PipeOutputStream
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
- * このパイプからブロックとしてデータを送信するための出力ストリームです。出力されたバイナリは内部でバッファリング
- * され、フラグメント化されたブロックとして送信されます。
- * このパイプを使用した出力ストリームクラス。出力内容を Block にカプセル化して非同期セッションへ出力する。
+ * パイプに対してバイナリデータを Block メッセージとして送信するための出力ストリームです。出力されたバイナリは内部
+ * でバッファリングされ、フラグメント化されたブロックとして送信されます。
+ * バッファ容量に達した場合やフラッシュされた場合はバッファの内容を Block メッセージにカプセル化して非同期で
+ * セッションへ送信します。
  */
 private class PipeOutputStream private[asterisk](pipe:Pipe, bufferSize:Int) extends OutputStream {
 	import PipeOutputStream.logger

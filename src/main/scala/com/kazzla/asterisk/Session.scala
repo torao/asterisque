@@ -19,11 +19,17 @@ import scala.concurrent.duration.Duration
 // Session
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
+ * ピアとの通信状態を表すクラスです。
+ *
  * @author Takami Torao
  * @param name このセッションの名前
+ * @param defaultService このセッション上でピアに公開する初期状態のサービス
+ * @param wire このセッションのワイヤー
+ * @param messagePump このセッションからメッセージを送信するためのスレッド
  */
-class Session private[asterisk](val name:String, defaultService:Service, val wire:Wire, messagePump:Executor) extends Attributes{
-
+class Session private[asterisk](val name:String, defaultService:Service, val wire:Wire, messagePump:Executor)
+	extends Attributes
+{
 	import Session.logger
 
 	/**
@@ -32,6 +38,11 @@ class Session private[asterisk](val name:String, defaultService:Service, val wir
 	@volatile
 	private[this] var _service = defaultService
 
+	/**
+	 * このセッション上でピアに公開するサービスを変更します。
+	 * @param s 新しく公開するサービス
+	 * @return 以前のサービス
+	 */
 	def service_=(s:Service):Service = {
 		val old = _service
 		_service = s
@@ -44,7 +55,7 @@ class Session private[asterisk](val name:String, defaultService:Service, val wir
 	private[this] val pipeIdMask:Short = if(wire.isServer) Pipe.UNIQUE_MASK else 0
 
 	/**
-	 * パイプ ID を発行するためのシーケンス。
+	 * 新規のパイプ ID を発行するためのシーケンス番号。
 	 */
 	private[this] val pipeSequence = new AtomicInteger(0)
 
@@ -59,15 +70,11 @@ class Session private[asterisk](val name:String, defaultService:Service, val wir
 	private[this] val closed = new AtomicBoolean(false)
 
 	/**
-	 * このセッション上で新しい接続を受け付けた時に呼び出されるイベントハンドラです。
-	 */
-	val onAccept = new EventHandlers[(Pipe,Open)]()
-
-	/**
 	 * このセッションがクローズされたときに呼び出されるイベントハンドラです。
 	 */
 	val onClosed = new EventHandlers[Session]()
 
+	// `Wire` とこのセッションを結合しメッセージポンプを開始
 	wire.onReceive ++ dispatch        	// `Wire` にメッセージが到着した時のディスパッチャーを設定
 	wire.onClosed ++ { _ => close() } 	// `Wire` がクローズされたときにセッションもクローズ
 	wire.start()                      	// メッセージポンプを開始
@@ -79,7 +86,9 @@ class Session private[asterisk](val name:String, defaultService:Service, val wir
 	 * このセッション上のピアに対して指定された function との非同期呼び出しのためのパイプを作成します。
 	 *
 	 * @param function function の識別子
-	 * @return function とのパイプ
+	 * @param params function の実行パラメータ
+	 * @param onTransferComplete 呼び出し先とのパイプが生成されたときに実行される処理
+	 * @return パイプに対する Future
 	 */
 	def open(function:Short, params:Any*)(implicit onTransferComplete:(Pipe)=>Future[Any] = { _.future }):Future[Any] = {
 		import ExecutionContext.Implicits.global
@@ -220,6 +229,7 @@ class Session private[asterisk](val name:String, defaultService:Service, val wir
 	// ==============================================================================================
 	/**
 	 * このセッションをクローズします。
+	 * 実行中のすべてのパイプはクローズされ、以後のメッセージ配信は行われなくなります。
 	 */
 	def close():Unit = if(closed.compareAndSet(false, true)){
 		logger.trace(s"close():$name")
@@ -282,7 +292,7 @@ class Session private[asterisk](val name:String, defaultService:Service, val wir
 		def invoke(proxy:Any, method:Method, args:Array[AnyRef]):AnyRef = {
 			val export = method.getAnnotation(classOf[Export])
 			if(export == null){
-				// toString() や hashCode() など Object 型のメソッド呼び出し
+				// toString() や hashCode() など Object 型のメソッド呼び出し?
 				logger.debug(s"normal method: ${method.getSimpleName}")
 				method.invoke(this, args:_*)
 			} else {

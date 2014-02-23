@@ -23,6 +23,11 @@ package object asterisk {
 	import scala.language.reflectiveCalls
 	private[this] val logger = LoggerFactory.getLogger("com.kazzla.asterisk")
 
+	/**
+	 * リモート処理の呼び出しで発生した例外を表します。
+	 * @param message 例外メッセージ
+	 * @param ex 下層の例外
+	 */
 	class RemoteException(message:String, ex:Throwable) extends Exception(message, ex) {
 		def this(message:String) = this(message, null)
 	}
@@ -117,6 +122,10 @@ package object asterisk {
 		}
 	}
 
+	/**
+	 * ログ出力に証明書のダンプ機能を加える拡張。
+	 * @param l ログ出力先
+	 */
 	private[asterisk] implicit class RichLogger(l:Logger){
 		def dump(c:Certificate):Unit = if(l.isTraceEnabled){
 			logger.trace(s"Algorithm: ${c.getPublicKey.getAlgorithm}")
@@ -130,8 +139,22 @@ package object asterisk {
 		}
 	}
 
+	/**
+	 * サブクラスで任意の属性値の設定/参照を行うためのトレイトです。
+	 */
 	trait Attributes {
+
+		/**
+		 * このインスタンスに関連づけられている属性値。
+		 */
 		private[this] val attribute = new AtomicReference[Map[String,Any]](Map())
+
+		/**
+		 * このインスタンスに属性値を設定します。
+		 * @param name 属性値の名前
+		 * @param obj 属性値
+		 * @return 以前に設定されていた属性値
+		 */
 		def setAttribute(name:String, obj:Any):Option[Any] = {
 			@tailrec
 			def set():Option[Any] = {
@@ -145,6 +168,12 @@ package object asterisk {
 			}
 			set()
 		}
+
+		/**
+		 * このインスタンスから属性値を参照します。
+		 * @param name 属性値の名前
+		 * @return 属性値
+		 */
 		def getAttribute(name:String):Option[Any] = attribute.get().get(name)
 	}
 

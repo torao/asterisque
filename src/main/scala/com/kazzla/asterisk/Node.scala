@@ -21,35 +21,61 @@ import java.util.concurrent.Executors
 // Node
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
+ * アプリケーションの実行環境となるノードを表します。
+ *
  * @author Takami Torao
  */
 class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:Codec){
 	import Node._
 
+	/**
+	 * このノード上で新しいセッションが発生した時に初期状態で使用するサービス。
+	 */
 	@volatile
 	private[this] var _service = initService
 
+	/**
+	 * このノード上で Listen しているすべてのサーバ。ノードのシャットダウン時にクローズされる。
+	 */
 	private[this] val servers = new AtomicReference(Seq[Server]())
+
+	/**
+	 * このノード上で使用されているすべてのセッション。ノードのシャットダウン時にクローズされる。
+	 */
 	private[this] val sessions = new AtomicReference(Seq[Session]())
 
-	val onConnect = new EventHandlers[Session]()
-
+	/**
+	 * このノード上で新しいセッションが発生した時のデフォルトのサービスを変更します。
+	 * @param newService 新しいサービス
+	 * @return 現在設定されているサービス
+	 */
 	def service_=(newService:Service):Service = {
 		val old = _service
 		_service = newService
 		old
 	}
 
+	/**
+	 * このノード上で発生した個々のセッションのメッセージを Wire へ配信するためのスレッド。Open メッセージを送信後に
+	 * ブロック等を受信していない状態で受信処理を設定するラムダを呼び出す必要があるため単一スレッドにしている。
+	 * ただし設計上はセッションごとあるいはある程度のセッションをまとめた担当でも良い。
+	 * TODO: 送信は直列化されるが受信はその影響を受けないのでブロックを受けてしまう可能性がある!
+	 */
 	private[this] val messagePump = Executors.newSingleThreadExecutor()
 
 	// ==============================================================================================
 	// 接続受け付けの開始
 	// ==============================================================================================
 	/**
-	 * リモートのノードからの接続を受け付けます。
+	 * このノード上でリモートのノードからの接続を受け付けを開始します。アプリケーションは返値の [[Server]] を使用し
+	 * てこの呼び出しで開始した接続受け付けを終了することが出来ます。
+	 *
+	 * アプリケーションは `onAccept` に指定した処理で新しい接続を受け付けセッションが発生した時の挙動を実装すること
+	 * が出来ます。
+	 *
 	 * @param address バインドアドレス
 	 * @param tls 通信に使用する SSLContext
-	 * @param onAccept 接続を受け付けた時に実行する処理
+	 * @param onAccept 新規接続を受け付けた時に実行する処理
 	 * @return Server の Future
 	 */
 	def listen(address:SocketAddress, tls:Option[SSLContext] = None)(implicit onAccept:(Session)=>Unit = {_ => None}):Future[Server] = {
@@ -73,7 +99,8 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 	// ノードへの接続
 	// ==============================================================================================
 	/**
-	 * 指定されたアドレスの別のノードへ接続を行います。
+	 * このノードから指定されたアドレスの別のノードへ接続を行います。
+	 *
 	 * @param address 接続するノードのアドレス
 	 * @param tls 通信に使用する SSLContext
 	 * @return 接続により発生した Session の Future
@@ -110,7 +137,7 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 	// ノードのシャットダウン
 	// ==============================================================================================
 	/**
-	 * このノード上でアクティブなすべてのサーバ及びセッションがクローズされます。
+	 * このノードの処理を終了します。ノード上でアクティブなすべてのサーバ及びセッションがクローズされます。
 	 */
 	def shutdown():Unit = {
 		messagePump.shutdown()
@@ -124,22 +151,32 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 object Node {
 	private[Node] val logger = LoggerFactory.getLogger(classOf[Node])
 
+	/**
+	 * 新規のノードを生成するためのビルダーを作成します。
+	 * @param name 新しく作成するノードの名前
+	 */
 	def apply(name:String):Builder = new Builder(name)
 
+	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	// Builder
+	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	/**
+	 * 新規のノードを構築するためのビルダークラスです。
+	 */
 	class Builder private[Node](name:String) {
 		import ExecutionContext.Implicits.global
 		private var service:Service = new Service {}
 		private var bridge:Bridge = Netty
 		private var codec:Codec = MsgPackCodec
 
+		/**
+		 * 新しく生成するノードが使用するブリッジを指定します。
+		 */
 		def bridge(bridge:Bridge):Builder = {
 			this.bridge = bridge
 			this
 		}
 
-		// ==============================================================================================
-		//
-		// ==============================================================================================
 		/**
 		 * ノードが接続を受け新しいセッションの発生した初期状態でリモートのピアに提供するサービスを指定します。
 		 * このサービスはセッション構築後にセッションごとに変更可能です。
@@ -150,16 +187,24 @@ object Node {
 			this
 		}
 
+		/**
+		 * 新しく生成するノードが使用するコーデックを指定します。
+		 */
 		def codec(codec:Codec):Builder = {
 			this.codec = codec
 			this
 		}
 
+		/**
+		 * このビルダーに設定されている内容で新しいノードのインスタンスを構築します。
+		 */
 		def build():Node = new Node(name, service, bridge, codec)
 
 	}
 
-
+	/**
+	 * 指定されたコンテナに要素を追加するための再帰関数。
+	 */
 	@tailrec
 	private[Node] def add[T](container:AtomicReference[Seq[T]], element:T):Unit = {
 		val n = container.get()
@@ -168,6 +213,9 @@ object Node {
 		}
 	}
 
+	/**
+	 * 指定されたコンテナから要素を除去するための再帰関数。
+	 */
 	@tailrec
 	private[Node] def remove[T](container:AtomicReference[Seq[T]], element:T):Unit = {
 		val n = container.get()
