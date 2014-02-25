@@ -77,7 +77,8 @@ encode and decode supported data-types. $supportedDataTypes
 			'a':Char,
 			"hoge":String,
 			Array[Byte](0, 1, 2, 3, 4, 5),
-			UUID.randomUUID()
+			UUID.randomUUID(),
+			Sample2(List(1, 2, "a", "b"), Map("x"->"y", 0->1), Sample1("abc", 233))
 		)
 		(types.map{ value => Open(0, 0, Seq(value)) }.toList ::: types.map{ value => Close(0, Right(value)) }.toList).map{ msg =>
 			equals(msg, codec.decode(codec.encode(msg)).get)
@@ -119,3 +120,6 @@ class JavaCodecSpec extends CodecSpec {
 class MsgPackCodecSpec extends CodecSpec {
 	val codec = MsgPackCodec
 }
+
+case class Sample1(text:String, number:Int) extends Serializable
+case class Sample2(list:List[Any], map:Map[Any,Any], obj:Sample1) extends Serializable

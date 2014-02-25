@@ -13,7 +13,10 @@ import java.nio.ByteBuffer
 import org.msgpack.{MessageTypeException, MessagePack}
 import java.io.EOFException
 import org.msgpack.unpacker.BufferUnpacker
-import com.kazzla.asterisk.{Block, Close, Open, Message}
+import com.kazzla.asterisk._
+import com.kazzla.asterisk.Close
+import com.kazzla.asterisk.Open
+import scala.Some
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // MsgPackCodec
@@ -109,10 +112,9 @@ object MsgPackCodec extends Codec {
 	}
 
 	private[this] def encode(packer:BufferPacker, value:Any):Unit = {
-		if(value == null){
-			packer.write(0.toByte)
-			packer.writeNil()
-		} else value match {
+		value match {
+			case null =>
+				packer.write(0.toByte)
 			case i:Boolean =>
 				packer.write(1.toByte)
 				packer.write(i)
@@ -167,6 +169,17 @@ object MsgPackCodec extends Codec {
 				// packer.writeArrayEnd()
 			case i:Array[_] => encode(packer, i.toSeq)
 			case i:java.util.List[_] => encode(packer, i.toSeq)
+			case i:Product =>
+				if(i.productArity > Codec.MaxCaseClassElements){
+					throw new CodecException(
+						s"too much property: ${i.getClass.getSimpleName}, ${i.productArity} > ${Codec.MaxCaseClassElements}")
+				}
+				packer.write(102.toByte)
+				packer.write(i.getClass.getName)
+				packer.write(i.productArity.toByte)   // unsigned char
+				(0 until i.productArity).foreach { j =>
+					encode(packer, i.productElement(j))
+				}
 			case unsupported =>
 				throw new CodecException(s"unsupported data-type: ${unsupported.getClass} ($unsupported)")
 		}
@@ -174,9 +187,7 @@ object MsgPackCodec extends Codec {
 
 	private[this] def decode(unpacker:BufferUnpacker):Any = {
 		unpacker.readByte() match {
-			case 0 =>
-				unpacker.readNil()
-				null
+			case 0 => null
 			case 1 => unpacker.readBoolean()
 			case 2 => unpacker.readByte()
 			case 3 => unpacker.readShort().toChar
@@ -206,6 +217,34 @@ object MsgPackCodec extends Codec {
 				}.toMap
 				// unpacker.readMapEnd()
 				map
+			case 102 =>
+				val className = unpacker.readString()
+				val paramSize = unpacker.readByte() & Codec.MaxCaseClassElements
+				val params = (0 until paramSize).map{ _ => decode(unpacker) }.toArray
+				val objs = Class.forName(className).getConstructors.map{ c =>
+					if(c.getParameterTypes.length == paramSize){
+						try {
+							val actualParams = TypeMapper.appropriateValues(params, c.getParameterTypes)
+							Some(c.newInstance(actualParams:_*))
+						} catch {
+							case ex:TypeMapper.TypeMappingException =>
+								logger.trace(s"incompatible: ${c.getSimpleName}; ${ex.toString}")
+								None
+						}
+					} else {
+						logger.trace(s"incompatible: ${c.getSimpleName}")
+						None
+					}
+				}.filter{ _.isDefined }.map{ _.get }
+				if(objs.length == 0){
+					throw new CodecException(
+						s"appropriate constructor not found on class $className: ${debugString(params)}")
+				} else if(objs.length > 1){
+					throw new CodecException(
+						s"${objs.length} compatible constructors are found on class $className: ${debugString(params)}")
+				} else {
+					objs(0)
+				}
 			case unsupported =>
 				throw new CodecException(f"unsupported data-type: 0x$unsupported%02X")
 		}

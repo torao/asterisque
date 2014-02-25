@@ -8,7 +8,7 @@ package com.kazzla
 import java.io._
 import org.slf4j._
 import scala.collection.JavaConversions._
-import java.lang.reflect.Method
+import java.lang.reflect.{Constructor, Method}
 import java.security.cert.{X509Certificate, Certificate}
 import java.util.concurrent.atomic.AtomicReference
 import scala.annotation.tailrec
@@ -119,6 +119,18 @@ package object asterisk {
 			method.getDeclaringClass.getSimpleName + "." + method.getName + "(" + method.getParameterTypes.map { p =>
 				p.getSimpleName
 			}.mkString(",") + "):" + method.getReturnType.getSimpleName
+		}
+	}
+
+	/**
+	 * メソッドからデバッグ用の名前を取得するための拡張。
+	 * @param method メソッド
+	 */
+	private[asterisk] implicit class RichConstructor(method:Constructor[_]){
+		def getSimpleName:String = {
+			method.getDeclaringClass.getSimpleName + "(" + method.getParameterTypes.map { p =>
+				p.getSimpleName
+			}.mkString(",") + ")"
 		}
 	}
 

@@ -13,7 +13,7 @@ import scala.collection.JavaConversions._
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
  * リモートメソッド呼び出しのために転送から復元された値を実際の呼び出しパラメータとして使用できる型に変換します。
- * 型 A から型 B への新しい型変換を追加する場合は以下のように記述します。
+ * アプリケーションが型 A から型 B への独自の型変換を追加する場合は以下のように記述します。
  * {{{
  *   TypeMapper.to(classOf[B]) from {
  *     case i:B => i.toA
@@ -25,7 +25,7 @@ import scala.collection.JavaConversions._
 object TypeMapper {
 	private[TypeMapper] val logger = LoggerFactory.getLogger(TypeMapper.getClass)
 
-	class Exception(msg:String) extends java.lang.Exception(msg)
+	class TypeMappingException(msg:String) extends java.lang.Exception(msg)
 
 	// ==============================================================================================
 	// 適切な型への変換
@@ -35,12 +35,14 @@ object TypeMapper {
 	 * @param value 変換する値
 	 * @param to 変換後の値
 	 * @return 変換結果
+	 * @throws TypeMappingException 適切な型に変換できない場合
 	 */
 	def appropriateValues(value:Seq[Any], to:Seq[Class[_]]):Array[Object] = {
 		if(value != null && value.length == to.length){
 			to.zip(value).map{ case ((c,v)) => appropriateValue(v, c).asInstanceOf[Object] }.toArray
 		} else {
-			throw new IllegalArgumentException(s"incompatible parameter size: ${if(value==null) 0 else value.length}, to ${to.length}")
+			throw new IllegalArgumentException(
+				s"incompatible parameter size: ${if(value==null) 0 else value.length}, to ${to.length}")
 		}
 	}
 
@@ -52,6 +54,7 @@ object TypeMapper {
 	 * @param value 変換する値
 	 * @param to 変換後の値
 	 * @return 変換結果
+	 * @throws TypeMappingException 適切な型に変換できない場合
 	 */
 	def appropriateValue[T](value:Any, to:Class[T]):T = {
 		if(value.getClass == to){
@@ -66,10 +69,12 @@ object TypeMapper {
 						to.cast(f(value))
 					}
 				} else {
-					throw new Exception(s"type cannot be compatible: $value:${value.getClass.getSimpleName} to ${to.getSimpleName}")
+					throw new TypeMappingException(
+						s"type cannot be compatible: $value:${value.getClass.getSimpleName} to ${to.getSimpleName}")
 				}
 			case None =>
-				throw new Exception(s"type cannot be compatible: $value:${value.getClass.getSimpleName} to ${to.getSimpleName}")
+				throw new TypeMappingException(
+					s"type cannot be compatible: $value:${value.getClass.getSimpleName} to ${to.getSimpleName}")
 		}
 	}
 
