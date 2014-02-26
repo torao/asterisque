@@ -35,6 +35,30 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	import Pipe.logger
 
 	/**
+	 * このパイプに対する受信処理を設定する前に受信したメッセージのキューです。
+	 */
+	private val premature = new LinkedBlockingQueue[Message]()
+	private val messagePump = new AtomicBoolean(false)
+	private[asterisk] def dispatch(msg:Message):Unit = {
+		if(messagePump.get()){
+			session.dispatch(this, msg)
+		} else premature.synchronized {
+			if(messagePump.get()){
+				session.dispatch(this, msg)
+			} else {
+				premature.put(msg)
+			}
+		}
+	}
+
+	private[asterisk] def startMessagePump():Unit = premature.synchronized {
+		while(! premature.isEmpty){
+			session.dispatch(this, premature.take())
+		}
+		messagePump.set(true)
+	}
+
+	/**
 	 * このパイプがクローズされているかどうかを表すアトミックなフラグ。
 	 */
 	private[this] val closed = new AtomicBoolean(false)
@@ -79,12 +103,11 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	/**
 	 * このパイプが示す function 番号に対して指定された引数で Open メッセージを送信します。
 	 * @param params function 呼び出し時の引数
-	 * @param f Open メッセージ送信後に実行する処理
 	 */
-	private[asterisk] def open(params:Seq[Any], f:()=>Unit):Unit = {
+	private[asterisk] def open(params:Seq[Any]):Unit = {
 		Pipe.logger.trace(s"$signature: sending open")
 		val open = Open(id, function, params)
-		session.post(open, Some(f))
+		session.post(open)
 	}
 
 	// ==============================================================================================
@@ -103,7 +126,7 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	 */
 	private[this] def block(block:Block):Unit = {
 		if(logger.isTraceEnabled){ logger.trace(s"$signature: sending block: $block") }
-		session.post(block, None)
+		session.post(block)
 	}
 
 	// ==============================================================================================
@@ -116,7 +139,7 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	 */
 	private[asterisk] def close(result:Any):Unit = if(closed.compareAndSet(false, true)){
 		onClosing(true)
-		session.post(Close(id, Right(result)), None)
+		session.post(Close(id, Right(result)))
 		promise.success(result)
 		session.destroy(id)
 		Pipe.logger.trace(s"$signature: pipe is closed with success: $result")
@@ -134,7 +157,7 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	 */
 	private[asterisk] def close(ex:Throwable):Unit = if(closed.compareAndSet(false, true)){
 		onClosing(true)
-		session.post(Close(id, Left(ex.toString)), None)
+		session.post(Close(id, Left(ex.toString)))
 		promise.failure(ex)
 		session.destroy(id)
 		Pipe.logger.trace(s"$signature: pipe is closed with failure: $ex")

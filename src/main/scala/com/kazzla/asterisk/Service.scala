@@ -105,8 +105,14 @@ abstract class Service(implicit context:ExecutionContext) {
 		val id = export.value()
 		logger.debug(s"  function $id to ${m.getSimpleName}")
 		id.toInt accept { args =>
-			val params = TypeMapper.appropriateValues(args, m.getParameterTypes)
-			m.invoke(Service.this, params:_*).asInstanceOf[Future[Any]]
+			try {
+				val params = TypeMapper.appropriateValues(args, m.getParameterTypes)
+				m.invoke(Service.this, params:_*).asInstanceOf[Future[Any]]
+			} catch {
+				case ex:Throwable =>
+					logger.error(s"cannot invoke service: ${m.getSimpleName}, with parameter ${debugString(args)}")
+					throw ex
+			}
 		}
 	}
 

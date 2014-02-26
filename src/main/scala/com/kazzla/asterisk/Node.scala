@@ -5,17 +5,16 @@
 */
 package com.kazzla.asterisk
 
-import java.util.concurrent.atomic.AtomicReference
-import scala.annotation.tailrec
-import org.slf4j.LoggerFactory
-import java.net.SocketAddress
-import com.kazzla.asterisk.netty.Netty
 import com.kazzla.asterisk.codec.{MsgPackCodec, Codec}
+import com.kazzla.asterisk.netty.Netty
+import java.net.SocketAddress
+import java.util.concurrent.atomic.AtomicReference
 import javax.net.ssl.SSLContext
+import org.slf4j.LoggerFactory
+import scala.annotation.tailrec
 import scala.concurrent.{ExecutionContext, Promise, Future}
 import scala.util.Failure
 import scala.util.Success
-import java.util.concurrent.Executors
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Node
@@ -54,14 +53,6 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 		_service = newService
 		old
 	}
-
-	/**
-	 * このノード上で発生した個々のセッションのメッセージを Wire へ配信するためのスレッド。Open メッセージを送信後に
-	 * ブロック等を受信していない状態で受信処理を設定するラムダを呼び出す必要があるため単一スレッドにしている。
-	 * ただし設計上はセッションごとあるいはある程度のセッションをまとめた担当でも良い。
-	 * TODO: 送信は直列化されるが受信はその影響を受けないのでブロックを受けてしまう可能性がある!
-	 */
-	private[this] val messagePump = Executors.newSingleThreadExecutor()
 
 	// ==============================================================================================
 	// 接続受け付けの開始
@@ -127,7 +118,7 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 	 */
 	def bind(wire:Wire):Session = {
 		logger.trace(s"bind($wire):$name")
-		val s = new Session(s"$name[${wire.peerName}]", _service, wire, messagePump)
+		val s = new Session(s"$name[${wire.peerName}]", _service, wire)
 		add(sessions, s)
 		s.onClosed ++ { session => remove(sessions, session) }
 		s
@@ -140,7 +131,6 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 	 * このノードの処理を終了します。ノード上でアクティブなすべてのサーバ及びセッションがクローズされます。
 	 */
 	def shutdown():Unit = {
-		messagePump.shutdown()
 		servers.get().foreach{ _.close() }
 		sessions.get().foreach{ _.close() }
 		logger.debug(s"shutting-down $name; all available ${sessions.get().size} sessions, ${servers.get().size} servers are closed")

@@ -38,11 +38,11 @@ object Sample2 {
 
     // Server node serves greeting service on port 5330 without any action on accept connection.
     val server = Node("server").serve(new GreetingServiceImpl()).build()
-    server.listen(new InetSocketAddress("localhost", 5330), None)
+    server.listen(new InetSocketAddress("localhost", 5332), None)
 
     // Client node connect to server.
     val client = Node("client").build()
-    client.connect(new InetSocketAddress("localhost", 5330), None).onComplete{
+    client.connect(new InetSocketAddress("localhost", 5332), None).onComplete{
       case Success(session) =>
         // Bind known service interface from session, and call greeting service
         // asynchronously.

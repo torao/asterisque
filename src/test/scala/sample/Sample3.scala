@@ -42,7 +42,7 @@ object Sample3 {
 
     // Server node serves greeting service on port 5330 without any action on accept connection.
     val server = Node("server").serve(new MessageService()).build()
-    server.listen(new InetSocketAddress("localhost", 5330), None)
+    server.listen(new InetSocketAddress("localhost", 5333), None)
 
 	  // send "1","2","3","4" to pipe and print received block as string
 		def receive(pipe:Pipe):Future[Any] = {
@@ -54,7 +54,7 @@ object Sample3 {
 
 	  // Client node connect to server.
     val client = Node("client").build()
-    client.connect(new InetSocketAddress("localhost", 5330), None).onComplete{
+    client.connect(new InetSocketAddress("localhost", 5333), None).onComplete{
       case Success(session) =>
 	      // NOTE: Interface binding is not supported in messaging client.
         // Bind known service interface from session, and call greeting service

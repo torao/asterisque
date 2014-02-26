@@ -5,15 +5,12 @@
 */
 package com.kazzla.asterisk
 
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicReference, AtomicInteger}
-import scala.annotation.tailrec
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.lang.reflect.{Method, InvocationHandler}
-import scala.concurrent.{Await, ExecutionContext, Promise, Future}
-import scala.util.{Success, Failure}
-import java.util.concurrent.Executor
-import scala.concurrent.duration.Duration
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicReference, AtomicInteger}
+import org.slf4j.LoggerFactory
+import scala.concurrent.Future
+import scala.annotation.tailrec
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Session
@@ -25,9 +22,8 @@ import scala.concurrent.duration.Duration
  * @param name このセッションの名前
  * @param defaultService このセッション上でピアに公開する初期状態のサービス
  * @param wire このセッションのワイヤー
- * @param messagePump このセッションからメッセージを送信するためのスレッド
  */
-class Session private[asterisk](val name:String, defaultService:Service, val wire:Wire, messagePump:Executor)
+class Session private[asterisk](val name:String, defaultService:Service, val wire:Wire)
 	extends Attributes
 {
 	import Session.logger
@@ -91,61 +87,60 @@ class Session private[asterisk](val name:String, defaultService:Service, val wir
 	 * @return パイプに対する Future
 	 */
 	def open(function:Short, params:Any*)(implicit onTransferComplete:(Pipe)=>Future[Any] = { _.future }):Future[Any] = {
-		import ExecutionContext.Implicits.global
-		val promise = Promise[Future[Any]]()
 		val pipe = create(function)
-		pipe.open(params, { () =>
-			Session.using(this, pipe){
-				val future = onTransferComplete(pipe) andThen {
-					case Success(result) =>
-						if(! pipe.isClosed){
-							pipe.close(result)
-						}
-					case Failure(ex) =>
-						if(! pipe.isClosed){
-							pipe.close(ex)
-						}
-				}
-				promise.success(future)
-			}
-		})
-		Await.result(promise.future, Duration.Inf)
+		pipe.open(params)
+		val future = Session.using(this, pipe){ onTransferComplete(pipe) }
+		pipe.startMessagePump()
+		future
 	}
 
 	/**
 	 * 指定されたメッセージを受信したときに呼び出されその種類によって処理を分岐します。
 	 */
-	private[this] def dispatch(frame:Message):Unit = {
+	private[this] def dispatch(msg:Message):Unit = {
 		if(logger.isTraceEnabled){
-			logger.trace(s"dispatch:$frame")
+			logger.trace(s"dispatch:$msg")
 		}
-		val pipe = frame match {
+		val pipe = msg match {
 			case open:Open => create(open)
-			case _ => pipes.get().get(frame.pipeId)
+			case _ => pipes.get().get(msg.pipeId)
 		}
 		pipe match {
 			case Some(p) =>
-				try {
-					Session.using(this, p){
-						_service.dispatch(p, frame)
-					}
-				} catch {
-					case ex:Throwable =>
-						logger.error(s"unexpected error: $frame, closing pipe", ex)
-						post(Close(frame.pipeId, Left(s"internal error")), None)
-						if(ex.isInstanceOf[ThreadDeath]){
-							throw ex
-						}
+				if(msg.isInstanceOf[Open]){
+					// サービスを起動しメッセージポンプの開始
+					dispatch(p, msg)
+					p.startMessagePump()
+				} else {
+					// Open は受信したがサービスの処理が完了していない状態でメッセージを受信した場合にパイプのキューに保存できるよう
+					// 一度パイプを経由して dispatch(Pipe,Message) を実行する
+					p.dispatch(msg)
 				}
 			case None =>
-				logger.debug(s"unknown pipe-id: $frame")
-				frame match {
+				logger.debug(s"unknown pipe-id: $msg")
+				msg match {
 					case _:Close =>
-						logger.debug(s"both of sessions unknown pipe #${frame.pipeId}")
+						logger.debug(s"both of sessions unknown pipe #${msg.pipeId}")
 					case _ =>
-						post(Close(frame.pipeId, Left(s"unknown pipe-id: ${frame.pipeId}")), None)
+						post(Close(msg.pipeId, Left(s"unknown pipe-id: ${msg.pipeId}")))
 				}
 		}
+	}
+
+	/**
+	 * 指定されたメッセージを受信したときに呼び出されその種類によって処理を分岐します。
+	 */
+	private[asterisk] def dispatch(pipe:Pipe, msg:Message):Unit = try {
+		Session.using(this, pipe){
+			_service.dispatch(pipe, msg)
+		}
+	} catch {
+		case ex:Throwable =>
+			logger.error(s"unexpected error: $msg, closing pipe", ex)
+			post(Close(msg.pipeId, Left(s"internal error")))
+			if(ex.isInstanceOf[ThreadDeath]){
+				throw ex
+			}
 	}
 
 	// ==============================================================================================
@@ -160,8 +155,8 @@ class Session private[asterisk](val name:String, defaultService:Service, val wir
 		val map = pipes.get()
 		// 既に使用されているパイプ ID が指定された場合はエラーとしてすぐ終了
 		if(map.contains(open.pipeId)){
-			logger.debug(s"duplicate pipe-id specified: ${open.pipeId}")
-			post(Close(open.pipeId, Left(s"duplicate pipe-id specified: ${open.pipeId}")), None)
+			logger.debug(s"duplicate pipe-id specified: ${open.pipeId}; ${map.get(open.pipeId)}")
+			post(Close(open.pipeId, Left(s"duplicate pipe-id specified: ${open.pipeId}")))
 			return None
 		}
 		// 新しいパイプを構築して登録
@@ -212,16 +207,11 @@ class Session private[asterisk](val name:String, defaultService:Service, val wir
 	 * ピアに対して指定されたメッセージを送信します。
 	 */
 	@volatile
-	private[asterisk] var post:(Message, Option[()=>Unit])=>Unit = { (frame, onSend) =>
-		messagePump.execute(new Runnable {
-			override def run(): Unit = {
-				wire.send(frame)
-				if(logger.isTraceEnabled){
-					logger.trace(s"post:$frame")
-				}
-				onSend.foreach{ _() }
-			}
-		})
+	private[asterisk] var post:(Message)=>Unit = { (frame) =>
+		wire.send(frame)
+		if(logger.isTraceEnabled){
+			logger.trace(s"post:$frame")
+		}
 	}
 
 	// ==============================================================================================
@@ -239,7 +229,7 @@ class Session private[asterisk](val name:String, defaultService:Service, val wir
 
 		// 以降のメッセージ送信をすべて例外に変更して送信を終了
 		// ※Pipe#close() で Session#post() が呼び出されるためすべてのパイプに Close を投げた後に行う
-		post = { (_,_) => throw new IOException(s"session $name closed") }
+		post = { (_) => throw new IOException(s"session $name closed") }
 
 		// Wire のクローズ
 		wire.close()

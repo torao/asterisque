@@ -77,11 +77,11 @@ object Sample4 {
 
     // Server node serves greeting service on port 5330 without any action on accept connection.
     val server = Node("server").serve(new StreamService()).build()
-    server.listen(new InetSocketAddress("localhost", 5330), None)
+    server.listen(new InetSocketAddress("localhost", 5334), None)
 
 	  // Client node connect to server.
     val client = Node("client").build()
-    client.connect(new InetSocketAddress("localhost", 5330), None).onComplete{
+    client.connect(new InetSocketAddress("localhost", 5334), None).onComplete{
       case Success(session) =>
         // NOTE: Interface binding is not supported in messaging client.
 	      val f1 = session.open(10, "UTF-8")(send("UTF-8"))
@@ -102,7 +102,7 @@ object Sample4 {
 				      receive.success(count)
 			      }
 			      scala.concurrent.future {
-				      val size = util.Random.nextInt(1024 * 1024)
+				      val size = util.Random.nextInt(256 * 1024)
 				      (0 until size).foreach{ _ => pipe.out.write(0x00) }
 				      pipe.out.close()    // flush buffer and send eof
 				      send.success(size)

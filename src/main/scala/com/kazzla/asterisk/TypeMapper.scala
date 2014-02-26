@@ -42,7 +42,8 @@ object TypeMapper {
 			to.zip(value).map{ case ((c,v)) => appropriateValue(v, c).asInstanceOf[Object] }.toArray
 		} else {
 			throw new IllegalArgumentException(
-				s"incompatible parameter size: ${if(value==null) 0 else value.length}, to ${to.length}")
+				s"incompatible parameter size: ${if(value==null) 0 else value.length} (${debugString(value)})," +
+				s" to ${to.length} (${to.map{_.getSimpleName}.mkString(",")})")
 		}
 	}
 
