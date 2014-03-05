@@ -19,7 +19,8 @@ import scala.Some
  *
  * @author Takami Torao
  */
-object JavaCodec extends Codec {
+class JavaCodec(loader:ClassLoader) extends Codec {
+	def this() = this(Thread.currentThread().getContextClassLoader)
 
 	/**
 	 * Java シリアライゼーションを使用してメッセージをエンコードします。
@@ -61,7 +62,16 @@ object JavaCodec extends Codec {
 				val buf = new Array[Byte](len)
 				buffer.get(buf)
 				val bais = new ByteArrayInputStream(buf)
-				val in = new ObjectInputStream(bais)
+				val in = new ObjectInputStream(bais){
+					protected override def resolveClass(desc:ObjectStreamClass):Class[_] = {
+						val name: String = desc.getName
+						try {
+							Class.forName(name, false, loader)
+						} catch {
+							case ex: ClassNotFoundException => super.resolveClass(desc)
+						}
+					}
+				}
 				Some(in.readObject().asInstanceOf[Message])
 			}
 		}
@@ -69,7 +79,7 @@ object JavaCodec extends Codec {
 		case ex:InvalidClassException =>
 			throw new CodecException(s"${ex.classname}", ex)
 		case ex:Exception =>
-			throw new CodecException("invalid serialization stream", ex)
+			throw new CodecException(s"invalid serialization stream: $ex", ex)
 	}
 
 }

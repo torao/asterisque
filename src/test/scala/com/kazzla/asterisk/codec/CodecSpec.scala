@@ -54,6 +54,7 @@ encode and decode supported data-types. $supportedDataTypes
 			Close(4, Right(Array(true, true))),
 			Close(5, Right(Array(1, 2, 3))),
 			Close(6, Right(Array(false, -1, "xyz"))),
+			Close(7, Right(())),
 			Close(100, Left(null)),
 			Close(101, Left("")),
 			Close(102, Left("AAAAAAAAAAAAAAAAA")),
@@ -67,6 +68,7 @@ encode and decode supported data-types. $supportedDataTypes
 	def supportedDataTypes = {
 		val types = Seq(
 			null,
+			(),
 			true:Boolean,
 			0:Byte,
 			1:Short,
@@ -114,7 +116,7 @@ encode and decode supported data-types. $supportedDataTypes
 }
 
 class JavaCodecSpec extends CodecSpec {
-	val codec = JavaCodec
+	val codec = new JavaCodec()
 }
 
 class MsgPackCodecSpec extends CodecSpec {

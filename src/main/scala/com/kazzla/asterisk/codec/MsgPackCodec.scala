@@ -115,38 +115,40 @@ object MsgPackCodec extends Codec {
 		value match {
 			case null =>
 				packer.write(0.toByte)
-			case i:Boolean =>
+			case () =>
 				packer.write(1.toByte)
-				packer.write(i)
-			case i:Byte =>
+			case i:Boolean =>
 				packer.write(2.toByte)
 				packer.write(i)
-			case i:Char =>
+			case i:Byte =>
 				packer.write(3.toByte)
+				packer.write(i)
+			case i:Char =>
+				packer.write(4.toByte)
 				packer.write(i.toShort)
 			case i:Short =>
-				packer.write(4.toByte)
-				packer.write(i)
-			case i:Int =>
 				packer.write(5.toByte)
 				packer.write(i)
-			case i:Long =>
+			case i:Int =>
 				packer.write(6.toByte)
 				packer.write(i)
-			case i:Float =>
+			case i:Long =>
 				packer.write(7.toByte)
 				packer.write(i)
-			case i:Double =>
+			case i:Float =>
 				packer.write(8.toByte)
 				packer.write(i)
-			case i:Array[Byte] =>
+			case i:Double =>
 				packer.write(9.toByte)
 				packer.write(i)
-			case i:String =>
+			case i:Array[Byte] =>
 				packer.write(10.toByte)
 				packer.write(i)
-			case i:UUID =>
+			case i:String =>
 				packer.write(11.toByte)
+				packer.write(i)
+			case i:UUID =>
+				packer.write(12.toByte)
 				packer.write(i.getMostSignificantBits)
 				packer.write(i.getLeastSignificantBits)
 			case i:Map[_,_] =>
@@ -188,17 +190,18 @@ object MsgPackCodec extends Codec {
 	private[this] def decode(unpacker:BufferUnpacker):Any = {
 		unpacker.readByte() match {
 			case 0 => null
-			case 1 => unpacker.readBoolean()
-			case 2 => unpacker.readByte()
-			case 3 => unpacker.readShort().toChar
-			case 4 => unpacker.readShort()
-			case 5 => unpacker.readInt()
-			case 6 => unpacker.readLong()
-			case 7 => unpacker.readFloat()
-			case 8 => unpacker.readDouble()
-			case 9 => unpacker.readByteArray()
-			case 10 => unpacker.readString()
-			case 11 => new UUID(unpacker.readLong(), unpacker.readLong())
+			case 1 => ()
+			case 2 => unpacker.readBoolean()
+			case 3 => unpacker.readByte()
+			case 4 => unpacker.readShort().toChar
+			case 5 => unpacker.readShort()
+			case 6 => unpacker.readInt()
+			case 7 => unpacker.readLong()
+			case 8 => unpacker.readFloat()
+			case 9 => unpacker.readDouble()
+			case 10 => unpacker.readByteArray()
+			case 11 => unpacker.readString()
+			case 12 => new UUID(unpacker.readLong(), unpacker.readLong())
 			case 100 =>
 				val length = unpacker.readInt()
 				// val length = unpacker.readArrayBegin() / 2
