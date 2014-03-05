@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.{AtomicBoolean, AtomicReference, AtomicIntege
 import org.slf4j.LoggerFactory
 import scala.concurrent.Future
 import scala.annotation.tailrec
+import scala.util.Try
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Session
@@ -225,7 +226,11 @@ class Session private[asterisk](val name:String, defaultService:Service, val wir
 		logger.trace(s"close():$name")
 
 		// 残っているすべてのパイプに Close メッセージを送信
-		pipes.get().values.foreach{ p => p.close(new IOException(s"session $name closed")) }
+		pipes.get().values.foreach{ p =>
+			Try(p.close(new IOException(s"session $name closed"))).recover {
+				case ex:IOException => logger.debug(s"wire may already closed: $ex")
+			}
+		}
 
 		// 以降のメッセージ送信をすべて例外に変更して送信を終了
 		// ※Pipe#close() で Session#post() が呼び出されるためすべてのパイプに Close を投げた後に行う
