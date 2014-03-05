@@ -8,8 +8,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Session.scala" afterPath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Session.scala" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Node.scala" afterPath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Node.scala" />
     </list>
     <ignored path="asterisk.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -74,11 +73,22 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="Session.scala" pinned="false" current="true" current-in-tab="true">
+      <file leaf-file-name="Session.scala" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Session.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="230" column="31" selection-start="6750" selection-end="6750" vertical-scroll-proportion="0.35326087" vertical-offset="3040" max-vertical-offset="4710">
+            <state line="230" column="31" selection-start="6750" selection-end="6750" vertical-scroll-proportion="0.0" vertical-offset="3040" max-vertical-offset="4710">
               <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="Node.scala" pinned="false" current="true" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Node.scala">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="58" column="0" selection-start="1566" selection-end="1566" vertical-scroll-proportion="0.8220109" vertical-offset="205" max-vertical-offset="3375">
+              <folding>
+                <element signature="e#198#252#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -188,7 +198,6 @@
         <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/codec/MsgPackCodec.scala" />
         <option value="$PROJECT_DIR$/docs/developerguide.md" />
         <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Pipe.scala" />
-        <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Node.scala" />
         <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/TypeMapper.scala" />
         <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Service.scala" />
         <option value="$PROJECT_DIR$/src/test/scala/sample/Sample3.scala" />
@@ -200,6 +209,7 @@
         <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/codec/JavaCodec.scala" />
         <option value="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/codec/CodecSpec.scala" />
         <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Session.scala" />
+        <option value="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Node.scala" />
       </list>
     </option>
   </component>
@@ -541,36 +551,6 @@
             </PATH_ELEMENT>
             <PATH_ELEMENT>
               <option name="myItemId" value="package.scala" />
-              <option name="myItemType" value="org.jetbrains.plugins.scala.components.ScalaDefsProjectViewProvider$ScalaFileTreeNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="asterisk" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="asterisk" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="src" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="main" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="scala" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="asterisk" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="Node.scala" />
               <option name="myItemType" value="org.jetbrains.plugins.scala.components.ScalaDefsProjectViewProvider$ScalaFileTreeNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -1292,11 +1272,6 @@
         <state line="50" column="23" selection-start="1386" selection-end="1386" vertical-scroll-proportion="0.625" vertical-offset="250" max-vertical-offset="1485" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Node.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="13" column="0" selection-start="436" selection-end="436" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="3300" />
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/TypeMapper.scala">
       <provider selected="true" editor-type-id="text-editor">
         <state line="43" column="0" selection-start="1493" selection-end="1493" vertical-scroll-proportion="0.0" vertical-offset="392" max-vertical-offset="2730" />
@@ -1372,8 +1347,17 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Session.scala">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="230" column="31" selection-start="6750" selection-end="6750" vertical-scroll-proportion="0.35326087" vertical-offset="3040" max-vertical-offset="4710">
+        <state line="230" column="31" selection-start="6750" selection-end="6750" vertical-scroll-proportion="0.0" vertical-offset="3040" max-vertical-offset="4710">
           <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Node.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="58" column="0" selection-start="1566" selection-end="1566" vertical-scroll-proportion="0.8220109" vertical-offset="205" max-vertical-offset="3375">
+          <folding>
+            <element signature="e#198#252#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>

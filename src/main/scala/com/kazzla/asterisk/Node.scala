@@ -41,7 +41,7 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 	/**
 	 * このノード上で使用されているすべてのセッション。ノードのシャットダウン時にクローズされる。
 	 */
-	private[this] val sessions = new AtomicReference(Seq[Session]())
+	private[this] val _sessions = new AtomicReference(Seq[Session]())
 
 	/**
 	 * このノード上で新しいセッションが発生した時のデフォルトのサービスを変更します。
@@ -53,6 +53,11 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 		_service = newService
 		old
 	}
+
+	/**
+	 * このノード上で有効なすべてのセッションを参照します。
+	 */
+	def sessions:TraversableOnce[Session] = _sessions.get()
 
 	// ==============================================================================================
 	// 接続受け付けの開始
@@ -119,8 +124,8 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 	def bind(wire:Wire):Session = {
 		logger.trace(s"bind($wire):$name")
 		val s = new Session(s"$name[${wire.peerName}]", _service, wire)
-		add(sessions, s)
-		s.onClosed ++ { session => remove(sessions, session) }
+		add(_sessions, s)
+		s.onClosed ++ { session => remove(_sessions, session) }
 		s
 	}
 
@@ -132,8 +137,8 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 	 */
 	def shutdown():Unit = {
 		servers.get().foreach{ _.close() }
-		sessions.get().foreach{ _.close() }
-		logger.debug(s"shutting-down $name; all available ${sessions.get().size} sessions, ${servers.get().size} servers are closed")
+		_sessions.get().foreach{ _.close() }
+		logger.debug(s"shutting-down $name; all available ${_sessions.get().size} sessions, ${servers.get().size} servers are closed")
 	}
 
 }
