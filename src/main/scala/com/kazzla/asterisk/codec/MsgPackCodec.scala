@@ -111,7 +111,7 @@ object MsgPackCodec extends Codec {
 			None
 	}
 
-	private[this] def encode(packer:BufferPacker, value:Any):Unit = {
+	def encode(packer:BufferPacker, value:Any):Unit = {
 		value match {
 			case null =>
 				packer.write(0.toByte)
@@ -187,7 +187,7 @@ object MsgPackCodec extends Codec {
 		}
 	}
 
-	private[this] def decode(unpacker:BufferUnpacker):Any = {
+	def decode(unpacker:BufferUnpacker):Any = {
 		unpacker.readByte() match {
 			case 0 => null
 			case 1 => ()
