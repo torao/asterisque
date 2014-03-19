@@ -48,7 +48,7 @@ object Sample2 {
         // asynchronously.
         session.open(20, "asterisque").onSuccess{
 	        case result =>
-		        System.out.println(result)
+		        System.out.println(result.toString)
 		        server.shutdown()
 		        client.shutdown()
         }

@@ -123,7 +123,7 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 	 */
 	def bind(wire:Wire):Session = {
 		logger.trace(s"bind($wire):$name")
-		val s = new Session(s"$name[${wire.peerName}]", _service, wire)
+		val s = new Session(this, s"$name[${wire.peerName}]", _service, wire)
 		add(_sessions, s)
 		s.onClosed ++ { session => remove(_sessions, session) }
 		s

@@ -271,9 +271,48 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 		// ============================================================================================
 		/**
 		 * 指定されたバイナリデータを非同期メッセージとして送信します。
+		 * このメソッドは渡された buffer をそのまま送信バッファとして使用します。従ってメソッド呼び出しが終わった後に
+		 * バッファの内容を変更した場合、実際に送信されるデータは保証されません。
+		 */
+		def sendDirect(buffer:Array[Byte]):MessageSink = {
+			sendDirect(buffer, 0, buffer.length)
+			this
+		}
+
+		// ============================================================================================
+		// ブロックの送信
+		// ============================================================================================
+		/**
+		 * 指定されたバイナリデータを非同期メッセージとして送信します。
+		 * このメソッドは渡された buffer をそのまま送信バッファとして使用します。従ってメソッド呼び出しが終わった後に
+		 * バッファの内容を変更した場合、実際に送信されるデータは保証されません。
+		 */
+		def sendDirect(buffer:Array[Byte], offset:Int, length:Int):MessageSink = {
+			Pipe.this.block(buffer, offset, length)
+			this
+		}
+
+		// ============================================================================================
+		// ブロックの送信
+		// ============================================================================================
+		/**
+		 * 指定されたバイナリデータを非同期メッセージとして送信します。
+		 * このメソッドは渡された buffer をそのまま送信バッファとして使用します。従ってメソッド呼び出しが終わった後に
+		 * バッファの内容を変更した場合、実際に送信されるデータは保証されません。
+		 */
+		def <<! (buffer:Array[Byte]):MessageSink = {
+			sendDirect(buffer)
+			this
+		}
+
+		// ============================================================================================
+		// ブロックの送信
+		// ============================================================================================
+		/**
+		 * 指定されたバイナリデータを非同期メッセージとして送信します。
 		 */
 		def send(buffer:Array[Byte]):MessageSink = {
-			block(buffer, 0, buffer.length)
+			send(buffer, 0, buffer.length)
 			this
 		}
 
@@ -284,7 +323,9 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 		 * 指定されたバイナリデータを非同期メッセージとして送信します。
 		 */
 		def send(buffer:Array[Byte], offset:Int, length:Int):MessageSink = {
-			Pipe.this.block(buffer, offset, length)
+			val payload = new Array[Byte](length)
+			System.arraycopy(buffer, offset, payload, 0, length)
+			Pipe.this.block(payload, 0, length)
 			this
 		}
 

@@ -24,7 +24,7 @@ import scala.util.Try
  * @param defaultService このセッション上でピアに公開する初期状態のサービス
  * @param wire このセッションのワイヤー
  */
-class Session private[asterisk](val name:String, defaultService:Service, val wire:Wire)
+class Session private[asterisk](val node:Node, val name:String, defaultService:Service, val wire:Wire)
 	extends Attributes
 {
 	import Session.logger
