@@ -123,7 +123,7 @@ class Session private[asterisk](val node:Node, val name:String, defaultService:S
 					case _:Close =>
 						logger.debug(s"both of sessions unknown pipe #${msg.pipeId}")
 					case _ =>
-						post(Close(msg.pipeId, Left(s"unknown pipe-id: ${msg.pipeId}")))
+						post(Close.unexpectedError(msg.pipeId, s"unknown pipe-id: ${msg.pipeId}"))
 				}
 		}
 	}
@@ -138,7 +138,7 @@ class Session private[asterisk](val node:Node, val name:String, defaultService:S
 	} catch {
 		case ex:Throwable =>
 			logger.error(s"unexpected error: $msg, closing pipe", ex)
-			post(Close(msg.pipeId, Left(s"internal error")))
+			post(Close.unexpectedError(msg.pipeId, s"internal error"))
 			if(ex.isInstanceOf[ThreadDeath]){
 				throw ex
 			}
@@ -157,7 +157,7 @@ class Session private[asterisk](val node:Node, val name:String, defaultService:S
 		// 既に使用されているパイプ ID が指定された場合はエラーとしてすぐ終了
 		if(map.contains(open.pipeId)){
 			logger.debug(s"duplicate pipe-id specified: ${open.pipeId}; ${map.get(open.pipeId)}")
-			post(Close(open.pipeId, Left(s"duplicate pipe-id specified: ${open.pipeId}")))
+			post(Close.unexpectedError(open.pipeId, s"duplicate pipe-id specified: ${open.pipeId}"))
 			return None
 		}
 		// 新しいパイプを構築して登録

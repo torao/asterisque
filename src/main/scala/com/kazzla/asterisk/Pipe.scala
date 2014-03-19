@@ -157,7 +157,7 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	 */
 	private[asterisk] def close(ex:Throwable):Unit = if(closed.compareAndSet(false, true)){
 		onClosing(true)
-		session.post(Close(id, Left(ex.toString)))
+		session.post(Close.unexpectedError(id, ex))
 		promise.failure(ex)
 		session.destroy(id)
 		Pipe.logger.trace(s"$signature: pipe is closed with failure: $ex")
@@ -174,8 +174,7 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 	private[asterisk] def close(close:Close):Unit = if(closed.compareAndSet(false, true)){
 		onClosing(false)
 		if(close.result.isLeft){
-			val ex = new RemoteException(close.result.left.get)
-			promise.failure(ex)
+			promise.failure(close.result.left.get)
 		} else {
 			promise.success(close.result.right.get)
 		}

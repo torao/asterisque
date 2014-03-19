@@ -31,10 +31,40 @@ case class Open(override val pipeId:Short, function:Short, params:Seq[Any]) exte
 /**
  * @author Takami Torao
  */
-case class Close(override val pipeId:Short, result:Either[String,Any]) extends Message(pipeId) {
+case class Close(override val pipeId:Short, result:Either[Abort,Any]) extends Message(pipeId) {
 	//override def toString = s"${getClass.getSimpleName}($pipeId,${result.left.map(debugString)},${result.right.map(debugString)})"
 }
 
+object Close {
+	val UnexpectedErrorCode = -1
+	def error(pipeId:Short, error:Abort):Close = Close(pipeId, Left(error))
+	def error(pipeId:Short, code:Int, message:String, description:String):Close = error(pipeId, Abort(code, message, description))
+	def unexpectedError(pipeId:Short, ex:Throwable) = ex match {
+		case Abort(code, msg, desc) => error(pipeId, code, msg, desc)
+		case _ =>
+			val message = Option(ex.getMessage) match {
+				case Some("") => ex.getClass.getName
+				case Some(msg) => msg
+				case None => ex.getClass.getName
+			}
+			error(pipeId, UnexpectedErrorCode, message, "")
+	}
+	def unexpectedError(pipeId:Short, msg:String) = error(pipeId, UnexpectedErrorCode, msg, "")
+	def success(pipeId:Short, result:Any) = Close(pipeId, Right(result))
+}
+
+/**
+ * [[Close]] のエラー情報。
+ * @param code アプリケーションによって定義されるエラーコード
+ * @param message エラーメッセージ
+ * @param description エラーの詳細情報
+ */
+case class Abort(code:Int, message:String, description:String) extends Exception(s"$code: $message"){
+	def toClose(pipeId:Short) = Close.unexpectedError(pipeId, this)
+}
+object Abort {
+	def apply(code:Int, msg:String):Abort = Abort(code, msg, "")
+}
 /**
  * 長さが 0 のブロックは EOF を表します。
  */

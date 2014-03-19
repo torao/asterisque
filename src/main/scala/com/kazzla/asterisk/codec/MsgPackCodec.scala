@@ -62,7 +62,14 @@ object MsgPackCodec extends Codec {
 				packer.write(TYPE_CLOSE)
 				packer.write(c.pipeId)
 				packer.write(c.result.isRight)
-				encode(packer, c.result.right.getOrElse(c.result.left.get))
+				if(c.result.isRight){
+					encode(packer, c.result.right.get)
+				} else {
+					val abort = c.result.left.get
+					packer.write(abort.code)
+					packer.write(abort.message)
+					packer.write(abort.description)
+				}
 			case b:Block =>
 				packer.write(TYPE_BLOCK)
 				packer.write(b.pipeId)
@@ -90,7 +97,10 @@ object MsgPackCodec extends Codec {
 				val result = if(success){
 					Right(decode(unpacker))
 				} else {
-					Left(decode(unpacker).asInstanceOf[String])
+					val code = unpacker.readInt()
+					val msg = unpacker.readString()
+					val desc = unpacker.readString()
+					Left(Abort(code, msg, desc))
 				}
 				buffer.position(unpacker.getReadByteCount)
 				Some(Close(pipeId, result))
