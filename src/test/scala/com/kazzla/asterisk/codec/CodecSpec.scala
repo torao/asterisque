@@ -62,6 +62,7 @@ encode and decode supported data-types. $supportedDataTypes
 			Close.unexpectedError(105.toShort, Abort(10, "msg", "desc")),
 
 			Block(0, Array[Byte]()),
+			Block.eof(0),
 			Block(1, Array[Byte](0, 1, 2, 3)),
 			Block(2, (0 to 0xFF).map{_.toByte}.toArray, 5, 100)
 		).map{ msg => equals(msg, codec.decode(codec.encode(msg)).get) }.reduceLeft{ _ and _ }
@@ -102,6 +103,7 @@ encode and decode supported data-types. $supportedDataTypes
 					actual.result.right.getOrElse(actual.result.left.get))
 		case (expected:Block, actual:Block) =>
 			(expected.pipeId === actual.pipeId) and
+			(expected.eof === actual.eof) and
 			(java.util.Arrays.equals(
 				expected.payload.drop(expected.offset).take(expected.length).toArray,
 				actual.payload.drop(actual.offset).take(actual.length).toArray) must beTrue)

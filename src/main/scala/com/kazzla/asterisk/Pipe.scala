@@ -417,7 +417,7 @@ object Pipe {
 		 */
 		def apply(block:Block):Unit = synchronized {
 			sequence(block)
-			if(block.isEOF){
+			if(block.eof){
 				finish()
 			}
 		}

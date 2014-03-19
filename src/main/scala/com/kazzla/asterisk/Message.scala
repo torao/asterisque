@@ -65,10 +65,8 @@ case class Abort(code:Int, message:String, description:String) extends Exception
 object Abort {
 	def apply(code:Int, msg:String):Abort = Abort(code, msg, "")
 }
-/**
- * 長さが 0 のブロックは EOF を表します。
- */
-case class Block(override val pipeId:Short, payload:Array[Byte], offset:Int, length:Int) extends Message(pipeId) {
+
+case class Block(override val pipeId:Short, payload:Array[Byte], offset:Int, length:Int, eof:Boolean = false) extends Message(pipeId) {
 
 	// ==============================================================================================
 	// EOF 判定
@@ -76,13 +74,16 @@ case class Block(override val pipeId:Short, payload:Array[Byte], offset:Int, len
 	/**
 	 * このブロックが EOF を表すかを判定します。
 	 * @return EOF の場合 true
+	 * @deprecated use `eof` parameter directly.
 	 */
-	def isEOF:Boolean = length == 0
+	def isEOF:Boolean = eof
 
-	override def toString:String = {
-		"%s(%d,[%s],%d,%d)".format(getClass.getSimpleName, pipeId, payload.map {
+	override def toString:String = if(eof){
+		s"$productPrefix(EOF)"
+	} else {
+		s"$productPrefix($pipeId,[${payload.map {
 			b => "%02X".format(b & 0xFF)
-		}.mkString(","), offset, length)
+		}.mkString(",")}],$offset,$length)"
 	}
 
 	def toByteBuffer:ByteBuffer = ByteBuffer.wrap(payload, offset, length)
@@ -97,7 +98,7 @@ object Block {
 	/**
 	 * EOF ブロックで共用する長さ 0 のバイト配列。
 	 */
-	private[this] val empty = Array[Byte]()
+	private[this] val EmptyArray = Array[Byte]()
 
 	// ==============================================================================================
 	// EOF ブロックの作成
@@ -107,7 +108,7 @@ object Block {
 	 * @param id パイプ ID
 	 * @return EOFブロック
 	 */
-	def eof(id:Short) = Block(id, empty)
+	def eof(id:Short) = Block(id, EmptyArray, 0, 0, eof = true)
 
 	def apply(pipeId:Short, binary:Array[Byte]):Block = Block(pipeId, binary, 0, binary.length)
 }

@@ -73,7 +73,10 @@ object MsgPackCodec extends Codec {
 			case b:Block =>
 				packer.write(TYPE_BLOCK)
 				packer.write(b.pipeId)
-				packer.write(b.payload, b.offset, b.length)
+				packer.write(b.eof)
+				if(! b.eof){
+					packer.write(b.payload, b.offset, b.length)
+				}
 		}
 		if(logger.isTraceEnabled){
 			logger.trace(s"encode:$packet: ${packer.getBufferSize}bytes")
@@ -106,9 +109,14 @@ object MsgPackCodec extends Codec {
 				Some(Close(pipeId, result))
 			case TYPE_BLOCK =>
 				val pipeId = unpacker.readShort()
-				val binary = unpacker.readByteArray()
+				val eof = unpacker.readBoolean()
+				val binary = if(! eof){
+					unpacker.readByteArray()
+				} else {
+					Array[Byte](0)
+				}
 				buffer.position(unpacker.getReadByteCount)
-				Some(Block(pipeId, binary))
+				Some(if(eof) Block.eof(pipeId) else Block(pipeId, binary))
 			case unknown =>
 				throw new CodecException(f"unsupported frame-type: 0x$unknown%02X")
 		}
