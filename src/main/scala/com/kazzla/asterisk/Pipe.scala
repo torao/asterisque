@@ -311,6 +311,19 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 		/**
 		 * 指定されたバイナリデータを非同期メッセージとして送信します。
 		 */
+		def send(buffer:ByteBuffer):MessageSink = {
+			val payload = new Array[Byte](buffer.remaining())
+			buffer.get(payload)
+			sendDirect(payload)
+			this
+		}
+
+		// ============================================================================================
+		// ブロックの送信
+		// ============================================================================================
+		/**
+		 * 指定されたバイナリデータを非同期メッセージとして送信します。
+		 */
 		def send(buffer:Array[Byte]):MessageSink = {
 			send(buffer, 0, buffer.length)
 			this
@@ -325,7 +338,7 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 		def send(buffer:Array[Byte], offset:Int, length:Int):MessageSink = {
 			val payload = new Array[Byte](length)
 			System.arraycopy(buffer, offset, payload, 0, length)
-			Pipe.this.block(payload, 0, length)
+			sendDirect(payload, 0, length)
 			this
 		}
 
@@ -336,6 +349,10 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 		 * 指定されたバイナリデータを非同期メッセージとして送信します。
 		 */
 		def << (buffer:Array[Byte]):MessageSink = {
+			send(buffer)
+			this
+		}
+		def << (buffer:ByteBuffer):MessageSink = {
 			send(buffer)
 			this
 		}

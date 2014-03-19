@@ -8,11 +8,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Node.scala" afterPath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Node.scala" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Pipe.scala" afterPath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Pipe.scala" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/test/scala/sample/Sample2.scala" afterPath="$PROJECT_DIR$/src/test/scala/sample/Sample2.scala" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Session.scala" afterPath="$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Session.scala" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <ignored path="asterisk.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -98,7 +94,7 @@
       <file leaf-file-name="Node.scala" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Node.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="125" column="30" selection-start="3921" selection-end="3921" vertical-scroll-proportion="0.0" vertical-offset="1680" max-vertical-offset="3240">
+            <state line="125" column="30" selection-start="3921" selection-end="3921" vertical-scroll-proportion="0.0" vertical-offset="1350" max-vertical-offset="3240">
               <folding />
             </state>
           </provider>
@@ -107,7 +103,7 @@
       <file leaf-file-name="Pipe.scala" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Pipe.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="277" column="42" selection-start="9148" selection-end="9148" vertical-scroll-proportion="1.328125" vertical-offset="3255" max-vertical-offset="8715">
+            <state line="354" column="29" selection-start="11695" selection-end="11695" vertical-scroll-proportion="0.8276299" vertical-offset="4522" max-vertical-offset="8970">
               <folding />
             </state>
           </provider>
@@ -407,6 +403,36 @@
             </PATH_ELEMENT>
             <PATH_ELEMENT>
               <option name="myItemId" value="Pipe.scala" />
+              <option name="myItemType" value="org.jetbrains.plugins.scala.components.ScalaDefsProjectViewProvider$ScalaFileTreeNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisk" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisk" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="main" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="scala" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisk" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="Node.scala" />
               <option name="myItemType" value="org.jetbrains.plugins.scala.components.ScalaDefsProjectViewProvider$ScalaFileTreeNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -867,10 +893,10 @@
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.21632653" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Designer" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
-      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.21836735" sideWeight="0.67338216" order="11" side_tool="false" content_ui="tabs" />
+      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.16632654" sideWeight="0.67338216" order="11" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="SBT Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32857144" sideWeight="0.5" order="15" side_tool="false" content_ui="tabs" />
-      <window_info id="Debug" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.38367346" sideWeight="0.6984127" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.38367346" sideWeight="0.6984127" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.29897958" sideWeight="0.5" order="1" side_tool="true" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="true" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32959184" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
@@ -1177,13 +1203,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Node.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="125" column="30" selection-start="3921" selection-end="3921" vertical-scroll-proportion="0.0" vertical-offset="1269" max-vertical-offset="3240">
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Message.scala">
       <provider selected="true" editor-type-id="text-editor">
         <state line="40" column="47" selection-start="1533" selection-end="1533" vertical-scroll-proportion="0.0" vertical-offset="327" max-vertical-offset="1275">
@@ -1191,9 +1210,16 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Node.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="125" column="30" selection-start="3921" selection-end="3921" vertical-scroll-proportion="0.0" vertical-offset="1269" max-vertical-offset="3240">
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Pipe.scala">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="277" column="42" selection-start="9148" selection-end="9148" vertical-scroll-proportion="1.328125" vertical-offset="3255" max-vertical-offset="8715">
+        <state line="354" column="29" selection-start="11695" selection-end="11695" vertical-scroll-proportion="0.8276299" vertical-offset="4522" max-vertical-offset="8970">
           <folding />
         </state>
       </provider>
