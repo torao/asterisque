@@ -35,7 +35,7 @@ object Sample5 {
 		}
 	}
 
-  class PingService extends Service {
+  class PingService extends Service(global) {
 	  @Export(10)
 	  def p(sec:Int) = withPipe(ping(sec))
   }

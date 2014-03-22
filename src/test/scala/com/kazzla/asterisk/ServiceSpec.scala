@@ -8,7 +8,7 @@ package com.kazzla.asterisk
 import org.specs2.Specification
 import scala.concurrent.{Await, Promise, Future}
 import com.kazzla.asterisk.codec.MsgPackCodec
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext.Implicits._
 import java.util.{TimerTask, Timer}
 import scala.concurrent.duration.Duration
 
@@ -29,7 +29,7 @@ support asynchronous funtion call to a method that implemented by low-level oper
 
 	def e0 = {
 		val service = new TestService()
-		trx(new Service{ }, service){ (client, server) =>
+		trx(new Service(global){ }, service){ (client, server) =>
 			val logger = client.bind(classOf[Test])
 			val text = randomString
 			Await.result(logger.reverse(text), Duration.Inf) === _reverse(text)
@@ -38,7 +38,7 @@ support asynchronous funtion call to a method that implemented by low-level oper
 
 	def e1 = {
 		val service = new TestService()
-		trx(new Service{ }, service){ (client, server) =>
+		trx(new Service(global){ }, service){ (client, server) =>
 			val text = randomString
 			val promise = Promise[String]()
 			client.open(20, text).onSuccess{ case result =>
@@ -50,7 +50,7 @@ support asynchronous funtion call to a method that implemented by low-level oper
 
 	def e2 = {
 		val service = new TestService()
-		trx(new Service{ }, service){ (client, server) =>
+		trx(new Service(global){ }, service){ (client, server) =>
 			val text = randomString
 			val promise = Promise[String]()
 			client.open(10, text).onSuccess{ case result => promise.success(result.asInstanceOf[String]) }
@@ -60,7 +60,7 @@ support asynchronous funtion call to a method that implemented by low-level oper
 
 	def e3 = {
 		val service = new TestService()
-		trx(new Service{ }, service){ (client, server) =>
+		trx(new Service(global){ }, service){ (client, server) =>
 			val text = randomString
 			val future = client.bind(classOf[AltTest]).rawReverse(text)
 			Await.result(future, Duration.Inf) ===  _reverse(text)
@@ -91,7 +91,7 @@ support asynchronous funtion call to a method that implemented by low-level oper
 		def rawReverse(text:String):Future[String]
 	}
 
-	class TestService extends Service with Test {
+	class TestService extends Service(global) with Test {
 		def reverse(text:String) = {
 			val promise = Promise[String]()
 			timer.schedule(new TimerTask {

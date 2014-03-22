@@ -12,7 +12,7 @@ import java.io.PrintWriter
 import scala.concurrent.{Promise, Future, Await}
 import scala.concurrent.duration.Duration
 import org.slf4j.LoggerFactory
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext.Implicits._
 
 object Sample {
 	val logger = LoggerFactory.getLogger(Sample.getClass)
@@ -35,7 +35,7 @@ object Sample {
 
 	object Node1 {
 
-		val ns = Node("NameServer").serve(new Service with NameServer {
+		val ns = Node("NameServer").serve(new Service(global) with NameServer {
 			def lookup(name:String):Future[Int] = Session() match {
 				case Some(session) =>
 
@@ -66,7 +66,7 @@ object Sample {
 
 	object Node2 {
 
-		val logging = Node("LoggingServer").serve(new Service with LogServer {
+		val logging = Node("LoggingServer").serve(new Service(global) with LogServer {
 			def error(msg:String):Future[Unit] = {
 				Console.out.print(s"ERROR: $msg\n")
 				Promise.successful(()).future

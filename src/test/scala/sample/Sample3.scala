@@ -24,7 +24,7 @@ object Sample3 {
   /**
    * Service implementation specify `Service` and interface.
    */
-  class MessageService extends Service {
+  class MessageService extends Service(global) {
 	  @Export(value=10)
     def sum():Future[Int] = withPipe { pipe =>
 	    pipe.src.filterNot{ _.isEOF }.map{ _.toByteBuffer.getString("UTF-8").toInt }.sum

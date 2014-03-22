@@ -27,7 +27,7 @@ callback close event when peer wire is closed: $s02
 		trait T0 {
 			@Export(0) def hoge():Future[String]
 		}
-		class C0 extends Service with T0 {
+		class C0 extends Service(global) with T0 {
 			def hoge() = Future("hoge")
 		}
 		val n0 = Node("node0").codec(MsgPackCodec).serve(new C0).build()

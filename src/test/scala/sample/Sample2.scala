@@ -24,7 +24,7 @@ object Sample2 {
   /**
    * Service implementation specify `Service` and interface.
    */
-  class GreetingServiceImpl extends Service {
+  class GreetingServiceImpl extends Service(global) {
     10 accept { args => Future(s"hello, ${args(0)}") }
     20 accept { args =>
       scala.concurrent.future {

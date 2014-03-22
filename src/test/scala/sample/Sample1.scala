@@ -46,7 +46,7 @@ object Sample1 {
   /**
    * Service implementation specify `Service` and interface.
    */
-  class GreetingServiceImpl extends Service with GreetingService {
+  class GreetingServiceImpl extends Service(global) with GreetingService {
     def greeting(name:String):Future[String] = Future(s"hello, $name")
     def lazyGreeting(name:String):Future[String] = scala.concurrent.future {
       Thread.sleep(3 * 1000)

@@ -159,8 +159,7 @@ object Node {
 	 * 新規のノードを構築するためのビルダークラスです。
 	 */
 	class Builder private[Node](name:String) {
-		import ExecutionContext.Implicits.global
-		private var service:Service = new Service {}
+		private var service:Service = new Service(ExecutionContext.Implicits.global) {}
 		private var bridge:Bridge = Netty
 		private var codec:Codec = MsgPackCodec
 

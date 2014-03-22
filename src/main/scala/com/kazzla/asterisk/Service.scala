@@ -66,8 +66,9 @@ import java.nio.ByteBuffer
  *
  * @author Takami Torao
  */
-abstract class Service(implicit context:ExecutionContext) {
+abstract class Service(context:ExecutionContext) {
 	import Service._
+	private[this] implicit val _context = context
 
 	logger.debug(s"binding ${getClass.getSimpleName} as service")
 

@@ -43,7 +43,7 @@ object Sample4 {
   /**
    * Service implementation specify `Service` and interface.
    */
-  class StreamService extends Service {
+  class StreamService extends Service(global) {
 	  // encode stream binary to string by specified charset
 	  @Export(value=10)
 	  def makeString(charset:String) = withPipe(receive(charset))
