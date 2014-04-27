@@ -6,11 +6,10 @@
 package com.kazzla.asterisk.netty
 
 import com.kazzla.asterisk._
-import com.kazzla.asterisk.codec.Codec
 import io.netty.bootstrap.{ServerBootstrap, Bootstrap}
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.{NioServerSocketChannel, NioSocketChannel}
-import io.netty.channel.{ChannelHandlerContext, ChannelInitializer, ChannelOption}
+import io.netty.channel.{ChannelInitializer, ChannelOption}
 import io.netty.util.concurrent.GenericFutureListener
 import io.netty.util.concurrent.{Future => NFuture}
 import java.net.SocketAddress
@@ -19,9 +18,7 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.{Future, Promise}
 import io.netty.channel.socket.SocketChannel
 import io.netty.handler.ssl.SslHandler
-import io.netty.handler.codec.{ByteToMessageDecoder, MessageToByteEncoder}
-import io.netty.buffer.ByteBuf
-import java.util.{List => JList}
+import io.asterisque.codec.Codec
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Netty
@@ -85,10 +82,10 @@ object Netty extends Bridge {
 	 * @param onAccept サーバ上で新しい接続が発生した時のコールバック
 	 * @return Server の Future
 	 */
-	def listen(codec:Codec, address:SocketAddress, sslContext:Option[SSLContext])(onAccept:(Wire)=>Unit):Future[Server] = {
+	def listen(codec:Codec, address:SocketAddress, sslContext:Option[SSLContext], onAccept:Bridge.AcceptListener):Future[Bridge.Server] = {
 		val factory = new Netty(codec, true, sslContext, { wire =>
 			logger.debug(s"onAccept($wire)")
-			onAccept(wire)
+			onAccept.apply(wire)
 		})
 		val masterGroup = new NioEventLoopGroup()
 		val workerGroup = new NioEventLoopGroup()
@@ -101,12 +98,12 @@ object Netty extends Bridge {
 			.childOption(ChannelOption.TCP_NODELAY, java.lang.Boolean.TRUE)
 			.childHandler(factory)
 
-		val promise = Promise[Server]()
+		val promise = Promise[Bridge.Server]()
 		server.bind().addListener(new GenericFutureListener[NFuture[Any]] {
 			def operationComplete(future:NFuture[Any]):Unit = {
 				if(future.isSuccess){
 					logger.debug("operationComplete(success)")
-					promise.success(new Server(address) {
+					promise.success(new Bridge.Server(address) {
 						override def close() {
 							logger.debug("closing netty server bootstrap")
 							masterGroup.shutdownGracefully()
@@ -171,35 +168,5 @@ private[netty] class Netty(codec:Codec, isServer:Boolean, sslContext:Option[SSLC
 		pipeline.addLast("com.kazzla.asterisk.frame.encoder", new MessageEncoder(codec))
 		pipeline.addLast("com.kazzla.asterisk.frame.decoder", new MessageDecoder(codec))
 		pipeline.addLast("com.kazzla.asterisk.service", new WireConnect(sslHandler, isServer, onWireCreate))
-	}
-}
-
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// MessageEncoder
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-/**
- * @author Takami Torao
- */
-private[netty] class MessageEncoder(codec:Codec) extends MessageToByteEncoder[Message] {
-	def encode(ctx:ChannelHandlerContext, msg:Message, b:ByteBuf):Unit = {
-		b.writeBytes(codec.encode(msg))
-	}
-}
-
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// MessageDecoder
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-/**
- * @author Takami Torao
- */
-private[netty] class MessageDecoder(codec:Codec) extends ByteToMessageDecoder {
-	def decode(ctx:ChannelHandlerContext, b:ByteBuf, out:JList[Object]):Unit = {
-		val buffer = b.nioBuffer()
-		codec.decode(buffer) match {
-			case Some(msg) =>
-				b.skipBytes(buffer.position())
-				out.add(msg)
-			case None => None
-		}
 	}
 }

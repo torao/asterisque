@@ -5,7 +5,7 @@
 */
 package com.kazzla.asterisk
 
-import com.kazzla.asterisk.codec.{MsgPackCodec, Codec}
+import com.kazzla.asterisk.codec.MsgPackCodec
 import com.kazzla.asterisk.netty.Netty
 import java.net.SocketAddress
 import java.util.concurrent.atomic.AtomicReference
@@ -15,6 +15,8 @@ import scala.annotation.tailrec
 import scala.concurrent.{ExecutionContext, Promise, Future}
 import scala.util.Failure
 import scala.util.Success
+import com.kazzla.asterisk.Bridge.AcceptListener
+import io.asterisque.codec.Codec
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Node
@@ -36,7 +38,7 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 	/**
 	 * このノード上で Listen しているすべてのサーバ。ノードのシャットダウン時にクローズされる。
 	 */
-	private[this] val servers = new AtomicReference(Seq[Server]())
+	private[this] val servers = new AtomicReference(Seq[Bridge.Server]())
 
 	/**
 	 * このノード上で使用されているすべてのセッション。ノードのシャットダウン時にクローズされる。
@@ -63,8 +65,8 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 	// 接続受け付けの開始
 	// ==============================================================================================
 	/**
-	 * このノード上でリモートのノードからの接続を受け付けを開始します。アプリケーションは返値の [[Server]] を使用し
-	 * てこの呼び出しで開始した接続受け付けを終了することが出来ます。
+	 * このノード上でリモートのノードからの接続を受け付けを開始します。アプリケーションは返値の [[Bridge.Server]]
+	 * を使用してこの呼び出しで開始した接続受け付けを終了することが出来ます。
 	 *
 	 * アプリケーションは `onAccept` に指定した処理で新しい接続を受け付けセッションが発生した時の挙動を実装すること
 	 * が出来ます。
@@ -74,13 +76,15 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
 	 * @param onAccept 新規接続を受け付けた時に実行する処理
 	 * @return Server の Future
 	 */
-	def listen(address:SocketAddress, tls:Option[SSLContext] = None)(implicit onAccept:(Session)=>Unit = {_ => None}):Future[Server] = {
+	def listen(address:SocketAddress, tls:Option[SSLContext] = None)(implicit onAccept:(Session)=>Unit = {_ => None}):Future[Bridge.Server] = {
 		import ExecutionContext.Implicits.global
-		val promise = Promise[Server]()
-		bridge.listen(codec, address, tls){ wire => onAccept(bind(wire)) }.onComplete {
+		val promise = Promise[Bridge.Server]()
+		bridge.listen(codec, address, tls, new AcceptListener {
+			override def apply(wire:Wire):Unit = { onAccept(bind(wire)) }
+		}).onComplete {
 			case Success(server) =>
 				add(servers, server)
-				promise.success(new Server(server.address){
+				promise.success(new Bridge.Server(server.address){
 					override def close(){
 						remove(servers, server)
 						server.close()

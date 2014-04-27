@@ -11,6 +11,7 @@ import org.specs2.matcher.MatchResult
 import com.kazzla.asterisk.Close
 import com.kazzla.asterisk.Open
 import java.util.UUID
+import io.asterisque.codec.{JavaCodec, Codec}
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // CodecSpec

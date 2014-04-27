@@ -3,20 +3,19 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package com.kazzla.asterisk.codec
+package io.asterisque.codec
 
 import org.msgpack.packer.BufferPacker
 import java.util.UUID
 import scala.collection.JavaConversions._
 import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
-import org.msgpack.{MessageTypeException, MessagePack}
+import org.msgpack.MessagePack
 import java.io.EOFException
 import org.msgpack.unpacker.BufferUnpacker
 import com.kazzla.asterisk._
-import com.kazzla.asterisk.Close
-import com.kazzla.asterisk.Open
 import scala.Some
+import io.asterisque.codec.{CodecException, Codec_}
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // MsgPackCodec
@@ -26,7 +25,7 @@ import scala.Some
  *
  * @author Takami Torao
  */
-object MsgPackCodec extends Codec {
+object MsgPackCodec_ extends Codec_ {
 	private[this] val logger = LoggerFactory.getLogger(classOf[Message])
 
 	/**
@@ -190,9 +189,9 @@ object MsgPackCodec extends Codec {
 			case i:Array[_] => encode(packer, i.toSeq)
 			case i:java.util.List[_] => encode(packer, i.toSeq)
 			case i:Product =>
-				if(i.productArity > Codec.MaxCaseClassElements){
+				if(i.productArity > Codec_.MaxCaseClassElements){
 					throw new CodecException(
-						s"too much property: ${i.getClass.getSimpleName}, ${i.productArity} > ${Codec.MaxCaseClassElements}")
+						s"too much property: ${i.getClass.getSimpleName}, ${i.productArity} > ${Codec_.MaxCaseClassElements}")
 				}
 				packer.write(102.toByte)
 				packer.write(i.getClass.getName)
@@ -240,15 +239,15 @@ object MsgPackCodec extends Codec {
 				map
 			case 102 =>
 				val className = unpacker.readString()
-				val paramSize = unpacker.readByte() & Codec.MaxCaseClassElements
+				val paramSize = unpacker.readByte() & Codec_.MaxCaseClassElements
 				val params = (0 until paramSize).map{ _ => decode(unpacker) }.toArray
 				val objs = Class.forName(className).getConstructors.map{ c =>
 					if(c.getParameterTypes.length == paramSize){
 						try {
-							val actualParams = TypeMapper.appropriateValues(params, c.getParameterTypes)
+							val actualParams = Codec.appropriateValues(params, c.getParameterTypes)
 							Some(c.newInstance(actualParams:_*))
 						} catch {
-							case ex:TypeMapper.TypeMappingException =>
+							case ex:Codec.TypeMappingException =>
 								logger.trace(s"incompatible: ${c.getSimpleName}; ${ex.toString}")
 								None
 						}

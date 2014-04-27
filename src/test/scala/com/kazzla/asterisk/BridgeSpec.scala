@@ -12,6 +12,7 @@ import org.specs2.Specification
 import org.specs2.execute.Result
 import com.kazzla.asterisk.codec.MsgPackCodec
 import javax.net.ssl.SSLContext
+import com.kazzla.asterisk.Bridge.AcceptListener
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // BridgeSpec
@@ -35,7 +36,9 @@ abstract class BridgeWireSpec(client:Option[SSLContext], server:Option[SSLContex
 		try {
 			val b = bridge
 			val p2 = Promise[Wire]()
-			val s = b.listen(MsgPackCodec, new InetSocketAddress("localhost", 39888), server){ w => p2.success(w) }
+			val s = b.listen(MsgPackCodec, new InetSocketAddress("localhost", 39888), server, new AcceptListener {
+				override def apply(wire:Wire):Unit = p2.success(wire)
+			})
 			using(Await.result(s, waitLimit)){ _ =>
 				val f = b.connect(MsgPackCodec, new InetSocketAddress("localhost", 39888), client)
 				using(Await.result(f, waitLimit)){ w1 =>

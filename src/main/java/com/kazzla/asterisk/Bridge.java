@@ -3,13 +3,15 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package com.kazzla.asterisk
+package com.kazzla.asterisk;
 
-import java.net.SocketAddress
-import javax.net.ssl.SSLContext
-import scala.concurrent.Future
-import java.io.Closeable
-import com.kazzla.asterisk.codec.Codec
+import com.kazzla.asterisk.codec.Codec;
+import scala.Option;
+import scala.concurrent.Future;
+
+import javax.net.ssl.SSLContext;
+import java.io.Closeable;
+import java.net.SocketAddress;
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Bridge
@@ -19,7 +21,7 @@ import com.kazzla.asterisk.codec.Codec
  * 通常このクラスはスレッドやノード間で共有されるためサブクラスが状態を持つ場合は十分注意する必要があります。
  * @author Takami Torao
  */
-trait Bridge {
+public interface Bridge {
 
 	// ==============================================================================================
 	// 接続の実行
@@ -31,7 +33,7 @@ trait Bridge {
 	 * @param sslContext クライアント認証を行うための SSL 証明書 (Noneの場合は非SSL接続)
 	 * @return Wire の Future
 	 */
-	def connect(codec:Codec, address:SocketAddress, sslContext:Option[SSLContext]):Future[Wire]
+	public Future<Wire> connect(Codec codec, SocketAddress address, Option<SSLContext> sslContext);
 
 	// ==============================================================================================
 	// 受付の実行
@@ -44,9 +46,17 @@ trait Bridge {
 	 * @param onAccept サーバ上で新しい接続が発生した時のコールバック
 	 * @return Server の Future
 	 */
-	def listen(codec:Codec, address:SocketAddress, sslContext:Option[SSLContext])(onAccept:(Wire)=>Unit):Future[Server]
-}
+	public Future<Server> listen(Codec codec, SocketAddress address, Option<SSLContext> sslContext, AcceptListener onAccept);
 
-class Server(val address:SocketAddress) extends Closeable {
-	def close():Unit = None
+	public interface AcceptListener {
+		public void apply(Wire wire);
+	}
+
+	public static class Server implements Closeable {
+		public final SocketAddress address;
+		public Server(SocketAddress address){
+			this.address = address;
+		}
+		public void close(){ }
+	}
 }
