@@ -11,6 +11,7 @@
     <orderEntry type="library" name="org.slf4j:slf4j-log4j12:1.7.7" level="project" />
     <orderEntry type="library" name="com.google.protobuf:protobuf-java:2.5.0" level="project" />
     <orderEntry type="library" name="org.msgpack:msgpack:0.6.9" level="project" />
+    <orderEntry type="library" name="io.netty:netty-all:4.0.18.Final" level="project" />
   </component>
 </module>
 

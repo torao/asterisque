@@ -29,7 +29,7 @@ import java.util.function.Consumer;
  *
  * @author Takami Torao
  */
-public class MessageQueue {
+class MessageQueue {
 
 	/**
 	 * このキューから入力側へ通知を行うメッセージ数。キューの保持するメッセージがこの数に達すると通知が行われます。

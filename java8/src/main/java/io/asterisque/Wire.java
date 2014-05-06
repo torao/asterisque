@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLSession;
 import java.io.Closeable;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -63,7 +65,6 @@ public abstract class Wire implements Closeable {
 	 * @param sendAdvisoryLimit 送信キューのアドバイザリーリミット
 	 * @param sendBlockingLimit 送信キューのブロックリミット
 	 * @param sendBackPressure 送信キューに対するバックプレッシャー通知
-	 * @param sendEmpty 送信キューの空、非空通知
 	 * @param recvAdvisoryLimit 受信キューのアドバイザリーリミット
 	 * @param recvBlockingLimit 受信キューのブロックリミット
 	 * @param recvBackPressure 受信キューに対するバックプレッシャー通知
@@ -71,14 +72,34 @@ public abstract class Wire implements Closeable {
 	 * @param executor メッセージ受信処理を実行するスレッド
 	 */
 	protected Wire(
-		int sendAdvisoryLimit, int sendBlockingLimit, Consumer<Boolean> sendBackPressure, Consumer<Boolean> sendEmpty,
+		int sendAdvisoryLimit, int sendBlockingLimit, Consumer<Boolean> sendBackPressure,
 		int recvAdvisoryLimit, int recvBlockingLimit, Consumer<Boolean> recvBackPressure, Consumer<Message> dispatcher,
 		Executor executor){
-		this.rightToLeft = new MessageQueue(sendAdvisoryLimit, sendBlockingLimit, sendBackPressure, sendEmpty);
+		this.rightToLeft = new MessageQueue(sendAdvisoryLimit, sendBlockingLimit, sendBackPressure, this::onSendQueueEmpty);
 		this.leftToRight = new MessageQueue(recvAdvisoryLimit, recvBlockingLimit, recvBackPressure, this::onMessageArrival);
 		this.dispatcher = dispatcher;
 		this.executor = executor;
 	}
+
+	// ==============================================================================================
+	// 送信メッセージの参照
+	// ==============================================================================================
+	/**
+	 * 送信キューから次の送信メッセージを参照します。送信キューが空の場合は Optional.empty() を返します。
+	 */
+	protected Optional<Message> nextSendMessage(){
+		return rightToLeft.dequeue();
+	}
+
+	// ==============================================================================================
+	// 送信メッセージ存在通知
+	// ==============================================================================================
+	/**
+	 * 送信キューが空になった時、および空から1つのメッセージが到着した時に呼び出されます。
+	 * サブクラスはこのメソッドをオーバーライドして非同期 I/O の Socket Writable 通知を操作することが出来ます。
+	 * @param empty 送信キューが空になったとき true
+	 */
+	protected void onSendQueueEmpty(boolean empty){ }
 
 	// ==============================================================================================
 	// 受信キュー通知
@@ -164,8 +185,9 @@ public abstract class Wire implements Closeable {
 	 * この Wire が通信相手とセキュアな通信経路を構築している場合にその SSLSession を参照します。
 	 *
 	 * @return 認証された通信相手の SSL セッション
+	 * @throws java.lang.InterruptedException ハンドシェイク待機中に割り込みが発生した場合
 	 */
-	public abstract Optional<SSLSession> getSSLSession();
+	public abstract Optional<SSLSession> getSSLSession() throws InterruptedException;
 
 	// ==============================================================================================
 	// メッセージの送信
@@ -220,6 +242,20 @@ public abstract class Wire implements Closeable {
 
 	public static interface PeerAddress {
 		public String toString();
+	}
+
+	public static class SocketPeerAddress implements PeerAddress {
+		public final SocketAddress address;
+		public SocketPeerAddress(SocketAddress address){
+			this.address = address;
+		}
+		public String toString() {
+			if(address instanceof InetSocketAddress){
+				InetSocketAddress isa = (InetSocketAddress)address;
+				return isa.getHostName() + ":" + isa.getPort();
+			}
+			return address.toString();
+		}
 	}
 
 }

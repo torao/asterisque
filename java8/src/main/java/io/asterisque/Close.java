@@ -74,4 +74,14 @@ public final class Close extends Message {
 		}
 	}
 
+	// ==============================================================================================
+	// 例外による終了
+	// ==============================================================================================
+	/**
+	 * 予期しない状態によってパイプを終了するときのクローズメッセージを作成します。
+	 */
+	public static Close unexpectedError(short pipeId, String msg){
+		return new Close(pipeId, new Abort(Abort.Unexpected, msg));
+	}
+
 }

@@ -9,9 +9,18 @@ package io.asterisque;
 // Debug
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+import org.slf4j.Logger;
+
+import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSession;
+import java.lang.reflect.Method;
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
+import java.text.DateFormat;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
+import java.util.stream.Stream;
 
 /**
  * デバッグ用のユーティリティ機能です。
@@ -114,6 +123,45 @@ public final class Debug {
 					return "\\u" + String.format("%04X", (int) ch);
 				}
 				return String.valueOf(ch);
+		}
+	}
+
+	public static String getSimpleName(Method m){
+		return m.getDeclaringClass().getSimpleName() +
+			"." + m.getName() +
+			"(" + Stream.of(m.getParameterTypes()).map(Class::getSimpleName).reduce((a,b) -> a + "," + b ).orElse("") +
+			"):" + m.getReturnType().getSimpleName();
+	}
+
+	public static void dumpCertificate(Logger logger, String prefix, Certificate cs){
+		if(logger.isTraceEnabled()){
+			if(cs instanceof X509Certificate) {
+				DateFormat df = DateFormat.getDateTimeInstance();
+				X509Certificate c = (X509Certificate)cs;
+				logger.trace(String.format("%s: Serial Number: %s", prefix, c.getSerialNumber()));
+				logger.trace(String.format("%s: Signature Algorithm: %s", prefix, c.getSigAlgName()));
+				logger.trace(String.format("%s: Signature Algorithm OID: %s", prefix, c.getSigAlgOID()));
+				logger.trace(String.format("%s: Issuer Principal Name: %s", prefix, c.getIssuerX500Principal().getName()));
+				logger.trace(String.format("%s: Subject Principal Name: %s", prefix, c.getSubjectX500Principal().getName()));
+				logger.trace(String.format("%s: Expires: %s - %s", prefix, df.format(c.getNotBefore()), df.format(c.getNotAfter())));
+			} else {
+				logger.trace(String.format("%s: Type: %s", prefix, cs.getType()));
+				logger.trace(String.format("%s: Public Key Algorithm: %s", prefix, cs.getPublicKey().getAlgorithm()));
+				logger.trace(String.format("%s: Public Key Format: %s", prefix, cs.getPublicKey().getFormat()));
+			}
+		}
+	}
+
+	public static void dumpSSLSession(Logger logger, String prefix, SSLSession session) throws SSLPeerUnverifiedException {
+		if(logger.isTraceEnabled()){
+			logger.trace(String.format("%s: CipherSuite   : %s", prefix, session.getCipherSuite()));
+			logger.trace(String.format("%s: LocalPrincipal: %s", prefix, session.getLocalPrincipal().getName()));
+			logger.trace(String.format("%s: PeerHost      : %s", prefix, session.getPeerHost()));
+			logger.trace(String.format("%s: PeerPort      : %s", prefix, session.getPeerPort()));
+			logger.trace(String.format("%s: PeerPrincipal : %s", prefix, session.getPeerPrincipal().getName()));
+			for(Certificate cs: session.getPeerCertificates()){
+				dumpCertificate(logger, prefix, cs);
+			}
 		}
 	}
 
