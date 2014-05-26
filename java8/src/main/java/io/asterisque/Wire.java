@@ -10,8 +10,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLSession;
 import java.io.Closeable;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -22,6 +20,7 @@ import java.util.function.Consumer;
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
  * 通信経路の実装です。
+ * 送受信 {@link io.asterisque.Message} キューを使用して下層の通信実装との帯域制限を行います。
  *
  * @author Takami Torao
  */
@@ -49,6 +48,11 @@ public abstract class Wire implements Closeable {
 	private final Consumer<Message> dispatcher;
 
 	/**
+	 * Wire がクローズされるときに呼び出すラムダ
+	 */
+	private final Consumer<Wire> disposer;
+
+	/**
 	 * メッセージ受信時にディスパッチャーを実行するスレッドプール。
 	 */
 	private final Executor executor;
@@ -69,15 +73,17 @@ public abstract class Wire implements Closeable {
 	 * @param recvBlockingLimit 受信キューのブロックリミット
 	 * @param recvBackPressure 受信キューに対するバックプレッシャー通知
 	 * @param dispatcher メッセージ受信処理
+	 * @param disposer {@link #close()} メソッドによりこの Wire がクローズされたときに一度だけ呼び出される処理
 	 * @param executor メッセージ受信処理を実行するスレッド
 	 */
 	protected Wire(
 		int sendAdvisoryLimit, int sendBlockingLimit, Consumer<Boolean> sendBackPressure,
-		int recvAdvisoryLimit, int recvBlockingLimit, Consumer<Boolean> recvBackPressure, Consumer<Message> dispatcher,
-		Executor executor){
+		int recvAdvisoryLimit, int recvBlockingLimit, Consumer<Boolean> recvBackPressure,
+		Consumer<Message> dispatcher, Consumer<Wire> disposer, Executor executor){
 		this.rightToLeft = new MessageQueue(sendAdvisoryLimit, sendBlockingLimit, sendBackPressure, this::onSendQueueEmpty);
 		this.leftToRight = new MessageQueue(recvAdvisoryLimit, recvBlockingLimit, recvBackPressure, this::onMessageArrival);
 		this.dispatcher = dispatcher;
+		this.disposer = disposer;
 		this.executor = executor;
 	}
 
@@ -118,14 +124,6 @@ public abstract class Wire implements Closeable {
 	}
 
 	// ==============================================================================================
-	// クローズイベントハンドラ
-	// ==============================================================================================
-	/**
-	 * {@link #close()} メソッドによりこの Wire がクローズされたときに一度だけ呼び出されるイベントハンドラです。
-	 */
-	public final EventHandlers<Wire> onClose = new EventHandlers<>();
-
-	// ==============================================================================================
 	// クローズ判定
 	// ==============================================================================================
 	/**
@@ -139,15 +137,15 @@ public abstract class Wire implements Closeable {
 	// クローズの実行
 	// ==============================================================================================
 	/**
-	 * この Wire をクローズします。インスタンスに対して最初に呼び出されたタイミングで {@link #onClose} イベント
-	 * ハンドラへのコールバックが行われます。このメソッドを複数回呼び出しても二度目以降は無視されます。
+	 * この Wire をクローズします。インスタンスに対して最初に呼び出されたタイミングでコンストラクタに指定した
+	 * disposer へのコールバックが行われます。このメソッドを複数回呼び出しても二度目以降は無視されます。
 	 *
 	 * クローズされた Wire に対するメッセージ送信はエラーになります。
 	 * クローズされた Wire が受信したメッセージは破棄されます。
 	 */
 	public void close(){
 		if(closed.compareAndSet(false, true)){
-			onClose.accept(this);
+			disposer.accept(this);
 		}
 	}
 
@@ -166,19 +164,6 @@ public abstract class Wire implements Closeable {
 	public abstract boolean isServer();
 
 	// ==============================================================================================
-	// 通信先アドレスの参照
-	// ==============================================================================================
-	/**
-	 * この Wire の通信相手のアドレスを参照します。
-	 * {@link #isServer()} が false を返すサブクラスは返値のアドレスを使用して再接続が可能でなければいけません。
-	 * アドレスの {@link io.asterisque.Wire.PeerAddress#toString()} は通信相手を人が識別するための文字列を
-	 * 返します。
-	 *
-	 * @return 通信相手を人が識別するための文字列
-	 */
-	public abstract PeerAddress getPeerAddress();
-
-	// ==============================================================================================
 	// SSL セッションの参照
 	// ==============================================================================================
 	/**
@@ -188,6 +173,14 @@ public abstract class Wire implements Closeable {
 	 * @throws java.lang.InterruptedException ハンドシェイク待機中に割り込みが発生した場合
 	 */
 	public abstract Optional<SSLSession> getSSLSession() throws InterruptedException;
+
+	// ==============================================================================================
+	// インスタンスの文字列化
+	// ==============================================================================================
+	/**
+	 * この Wire インスタンスの接続状態を人が識別するための情報を返します。
+	 */
+	public abstract String toString();
 
 	// ==============================================================================================
 	// メッセージの送信
@@ -237,24 +230,6 @@ public abstract class Wire implements Closeable {
 			}
 		} else {
 			logger.debug(String.format("arrival message disposed on closed wire: %s", msg));
-		}
-	}
-
-	public static interface PeerAddress {
-		public String toString();
-	}
-
-	public static class SocketPeerAddress implements PeerAddress {
-		public final SocketAddress address;
-		public SocketPeerAddress(SocketAddress address){
-			this.address = address;
-		}
-		public String toString() {
-			if(address instanceof InetSocketAddress){
-				InetSocketAddress isa = (InetSocketAddress)address;
-				return isa.getHostName() + ":" + isa.getPort();
-			}
-			return address.toString();
 		}
 	}
 

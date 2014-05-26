@@ -12,11 +12,16 @@ import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -25,45 +30,57 @@ import java.util.stream.Stream;
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
  * ピアとの通信状態を表すクラスです。
+ * {@code Wire} の再接続を行います。
  *
  * @author Takami Torao
  */
-public class Session extends Attributes{
+public class Session extends Attributes {
 	private static final Logger logger = LoggerFactory.getLogger(Session.class);
 
 	public final LocalNode node;
 	public final String name;
-	public final Wire wire;
+	private final BiFunction<Consumer<Message>, Consumer<Wire>, CompletableFuture<Wire>> wireFactory;
+
+	private volatile Optional<Wire> wire = Optional.empty();
+
+	/**
+	 * このセッションで提供しているサービス。
+	 */
+	private volatile Service service;
 
 	/**
 	 *
 	 * @param node
 	 * @param name このセッションの名前
 	 * @param defaultService このセッション上でピアに公開する初期状態のサービス
-	 * @param wire このセッションのワイヤー
 	 */
-	Session(LocalNode node, String name, Service defaultService, Wire wire){
+	Session(LocalNode node, String name, Service defaultService, BiFunction<Consumer<Message>, Consumer<Wire>, CompletableFuture<Wire>> wireFactory){
 		this.node = node;
 		this.name = name;
 		this.service = defaultService;
-		this.wire = wire;
-		this.pipeIdMask = wire.isServer()? Pipe.UniqueMask: 0;
+		this.wireFactory = wireFactory;
 
 		// `Wire` とこのセッションを結合しメッセージポンプを開始
-		wire.onClose.add(w -> close());
+		// wire.onClose.add(w -> close());
 		/*
 		wire.onReceive ++ dispatch        	// `Wire` にメッセージが到着した時のディスパッチャーを設定
 		wire.onClosed ++ { _ => close() } 	// `Wire` がクローズされたときにセッションもクローズ
 		wire.start()                      	// メッセージポンプを開始
 		*/
-
 	}
 
+	private short pipeIdMask() {
+		return wire.get().isServer()? Pipe.UniqueMask: 0;
+	}
 
 	/**
-	 * このセッションで提供しているサービス。
+	 * このセッションで生成するパイプの ID に付加するビットマスク。
 	 */
-	private volatile Service service;
+	private void connect() {
+		wireFactory.apply(this::dispatch, w -> close()).thenAccept(w -> {
+			this.wire = Optional.of(w);
+		});
+	}
 
 	/**
 	 * このセッション上でピアに公開するサービスを変更します。
@@ -75,11 +92,6 @@ public class Session extends Attributes{
 		service = s;
 		return old;
 	}
-
-	/**
-	 * このセッションで生成するパイプの ID に付加するビットマスク。
-	 */
-	private final short pipeIdMask;
 
 	/**
 	 * 新規のパイプ ID を発行するためのシーケンス番号。
@@ -136,21 +148,16 @@ public class Session extends Attributes{
 		if(logger.isTraceEnabled()){
 			logger.trace("dispatch: " + msg);
 		}
-		Pipe pipe;
-		if(msg instanceof Open) {
-			pipe = create((Open) msg);
-		} else {
-			pipe = pipes.get().get(msg.pipeId);
-		}
-		if(pipe != null) {
+		Optional<Pipe> pipe = (msg instanceof Open)? create((Open) msg): pipes.get().get(msg.pipeId);
+		if(pipe.isPresent()) {
 			if(msg instanceof Open) {
 				// サービスを起動しメッセージポンプの開始
-				dispatch(pipe, msg);
-				pipe.startMessagePump();
+				dispatch(pipe.get(), msg);
+				pipe.get().startMessagePump();
 			} else {
 				// Open は受信したがサービスの処理が完了していない状態でメッセージを受信した場合にパイプのキューに保存できるよう
 				// 一度パイプを経由して dispatch(Pipe,Message) を実行する
-				pipe.dispatch(msg);
+				pipe.get().dispatch(msg);
 			}
 		} else {
 			logger.debug("unknown pipe-id: " + msg);
@@ -183,8 +190,9 @@ public class Session extends Attributes{
 	/**
 	 * ピアから受信した Open メッセージに対応するパイプを構築します。オープンに成功した場合は新しく構築されたパイプ
 	 * を返します。
+	 * @throws IOException セッションが既にクローズされている場合
 	 */
-	private Optional<Pipe> create(Open open) {
+	private Optional<Pipe> create(Open open) throws IOException {
 		while(true){
 			Map<Short,Pipe> map = pipes.get();
 			// 既に使用されているパイプ ID が指定された場合はエラーとしてすぐ終了
@@ -212,7 +220,7 @@ public class Session extends Attributes{
 	private Pipe create(short function){
 		while(true) {
 			Map<Short, Pipe> map = pipes.get();
-			short id = (short) ((pipeSequence.getAndIncrement() & 0x7FFF) | pipeIdMask);
+			short id = (short) ((pipeSequence.getAndIncrement() & 0x7FFF) | pipeIdMask());
 			if(!map.containsKey(id)) {
 				Pipe pipe = new Pipe(id, function, this);
 				Map<Short,Pipe> newMap = new HashMap<>(map);
@@ -250,7 +258,7 @@ public class Session extends Attributes{
 		if(closed.get()){
 			throw new IOException("session " + name + " closed");
 		} else {
-			wire.send(msg);
+			wire.get().close();
 			if(logger.isTraceEnabled()){
 				logger.trace("post: " + msg);
 			}
@@ -281,14 +289,18 @@ public class Session extends Attributes{
 				pipe.close(new Close(pipe.id, new Abort(Abort.SessionClosing, "session " + name + " closing")));
 			});
 
-			post(new Control(Control.Close, new byte[0]));
+			try {
+				post(new Control(Control.Close, new byte[0]));
+			} catch(IOException ex){
+				logger.debug("unable to send control message: Close");
+			}
 
 			// 以降のメッセージ送信をすべて例外に変更して送信を終了
 			// ※Pipe#close() で Session#post() が呼び出されるためすべてのパイプに Close を投げた後に行う
 			closed.set(true);
 
 			// Wire のクローズ
-			wire.close();
+			wire.get().close();
 
 			// セッションのクローズを通知
 			onClosed.accept(this);

@@ -5,58 +5,54 @@
 */
 package io.asterisque;
 
-import io.asterisque.codec.Codec;
+import io.asterisque.conf.ConnectConfig;
+import io.asterisque.conf.ListenConfig;
+import io.asterisque.netty.Netty;
 
-import javax.net.ssl.SSLContext;
 import java.io.Closeable;
 import java.net.SocketAddress;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // NetworkBridge
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
- * IP ベースの接続や接続受け付けに使用するネットワーク実装です。
+ * TCP のようなソケットベースの接続や接続受け付けに使用するネットワーク実装です。
  *
  * @author Takami Torao
  */
 public interface NetworkBridge {
+
+	public static final NetworkBridge DefaultBridge = new Netty();
 
 	// ==============================================================================================
 	// 接続の実行
 	// ==============================================================================================
 	/**
 	 * 指定されたアドレスに対して非同期接続を行い `Wire` の Future を返します。
-	 * @param codec Wire 上で使用するコーデック
-	 * @param address 接続先のアドレス
-	 * @param sslContext クライアント認証を行うための SSL 証明書 (Noneの場合は非SSL接続)
+	 * @param config 接続設定
 	 * @return Wire の Future
 	 */
-	public CompletableFuture<Wire> connect(Codec codec, SocketAddress address, Optional<SSLContext> sslContext);
+	public CompletableFuture<Wire> connect(ConnectConfig config, Executor executor, Consumer<Message> dispatcher, Consumer<Wire> disposer);
 
 	// ==============================================================================================
 	// 受付の実行
 	// ==============================================================================================
 	/**
 	 * 指定されたアドレスに対して非同期で接続を受け付ける `Server` の Future を返します。
-	 * @param codec Wire 上で使用するコーデック
-	 * @param address バインド先のアドレス
-	 * @param sslContext サーバ認証を行うための SSL 証明書 (Noneの場合は非SSL接続)
-	 * @param onAccept サーバ上で新しい接続が発生した時のコールバック
+	 * @param config 接続設定
 	 * @return Server の Future
 	 */
-	public CompletableFuture<Server> listen(
-		Codec codec, SocketAddress address, Optional<SSLContext> sslContext, Consumer<Wire> onAccept);
+	public CompletableFuture<Server> listen(ListenConfig config, Executor executor, Consumer<Wire> onAccept);
 
 	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	// Server
 	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	/**
-	 * {@link io.asterisque.NetworkBridge#listen(io.asterisque.codec.Codec, java.net.SocketAddress,
-	 * java.util.Optional, java.util.function.Consumer)} によって生成されるサーバをクローズするために使用す
-	 * るクラスです。
+	 * {@link #listen(io.asterisque.conf.ListenConfig, java.util.concurrent.Executor, java.util.function.Consumer)}
+	 * によって生成されるサーバをクローズするために使用するクラスです。
 	 */
 	public static class Server implements Closeable {
 		public final SocketAddress address;
@@ -64,17 +60,6 @@ public interface NetworkBridge {
 			this.address = address;
 		}
 		public void close(){ }
-	}
-
-	public static class Config {
-		public final Codec codec;
-		public final SocketAddress address;
-		public final Optional<SSLContext> sslContext;
-		public Config(Codec codec, SocketAddress address, Optional<SSLContext> sslContext){
-			this.codec = codec;
-			this.address = address;
-			this.sslContext = sslContext;
-		}
 	}
 
 }

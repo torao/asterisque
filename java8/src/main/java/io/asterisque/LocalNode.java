@@ -5,20 +5,20 @@
 */
 package io.asterisque;
 
-import io.asterisque.codec.Codec;
-import io.asterisque.codec.MessagePackCodec;
-import io.asterisque.netty.Netty;
+import io.asterisque.cluster.Repository;
+import io.asterisque.conf.ConnectConfig;
+import io.asterisque.conf.ListenConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.net.ssl.SSLContext;
-import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -45,14 +45,26 @@ public class LocalNode {
 	 */
 	private final AtomicReference<Collection<Session>> sessions = new AtomicReference<>(Collections.emptyList());
 
+	private static final Service DefaultService = new Service(){ };
+
 	public final String name;
-	private final NetworkBridge bridge;
-	private final Codec codec;
-	public LocalNode(String name, Service initService, NetworkBridge bridge, Codec codec){
+
+	private final ExecutorService executor;
+
+	/**
+	 * この
+	 */
+	private final Repository repository;
+
+	public LocalNode(String name, Service initService, ExecutorService executor, Repository repository){
 		this.name = name;
 		this.service = initService;
-		this.bridge = bridge;
-		this.codec = codec;
+		this.executor = executor;
+		this.repository = repository;
+	}
+
+	public LocalNode(String name){
+		this(name, DefaultService, Executors.newCachedThreadPool(), Repository.OnMemory);
 	}
 
 	/**
@@ -83,14 +95,15 @@ public class LocalNode {
 	 * アプリケーションは `onAccept` に指定した処理で新しい接続を受け付けセッションが発生した時の挙動を実装すること
 	 * が出来ます。
 	 *
-	 * @param address バインドアドレス
-	 * @param tls 通信に使用する SSLContext
+	 * @param config listen 設定
 	 * @param onAccept 新規接続を受け付けた時に実行する処理
 	 * @return Server の Future
 	 */
-	public CompletableFuture<NetworkBridge.Server> listen(SocketAddress address, Optional<SSLContext> tls, Consumer<Session> onAccept) {
+	public ServerSession listen(ListenConfig config, Consumer<Session> onAccept) {
+		config.verify();
 		CompletableFuture<NetworkBridge.Server> future = new CompletableFuture<>();
-		bridge.listen(codec, address, tls, wire -> onAccept.accept(bind(wire))).whenComplete((server, ex) -> {
+		NetworkBridge bridge = config.bridge();
+		bridge.listen(config, executor, wire -> onAccept.accept(bind(wire))).whenComplete((server, ex) -> {
 			if(server != null) {
 				add(servers, server);
 				future.complete(new NetworkBridge.Server(server.address) {
@@ -104,13 +117,10 @@ public class LocalNode {
 				future.completeExceptionally(ex);
 			}
 		});
-		return future;
+		return new ServerSession(repository, future);
 	}
-	public CompletableFuture<NetworkBridge.Server> listen(SocketAddress address, Optional<SSLContext> tls) {
-		return listen(address, tls, s -> { });
-	}
-	public CompletableFuture<NetworkBridge.Server> listen(SocketAddress address) {
-		return listen(address, Optional.empty());
+	public ServerSession listen(ListenConfig config) {
+		return listen(config, s -> { });
 	}
 
 	// ==============================================================================================
@@ -119,30 +129,45 @@ public class LocalNode {
 	/**
 	 * このノードから指定されたアドレスの別のノードへ接続を行います。
 	 *
-	 * @param address 接続するノードのアドレス
-	 * @param tls 通信に使用する SSLContext
+	 * @param config 接続設定
 	 * @return 接続により発生した Session の Future
 	 */
-	public CompletableFuture<Session> connect(SocketAddress address, Optional<SSLContext> tls) {
-		return bridge.connect(codec, address, tls).thenApply(this::bind);
-	}
-	public CompletableFuture<Session> connect(SocketAddress address) {
-		return connect(address, Optional.empty());
+	public Session connect(ConnectConfig config) {
+		config.verify();
+		return bind((onReceive, onClose) -> {
+			NetworkBridge bridge = config.bridge();
+			return bridge.connect(config, executor, onReceive, onClose);
+		});
 	}
 
 	// ==============================================================================================
 	// セッションの構築
 	// ==============================================================================================
 	/**
-	 * 指定された Wire 上で新規のセッションを構築しメッセージング処理を開始します。
+	 * 既存の Wire 上で新規のセッションを構築しメッセージング処理を開始します。
 	 * このメソッドを使用することで `listen()`, `connect()` によるネットワーク以外の `Wire` 実装を使用すること
 	 * が出来ます。
 	 * @param wire セッションに結びつける Wire
 	 * @return 新規セッション
 	 */
 	public Session bind(Wire wire){
-		logger.trace("bind(" + wire + "):" + name);
-		Session session = new Session(this, name + "[" + wire.getPeerAddress().toString() + "]", service, wire);
+		return bind((onReceive, onClose) -> CompletableFuture.completedFuture(wire));
+	}
+
+	// ==============================================================================================
+	// セッションの構築
+	// ==============================================================================================
+	/**
+	 * 再接続可能なラムダから生成される Wire を使用する新規のセッションを構築します。
+	 * このメソッドを使用することで `listen()`, `connect()` によるネットワーク以外の `Wire` 実装を使用すること
+	 * が出来ます。
+	 * セッションは内部的に再接続をおこなうためラムダは複数回呼び出されます。
+	 * @param wireFactory Wire ファクトリ
+	 * @return 新規セッション
+	 */
+	public Session bind(BiFunction<Consumer<Message>, Consumer<Wire>, CompletableFuture<Wire>> wireFactory){
+		logger.trace("bind():" + name);
+		Session session = new Session(this, name, service, wireFactory);
 		add(sessions, session);
 		session.onClosed.add( s -> remove(sessions, s));
 		return session;
@@ -155,69 +180,12 @@ public class LocalNode {
 	 * このノードの処理を終了します。ノード上でアクティブなすべてのサーバ及びセッションがクローズされます。
 	 */
 	public void shutdown() {
+		executor.shutdown();
 		servers.get().forEach(NetworkBridge.Server::close);
+		servers.set(Collections.emptyList());
 		sessions.get().forEach(Session::close);
+		sessions.set(Collections.emptyList());
 		logger.debug("shutting-down " + name + "; all available " + sessions.get().size() + " sessions, " + servers.get().size() + "servers are closed");
-	}
-
-
-	/**
-	 * 新規のノードを生成するためのビルダーを作成します。
-	 * @param name 新しく作成するノードの名前
-	 */
-	public static Builder apply(String name){
-		return new Builder(name);
-	}
-
-	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	// Builder
-	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	/**
-	 * 新規のノードを構築するためのビルダークラスです。
-	 */
-	public static class Builder {
-		private final String name;
-		private Service service = new Service(){ };
-		private NetworkBridge bridge = new Netty();
-		private Codec codec = MessagePackCodec.getInstance();
-
-		private Builder(String name){
-			this.name = name;
-		}
-
-		/**
-		 * 新しく生成するノードが使用するブリッジを指定します。
-		 */
-		public Builder bridge(NetworkBridge bridge){
-			this.bridge = bridge;
-			return this;
-		}
-
-		/**
-		 * ノードが接続を受け新しいセッションの発生した初期状態でリモートのピアに提供するサービスを指定します。
-		 * このサービスはセッション構築後にセッションごとに変更可能です。
-		 * @param service 初期状態のサービス
-		 */
-		public Builder serve(Service service){
-			this.service = service;
-			return this;
-		}
-
-		/**
-		 * 新しく生成するノードが使用するコーデックを指定します。
-		 */
-		public Builder codec(Codec codec){
-			this.codec = codec;
-			return this;
-		}
-
-		/**
-		 * このビルダーに設定されている内容で新しいノードのインスタンスを構築します。
-		 */
-		public LocalNode build() {
-			return new LocalNode(name, service, bridge, codec);
-		}
-
 	}
 
 	/**
@@ -243,10 +211,8 @@ public class LocalNode {
 		}
 	}
 
-	public ConnectConfig prepareConnect(){
-		return new ConnectConfig();
-	}
 
+	/*
 	public class ConnectConfig {
 		private int pingInterval = 10 * 1000;
 		private SocketAddress address;
@@ -268,7 +234,9 @@ public class LocalNode {
 			return LocalNode.this.connect(this);
 		}
 	}
+	*/
 
+	/*
 	public class ListenConfig {
 		private int maxPing = 10 * 1000;
 		private int minPing = 1 * 1000;
@@ -276,14 +244,17 @@ public class LocalNode {
 		private SocketAddress address;
 		private Optional<SSLContext> tls = Optional.empty();
 		private ListenConfig(){ }
+		public int maxPing(){ return maxPing; }
 		public ListenConfig maxPing(int maxPing){
 			this.maxPing = maxPing;
 			return this;
 		}
+		public int minPing(){ return minPing; }
 		public ListenConfig minPing(int minPing){
 			this.minPing = minPing;
 			return this;
 		}
+		public Optional<Integer> ping(){ return ping; }
 		public ListenConfig ping(int ping){
 			this.ping = ping > 0? Optional.of(ping): Optional.empty();
 			return this;
@@ -300,5 +271,6 @@ public class LocalNode {
 			return LocalNode.this.listen(this);
 		}
 	}
+	*/
 
 }
