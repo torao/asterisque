@@ -3,42 +3,38 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package io.asterisque.cluster;
+package org.asterisque;
 
-import java.util.Optional;
-import java.util.UUID;
+import java.io.Serializable;
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// Repository
+// Message
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
- * 単純な KVS の機能を提供します。
+ * {@link io.asterisque.MessageQueue}
  *
  * @author Takami Torao
  */
-public interface Repository {
+public abstract class Message implements Serializable {
 
 	// ==============================================================================================
-	// データの保存
-	// ==============================================================================================
-	/**
-	 * 指定されたバイナリデータを保存します。
-	 * @param id データの ID
-	 * @param binary バイナリデータ
-	 * @param expires データの有効期限 (現在時刻からのミリ秒)
-	 */
-	public void store(UUID id, byte[] binary, long expires);
-
-	// ==============================================================================================
-	// データの復元
+	// パイプ ID
 	// ==============================================================================================
 	/**
-	 * 指定された ID のデータを復元しリポジトリから削除します。
-	 * @param id データの ID
-	 * @return 復元されたデータ
+	 * このメッセージの宛先を示すパイプ ID です。
 	 */
-	public Optional<byte[]> loadAndDelete(UUID id);
+	public final short pipeId;
 
-	public static final Repository OnMemory = new MemoryRepository();
-
+	// ==============================================================================================
+	// コンストラクタ
+	// ==============================================================================================
+	/**
+	 * 同一パッケージ内のサブクラスからのみ構築することが出来ます。
+	 */
+	Message(short pipeId){
+		if(pipeId == 0 && ! (this instanceof Control)){
+			throw new IllegalArgumentException("pipe-id should be zero if only Control message: " + pipeId);
+		}
+		this.pipeId = pipeId;
+	}
 }

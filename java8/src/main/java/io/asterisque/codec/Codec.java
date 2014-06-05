@@ -6,6 +6,7 @@
 package io.asterisque.codec;
 
 import io.asterisque.*;
+import org.asterisque.*;
 
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -55,12 +56,14 @@ public interface Codec {
 			Open open = (Open)msg;
 			m.writeTag(Msg.Open);
 			m.writeInt16(open.pipeId);
+			m.writeInt8(open.priority);
 			m.writeInt16(open.functionId);
 			m.writeList(Arrays.asList(open.params));
 		} else if(msg instanceof Close) {
 			Close close = (Close)msg;
 			m.writeTag(Msg.Close);
 			m.writeInt16(close.pipeId);
+			m.writeInt8(close.priority);
 			if(close.abort.isPresent()){
 				m.writeFalse();
 				m.writeInt32(close.abort.get().code);
@@ -73,6 +76,7 @@ public interface Codec {
 			Block block = (Block)msg;
 			m.writeTag(Msg.Block);
 			m.writeInt16(block.pipeId);
+			m.writeInt8(block.priority);
 			if(block.eof) {
 				m.writeFalse();
 			} else {
@@ -85,6 +89,7 @@ public interface Codec {
 		} else if(msg instanceof Control){
 			Control control = (Control)msg;
 			m.writeTag(Msg.Control);
+			m.writeInt8(control.priority);
 			m.writeInt8(control.code);
 			m.writeBinary(control.data);
 		} else {
@@ -125,33 +130,37 @@ public interface Codec {
 			switch(tag){
 				case Msg.Open:
 					short pipeId1 = u.readInt16();
+					byte priority1 = u.readInt8();
 					short functionId = u.readInt16();
 					List<?> params = u.readList();
-					return Optional.of(new Open(pipeId1, functionId, params.toArray()));
+					return Optional.of(new Open(pipeId1, priority1, functionId, params.toArray()));
 				case Msg.Close:
 					short pipeId2 = u.readInt16();
+					byte priority2 = u.readInt8();
 					boolean success = u.readBoolean();
 					if(success){
 						Object result = u.read();
-						return Optional.of(new Close(pipeId2, result));
+						return Optional.of(new Close(pipeId2, priority2, result));
 					} else {
 						int code = u.readInt32();
 						String msg = u.readString();
-						return Optional.of(new Close(pipeId2, new Abort(code, msg)));
+						return Optional.of(new Close(pipeId2, priority2, new Abort(code, msg)));
 					}
 				case Msg.Block:
 					short pipeId3 = u.readInt16();
+					byte priority3 = u.readInt8();
 					boolean available = u.readBoolean();
 					if(available){
 						byte[] payload = u.readBinary();
-						return Optional.of(new Block(pipeId3, payload));
+						return Optional.of(new Block(pipeId3, priority3, payload));
 					} else {
-						return Optional.of(Block.eof(pipeId3));
+						return Optional.of(Block.eof(pipeId3, priority3));
 					}
 				case Msg.Control:
+					byte priority4 = u.readInt8();
 					byte code = u.readInt8();
 					byte[] data = u.readBinary();
-					return Optional.of(new Control(code, data));
+					return Optional.of(new Control(priority4, code, data));
 				default:
 					throw new CodecException(String.format("unexpected message type: %02X", tag & 0xFF));
 			}

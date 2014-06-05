@@ -3,9 +3,9 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package io.asterisque.netty;
+package org.asterisque.netty;
 
-import io.asterisque.Message;
+import org.asterisque.Message;
 import io.asterisque.codec.Codec;
 import io.asterisque.codec.CodecException;
 import io.netty.buffer.ByteBuf;

@@ -6,6 +6,7 @@
 package io.asterisque;
 
 import io.asterisque.codec.TypeConversion;
+import org.asterisque.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

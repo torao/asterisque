@@ -5,10 +5,10 @@
 */
 package io.asterisque;
 
+import org.asterisque.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -54,7 +54,8 @@ public class Session extends Attributes {
 	 * @param name このセッションの名前
 	 * @param defaultService このセッション上でピアに公開する初期状態のサービス
 	 */
-	Session(LocalNode node, String name, Service defaultService, BiFunction<Consumer<Message>, Consumer<Wire>, CompletableFuture<Wire>> wireFactory){
+	Session(LocalNode node, String name, Service defaultService,
+					BiFunction<Consumer<Message>, Consumer<Wire>, CompletableFuture<Wire>> wireFactory){
 		this.node = node;
 		this.name = name;
 		this.service = defaultService;
@@ -148,7 +149,15 @@ public class Session extends Attributes {
 		if(logger.isTraceEnabled()){
 			logger.trace("dispatch: " + msg);
 		}
-		Optional<Pipe> pipe = (msg instanceof Open)? create((Open) msg): pipes.get().get(msg.pipeId);
+		Optional<Pipe> pipe = Optional.empty();
+		if(msg instanceof Open){
+			pipe = create((Open) msg);
+		} else {
+			Pipe p = pipes.get().get(msg.pipeId);
+			if(p != null){
+				pipe = Optional.of(p);
+			}
+		}
 		if(pipe.isPresent()) {
 			if(msg instanceof Open) {
 				// サービスを起動しメッセージポンプの開始
@@ -190,9 +199,8 @@ public class Session extends Attributes {
 	/**
 	 * ピアから受信した Open メッセージに対応するパイプを構築します。オープンに成功した場合は新しく構築されたパイプ
 	 * を返します。
-	 * @throws IOException セッションが既にクローズされている場合
 	 */
-	private Optional<Pipe> create(Open open) throws IOException {
+	private Optional<Pipe> create(Open open) {
 		while(true){
 			Map<Short,Pipe> map = pipes.get();
 			// 既に使用されているパイプ ID が指定された場合はエラーとしてすぐ終了
@@ -254,9 +262,9 @@ public class Session extends Attributes {
 	/**
 	 * ピアに対して指定されたメッセージを送信します。
 	 */
-	void post(Message msg) throws IOException {
+	void post(Message msg) {
 		if(closed.get()){
-			throw new IOException("session " + name + " closed");
+			logger.error("session " + name + " closed");
 		} else {
 			wire.get().close();
 			if(logger.isTraceEnabled()){
@@ -289,11 +297,7 @@ public class Session extends Attributes {
 				pipe.close(new Close(pipe.id, new Abort(Abort.SessionClosing, "session " + name + " closing")));
 			});
 
-			try {
-				post(new Control(Control.Close, new byte[0]));
-			} catch(IOException ex){
-				logger.debug("unable to send control message: Close");
-			}
+			post(new Control(Control.Close, new byte[0]));
 
 			// 以降のメッセージ送信をすべて例外に変更して送信を終了
 			// ※Pipe#close() で Session#post() が呼び出されるためすべてのパイプに Close を投げた後に行う

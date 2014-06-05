@@ -3,15 +3,12 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package io.asterisque.netty;
+package org.asterisque.netty;
 
-import io.asterisque.Debug;
-import io.asterisque.Message;
-import io.asterisque.Wire;
-import io.asterisque.conf.Config;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.ssl.SslHandler;
+import org.asterisque.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,7 +16,6 @@ import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
@@ -35,22 +31,14 @@ class WireConnect extends SimpleChannelInboundHandler<Message> {
 	/**
 	 * WireConnect の ID 生成のためのシーケンス番号。ログ出力のための情報であるため循環によって重複が発生しても良い。
 	 */
-	private final AtomicInteger Sequence = new AtomicInteger(0);
+	private static final AtomicInteger Sequence = new AtomicInteger(0);
 
-	private final Config config;
+	private final LocalNode local;
+	private final RemoteNode remote;
+	private final Bridge.Config config;
 	private final Optional<SslHandler> sslHandler;
 	private final boolean isServer;
 	private final Consumer<NettyWire> onWireCreate;
-
-	/*
-	private final int sendAdvisoryLimit;
-	private final int sendBlockingLimit;
-	private final Consumer<Boolean> sendBackPressure;
-	private final int recvAdvisoryLimit;
-	*/
-	private final Consumer<Message> dispatcher;
-	private final Consumer<Wire> disposer;
-	private final Executor executor;
 	private final String sym;
 
 	/**
@@ -61,24 +49,21 @@ class WireConnect extends SimpleChannelInboundHandler<Message> {
 	/**
 	 * ログ上で Wire の動作を識別するための ID 番号。
 	 */
-	private final int id = Sequence.getAndIncrement() & Integer.MAX_VALUE;
+	private final int id = Sequence.getAndIncrement() & 0x7FFFFFFF;
 
+	// ==============================================================================================
+	// コンストラクタ
+	// ==============================================================================================
 	/**
-	 * コンストラクタ
-	 * @param sslHandler
-	 * @param isServer
-	 * @param onWireCreate
-	 * @param dispatcher
-	 * @param executor
 	 */
-	public WireConnect(Optional<SslHandler> sslHandler, boolean isServer, Consumer<NettyWire> onWireCreate, Executor executor, Consumer<Message> dispatcher, Consumer<Wire> disposer, Config config){
+	public WireConnect(LocalNode local, RemoteNode remote, boolean isServer, Optional<SslHandler> sslHandler,
+										 Consumer<NettyWire> onWireCreate, Bridge.Config config){
+		this.local = local;
+		this.remote = remote;
 		this.sslHandler = sslHandler;
 		this.isServer = isServer;
 		this.onWireCreate = onWireCreate;
 		this.config = config;
-		this.dispatcher = dispatcher;
-		this.disposer = disposer;
-		this.executor = executor;
 		this.sym = isServer? "S": "C";
 	}
 
@@ -94,36 +79,33 @@ class WireConnect extends SimpleChannelInboundHandler<Message> {
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
 		trace("channelActive(" + ctx.name() + ")");
 		assert(! wire.isPresent());
+
+		// SSLHandler が指定されている場合はハンドシェイク完了後に SSLSession を取得
 		CompletableFuture<Optional<SSLSession>> future = new CompletableFuture<>();
 		if(sslHandler.isPresent()) {
 			SslHandler h = sslHandler.get();
 			h.handshakeFuture().addListener(f -> {
 				SSLSession session = h.engine().getSession();
 				if(session.isValid()) {
+					// SSL ハンドシェイク完了
 					future.complete(Optional.of(session));
 					debug("tls handshake success");
 				} else {
+					// SSL ハンドシェイク失敗
 					future.completeExceptionally(new IOException("tls handshake failure: invalid session"));
 					debug("tls handshake failure: invalid session");
 				}
 				Debug.dumpSSLSession(logger, sym + "[" + id + "]", session);
 			});
 		} else {
+			// SSL なし
 			future.complete(Optional.empty());
 		}
-		/* 	public NettyWire(CompletableFuture<Optional<SSLSession>> tls, boolean server, ConnectConfig config,
-		ChannelHandlerContext context,
-		Consumer<Message> dispatcher, Executor executor){
-		*/
-		NettyWire w = new NettyWire(future, isServer, config, ctx, dispatcher, disposer, executor);
-		/*
-		NettyWire w = new NettyWire(
-			ctx.channel().remoteAddress(), isServer, future, ctx,
-			sendAdvisoryLimit, sendBlockingLimit, sendBackPressure,
-			recvAdvisoryLimit, Integer.MAX_VALUE, pressure -> ctx.channel().config().setAutoRead(! pressure),
-			dispatcher, executor);
-		*/
+
+		// Wire 構築
+		NettyWire w = new NettyWire(local, remote, isServer, future, ctx);
 		wire = Optional.of(w);
+
 		super.channelActive(ctx);
 
 		// 接続完了を通知
@@ -183,8 +165,8 @@ class WireConnect extends SimpleChannelInboundHandler<Message> {
 		trace("closeWire()");
 		if(wire.isPresent()){
 			wire.get().close();
+			wire = Optional.empty();
 		}
-		wire = Optional.empty();
 	}
 
 	private void debug(String log) {

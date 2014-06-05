@@ -9,7 +9,6 @@ package io.asterisque.conf;
 // ListenConfig
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-import io.asterisque.NetworkBridge;
 import io.asterisque.Session;
 
 import java.util.function.Consumer;

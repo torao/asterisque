@@ -3,24 +3,17 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package io.asterisque;
-
-import org.asterisque.cluster.Repository;
-
-import java.util.concurrent.CompletableFuture;
+package io.asterisque.j;
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// ServerSession
+// Builder
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
  * @author Takami Torao
  */
-public class ServerSession {
-	private final Repository repository;
-	private final CompletableFuture<NetworkBridge.Server> server;
+public class Builder {
 
-	ServerSession(Repository repository, CompletableFuture<NetworkBridge.Server> server){
-		this.repository = repository;
-		this.server = server;
+	public final class Server {
+
 	}
 }

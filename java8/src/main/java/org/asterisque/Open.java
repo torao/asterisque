@@ -3,49 +3,47 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package io.asterisque;
+package org.asterisque;
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// Abort
+// Open
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
- * 処理の中断を表すクラスです。
+ * 特定のファンクションに対するパイプをオープンするためのメッセージです。
  *
  * @author Takami Torao
  */
-public final class Abort {
-
-	public static final int Unexpected = -1;
-	public static final int SessionClosing = -2;		// セッションがクローズ中
+public final class Open extends Message {
 
 	// ==============================================================================================
-	// 中断コード
+	// ファンクション ID
 	// ==============================================================================================
 	/**
-	 * この中断理由を受信側で識別するためのコード値です。
+	 * ファンクションを識別する ID です。
 	 */
-	public final int code;
+	public final short functionId;
 
 	// ==============================================================================================
-	// 中断メッセージ
+	// ファンクション引数
 	// ==============================================================================================
 	/**
-	 * この中断理由を人間が読める形式で表したメッセージです。
+	 * ファンクションの呼び出し時に渡す引数です。
 	 */
-	public final String message;
+	public final Object[] params;
 
 	// ==============================================================================================
 	// コンストラクタ
 	// ==============================================================================================
 	/**
-	 * 中断コードとメッセージを指定して構築を行います。
+	 * Open メッセージを構築します。
 	 */
-	public Abort(int code, String message){
-		if(message == null){
-			throw new NullPointerException("message is null");
+	public Open(short pipeId, short functionId, Object[] params){
+		super(pipeId);
+		if(params == null){
+			throw new NullPointerException("params is null");
 		}
-		this.code = code;
-		this.message = message;
+		this.functionId = functionId;
+		this.params = params;
 	}
 
 	// ==============================================================================================
@@ -56,7 +54,7 @@ public final class Abort {
 	 */
 	@Override
 	public String toString(){
-		return "Abort(" + code + "," + Debug.toString(message) + ")";
+		return "Open(" + pipeId + "," + functionId + "," + Debug.toString(params) + ")";
 	}
 
 }

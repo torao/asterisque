@@ -5,7 +5,6 @@
 */
 package io.asterisque.conf;
 
-import io.asterisque.NetworkBridge;
 import io.asterisque.codec.Codec;
 
 import javax.net.ssl.SSLContext;
@@ -19,7 +18,7 @@ import java.util.function.Consumer;
 /**
  * @author Takami Torao
  */
-public class ConnectConfig extends Config {
+public class ConnectConfig extends Node {
 	/*
 	private final int backlog;
 	private final int sendMessageBufferSize;

@@ -5,8 +5,7 @@
 */
 package io.asterisque.conf;
 
-import io.asterisque.Debug;
-import io.asterisque.NetworkBridge;
+import org.asterisque.Debug;
 import io.asterisque.codec.Codec;
 import io.asterisque.codec.MessagePackCodec;
 
@@ -22,7 +21,7 @@ import java.util.function.Consumer;
 /**
  * @author Takami Torao
  */
-public abstract class Config {
+public abstract class Node {
 	@SuppressWarnings("unchecked")
 	private static final Class<Consumer<Boolean>> BooleanConsumerType = (Class<Consumer<Boolean>>) (Class<?>)Consumer.class;
 	/** Wire 上で使用するコーデック */
@@ -36,15 +35,15 @@ public abstract class Config {
 	public static final Key<Consumer<Boolean>> ON_SEND_BACKPRESSURE = new Key<>("onSendBackpressure", BooleanConsumerType);
 	public static final Key<Integer> RECEIVE_BUFFER_SIZE = new Key<>("receiveBufferSize", Integer.class);
 
-	private final Optional<Config> init;
+	private final Optional<Node> init;
 	private final Map<Key<?>,Object> config;
 
-	public Config(){
+	public Node(){
 		this.init = Optional.empty();
 		this.config = new HashMap<>();
 	}
 
-	public Config(Config init){
+	public Node(Node init){
 		this.init = Optional.of(init);
 		this.config = new HashMap<>();
 	}
@@ -72,7 +71,7 @@ public abstract class Config {
 		return getOrElse(RECEIVE_BUFFER_SIZE, 10);
 	}
 
-	public <T> Config set(Key<T> key, T value){
+	public <T> Node set(Key<T> key, T value){
 		this.config.put(key, value);
 		return this;
 	}

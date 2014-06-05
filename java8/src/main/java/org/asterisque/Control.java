@@ -3,47 +3,49 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package io.asterisque;
+package org.asterisque;
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// Open
+// Control
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
- * 特定のファンクションに対するパイプをオープンするためのメッセージです。
+ * Control メッセージはフレームワークによって他のメッセージより優先して送信されます。
  *
  * @author Takami Torao
  */
-public final class Open extends Message {
+public final class Control extends Message {
+
+	public static final byte Close = 1;
 
 	// ==============================================================================================
-	// ファンクション ID
+	// ID
 	// ==============================================================================================
 	/**
-	 * ファンクションを識別する ID です。
+	 * 制御コードです。
 	 */
-	public final short functionId;
+	public final byte code;
 
 	// ==============================================================================================
-	// ファンクション引数
+	// データ
 	// ==============================================================================================
 	/**
-	 * ファンクションの呼び出し時に渡す引数です。
+	 * 制御コードに対するデータを表すバイト配列です。
 	 */
-	public final Object[] params;
+	public final byte[] data;
 
 	// ==============================================================================================
 	// コンストラクタ
 	// ==============================================================================================
 	/**
-	 * Open メッセージを構築します。
+	 * Control メッセージを構築します。
 	 */
-	public Open(short pipeId, short functionId, Object[] params){
-		super(pipeId);
-		if(params == null){
-			throw new NullPointerException("params is null");
+	public Control(byte code, byte[] data){
+		super((short)0 /* not used */);
+		if(data == null){
+			throw new NullPointerException("data is null");
 		}
-		this.functionId = functionId;
-		this.params = params;
+		this.code = code;
+		this.data = data;
 	}
 
 	// ==============================================================================================
@@ -54,7 +56,6 @@ public final class Open extends Message {
 	 */
 	@Override
 	public String toString(){
-		return "Open(" + pipeId + "," + functionId + "," + Debug.toString(params) + ")";
+		return "Control(0x" + String.format("%02X", code & 0xFF) + "," + Debug.toString(data) + ")";
 	}
-
 }

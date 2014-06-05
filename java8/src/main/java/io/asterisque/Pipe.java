@@ -5,6 +5,7 @@
 */
 package io.asterisque;
 
+import org.asterisque.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,6 +45,62 @@ public class Pipe extends Attributes {
 	public final Session session;
 
 	/**
+	 * このパイプに対する受信処理を設定する前に受信したメッセージのキューです。
+	 */
+	private BlockingQueue<Message> premature = new LinkedBlockingQueue<>();
+
+	private AtomicBoolean messagePump = new AtomicBoolean(false);
+
+	/**
+	 * このパイプがクローズされているかどうかを表すアトミックなフラグ。
+	 */
+	private AtomicBoolean closed = new AtomicBoolean(false);
+
+	/**
+	 * このパイプにブロックが到着した時に呼び出すイベントハンドラ。
+	 * アプリケーションはこのハンドラではなく [[src]] を使用する。
+	 */
+	EventHandlers<Block> onBlock = new EventHandlers<>();
+
+	/**
+	 * このパイプがクローズされたときに呼び出すイベントハンドラ。
+	 * アプリケーションはこのハンドラではなく [[future]] を使用する。
+	 */
+	private EventHandlers<Boolean> onClosing = new EventHandlers<>();
+
+	/**
+	 * このパイプがクローズされて確定した結果を通知するための `Promise`。
+	 * このパイプによる双方の処理で確定した結果 (成功/失敗にかかわらず) を参照するための `Future` です。
+	 * パイプの結果が確定した時点でパイプはクローズされています。
+	 */
+	public final CompletableFuture<Object> future = new CompletableFuture<>();
+
+	/**
+	 * どのパイプで何が起きたかをトレースするためのログ出力用のシンボル文字列。
+	 */
+	final String signature;
+
+	/**
+	 * 非同期メッセージングの Block メッセージ受信を行うメッセージソース。
+	 */
+	public final Source<Block> src = new MessageSource();
+
+
+	/**
+	 * このパイプによる非同期メッセージングの受信処理を設定する非同期コレクションです。
+	 * この非同期コレクションは処理の呼び出しスレッド内でしか受信処理を設定することが出来ません。
+	 */
+	public Source<Block> src() {
+		return src;
+	}
+
+	/**
+	 * このパイプに対する非同期メッセージングの送信を行うメッセージシンクです。
+	 * クローズされていないパイプに対してであればどのようなスレッドからでもメッセージの送信を行うことが出来ます。
+	 */
+	public final MessageSink sink = new MessageSink();
+
+	/**
 	 *
 	 * @param id パイプ ID
 	 * @param function このパイプの呼び出し先 function 番号
@@ -53,17 +110,11 @@ public class Pipe extends Attributes {
 		this.id = id;
 		this.function = function;
 		this.session = session;
+		this.signature = "#" + (session.wire.isServer ? "S" : "C") + (id & 0xFFFF);
 		logger.trace(signature + ": pipe created");
 		// ブロックを受信したらメッセージソースに通知
 		onBlock.add(src);
 	}
-
-	/**
-	 * このパイプに対する受信処理を設定する前に受信したメッセージのキューです。
-	 */
-	private BlockingQueue<Message> premature = new LinkedBlockingQueue<>();
-
-	private AtomicBoolean messagePump = new AtomicBoolean(false);
 
 	void dispatch(Message msg) {
 		if(messagePump.get()) {
@@ -89,40 +140,11 @@ public class Pipe extends Attributes {
 	}
 
 	/**
-	 * このパイプがクローズされているかどうかを表すアトミックなフラグ。
-	 */
-	private AtomicBoolean closed = new AtomicBoolean(false);
-
-	/**
 	 * このパイプがクローズされているときに true を返します。
 	 */
 	public boolean isClosed() {
 		return closed.get();
 	}
-
-	/**
-	 * このパイプにブロックが到着した時に呼び出すイベントハンドラ。
-	 * アプリケーションはこのハンドラではなく [[src]] を使用する。
-	 */
-	EventHandlers<Block> onBlock = new EventHandlers<>();
-
-	/**
-	 * このパイプがクローズされたときに呼び出すイベントハンドラ。
-	 * アプリケーションはこのハンドラではなく [[future]] を使用する。
-	 */
-	private EventHandlers<Boolean> onClosing = new EventHandlers<>();
-
-	/**
-	 * このパイプがクローズされて確定した結果を通知するための `Promise`。
-	 * このパイプによる双方の処理で確定した結果 (成功/失敗にかかわらず) を参照するための `Future` です。
-	 * パイプの結果が確定した時点でパイプはクローズされています。
-	 */
-	public final CompletableFuture<Object> future = new CompletableFuture<>();
-
-	/**
-	 * どのパイプで何が起きたかをトレースするためのログ出力用のシンボル文字列。
-	 */
-	final String signature = "#" + (session.wire.isServer ? "S" : "C") + (id & 0xFFFF);
 
 	// ==============================================================================================
 	// Open メッセージの送信
@@ -229,26 +251,6 @@ public class Pipe extends Attributes {
 			logger.debug(signature + ": pipe already closed: " + close);
 		}
 	}
-
-	/**
-	 * 非同期メッセージングの Block メッセージ受信を行うメッセージソース。
-	 */
-	public final Source<Block> src = new MessageSource();
-
-
-	/**
-	 * このパイプによる非同期メッセージングの受信処理を設定する非同期コレクションです。
-	 * この非同期コレクションは処理の呼び出しスレッド内でしか受信処理を設定することが出来ません。
-	 */
-	public Source<Block> src() {
-		return src;
-	}
-
-	/**
-	 * このパイプに対する非同期メッセージングの送信を行うメッセージシンクです。
-	 * クローズされていないパイプに対してであればどのようなスレッドからでもメッセージの送信を行うことが出来ます。
-	 */
-	public final MessageSink sink = new MessageSink();
 
 	/**
 	 * このパイプに対するブロック出力を `OutputStream` として行います。ストリームに対する出力データがバッファ

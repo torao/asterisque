@@ -5,9 +5,10 @@
 */
 package io.asterisque;
 
-import io.asterisque.cluster.Repository;
+import org.asterisque.cluster.Repository;
 import io.asterisque.conf.ConnectConfig;
 import io.asterisque.conf.ListenConfig;
+import org.asterisque.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -3,7 +3,7 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package io.asterisque.cluster;
+package org.asterisque.cluster;
 
 import java.util.*;
 
@@ -14,6 +14,16 @@ import java.util.*;
  * @author Takami Torao
  */
 class MemoryRepository implements Repository {
+
+	// ==============================================================================================
+	// 新規 UUID の取得
+	// ==============================================================================================
+	/**
+	 * {@inheritDoc}
+	 */
+	public UUID nextUUID(){
+		return UUID.randomUUID();
+	}
 
 	private static final class Value {
 		public final byte[] value;
@@ -28,6 +38,9 @@ class MemoryRepository implements Repository {
 
 	private static final Map<UUID, Value> Repository = new HashMap<>();
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public void store(UUID id, byte[] binary, long expires) {
 		synchronized(Repository){
@@ -38,6 +51,9 @@ class MemoryRepository implements Repository {
 		}
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public Optional<byte[]> loadAndDelete(UUID id) {
 		synchronized(Repository){

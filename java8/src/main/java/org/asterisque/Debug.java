@@ -3,17 +3,15 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package io.asterisque;
-
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// Debug
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+package org.asterisque;
 
 import org.slf4j.Logger;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 import java.lang.reflect.Method;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.text.DateFormat;
@@ -22,6 +20,9 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.stream.Stream;
 
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// Debug
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
  * デバッグ用のユーティリティ機能です。
  *
@@ -35,8 +36,7 @@ public final class Debug {
 	/**
 	 * コンストラクタはクラス内に隠蔽されています。
 	 */
-	private Debug() {
-	}
+	private Debug() { }
 
 	// ==============================================================================================
 	// インスタンスの文字列化
@@ -60,6 +60,14 @@ public final class Debug {
 		if(value instanceof String) {
 			String str = (String) value;
 			return "\"" + str.chars().mapToObj(Debug::escape) + "\"";
+		}
+		if(value instanceof InetSocketAddress){
+			InetSocketAddress i = (InetSocketAddress)value;
+			return i.getHostName() + ":" + i.getPort();
+		}
+		if(value instanceof InetAddress){
+			InetAddress i = (InetAddress)value;
+			return i.getHostName() + "/" + i.getHostAddress();
 		}
 		if(value instanceof Map<?, ?>) {
 			return "{" + String.join(",",

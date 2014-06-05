@@ -5,6 +5,7 @@
 */
 package io.asterisque;
 
+import org.asterisque.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,6 +13,7 @@ import javax.net.ssl.SSLSession;
 import java.io.Closeable;
 import java.util.Optional;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -20,7 +22,7 @@ import java.util.function.Consumer;
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
  * 通信経路の実装です。
- * 送受信 {@link io.asterisque.Message} キューを使用して下層の通信実装との帯域制限を行います。
+ * 送受信 {@link org.asterisque.Message} キューを使用して下層の通信実装との帯域制限を行います。
  *
  * @author Takami Torao
  */
@@ -48,7 +50,7 @@ public abstract class Wire implements Closeable {
 	private final Consumer<Message> dispatcher;
 
 	/**
-	 * Wire がクローズされるときに呼び出すラムダ
+	 * Wire がクローズされるときに呼び出すラムダ。
 	 */
 	private final Consumer<Wire> disposer;
 
@@ -63,25 +65,25 @@ public abstract class Wire implements Closeable {
 	/**
 	 * 送受信用の 2 つの {@link io.asterisque.MessageQueue} を使用して下層の非同期 I/O フレームワークとメッ
 	 * セージのやり取りを行うインターフェースです。
-	 * 送信、受信ともに {@link io.asterisque.Message} の advisory limit を使用したバックプレッシャーの通知を
+	 * 送信、受信ともに {@link org.asterisque.Message} の advisory limit を使用したバックプレッシャーの通知を
 	 * 行います。
 	 *
-	 * @param sendAdvisoryLimit 送信キューのアドバイザリーリミット
-	 * @param sendBlockingLimit 送信キューのブロックリミット
+	 * @param sendSoftLimit 送信キューのソフトリミット
+	 * @param sendHardLimit 送信キューのハードリミット
 	 * @param sendBackPressure 送信キューに対するバックプレッシャー通知
-	 * @param recvAdvisoryLimit 受信キューのアドバイザリーリミット
-	 * @param recvBlockingLimit 受信キューのブロックリミット
+	 * @param recvSoftLimit 受信キューのソフトリミット
+	 * @param recvHardLimit 受信キューのハードリミット
 	 * @param recvBackPressure 受信キューに対するバックプレッシャー通知
 	 * @param dispatcher メッセージ受信処理
 	 * @param disposer {@link #close()} メソッドによりこの Wire がクローズされたときに一度だけ呼び出される処理
 	 * @param executor メッセージ受信処理を実行するスレッド
 	 */
 	protected Wire(
-		int sendAdvisoryLimit, int sendBlockingLimit, Consumer<Boolean> sendBackPressure,
-		int recvAdvisoryLimit, int recvBlockingLimit, Consumer<Boolean> recvBackPressure,
+		int sendSoftLimit, int sendHardLimit, Consumer<Boolean> sendBackPressure,
+		int recvSoftLimit, int recvHardLimit, Consumer<Boolean> recvBackPressure,
 		Consumer<Message> dispatcher, Consumer<Wire> disposer, Executor executor){
-		this.rightToLeft = new MessageQueue(sendAdvisoryLimit, sendBlockingLimit, sendBackPressure, this::onSendQueueEmpty);
-		this.leftToRight = new MessageQueue(recvAdvisoryLimit, recvBlockingLimit, recvBackPressure, this::onMessageArrival);
+		this.rightToLeft = new MessageQueue(sendSoftLimit, sendHardLimit, sendBackPressure, this::onSendQueueEmpty);
+		this.leftToRight = new MessageQueue(recvSoftLimit, recvHardLimit, recvBackPressure, this::onMessageArrival);
 		this.dispatcher = dispatcher;
 		this.disposer = disposer;
 		this.executor = executor;
@@ -91,7 +93,8 @@ public abstract class Wire implements Closeable {
 	// 送信メッセージの参照
 	// ==============================================================================================
 	/**
-	 * 送信キューから次の送信メッセージを参照します。送信キューが空の場合は Optional.empty() を返します。
+	 * 送信キューから次の送信メッセージを取り出すためにサブクラスから呼び出します。送信キューが空の場合は
+	 * Optional.empty() を返します。
 	 */
 	protected Optional<Message> nextSendMessage(){
 		return rightToLeft.dequeue();
@@ -102,7 +105,7 @@ public abstract class Wire implements Closeable {
 	// ==============================================================================================
 	/**
 	 * 送信キューが空になった時、および空から1つのメッセージが到着した時に呼び出されます。
-	 * サブクラスはこのメソッドをオーバーライドして非同期 I/O の Socket Writable 通知を操作することが出来ます。
+	 * サブクラスはこのメソッドをオーバーライドして下層の非同期 I/O の Socket Writable 通知を変更することが出来ます。
 	 * @param empty 送信キューが空になったとき true
 	 */
 	protected void onSendQueueEmpty(boolean empty){ }
@@ -191,9 +194,17 @@ public abstract class Wire implements Closeable {
 	 *
 	 * @param msg 送信するメッセージ
 	 */
-	public void send(Message msg) throws InterruptedException {
+	public void send(byte priority, Message msg) {
 		if(! isClosed()) {
-			rightToLeft.enqueue(msg);
+			try {
+				rightToLeft.enqueue(priority, msg);
+			} catch(MessageQueue.HardLimitReached ex) {
+				logger.error("hard limit reached, closing wire: " + toString());
+				close();
+			} catch(MessageQueue.MaxSequenceReached ex) {
+				logger.error("queue expired, closing wire: " + toString());
+				close();
+			}
 		} else {
 			logger.debug(String.format("departure message disposed on closed wire: %s", msg));
 		}
@@ -203,34 +214,91 @@ public abstract class Wire implements Closeable {
 	// メッセージの受信
 	// ==============================================================================================
 	/**
-	 * 下層のネットワーク実装がメッセージを受信したときに呼び出します。
-	 * Wire が既にクローズされている場合は何も行いません。
+	 * 下層のネットワーク実装がメッセージを受信したときに呼び出されます。制御メッセージの場合は
+	 * Wire が既にクローズされている場合はログに出力するだけで何も行いません。
 	 *
 	 * @param msg 受信したメッセージ
 	 */
-	protected void receive(Message msg) throws InterruptedException{
+	protected void receive(Message msg) {
 		if(! isClosed()){
-			if(msg instanceof Control) {
-				Control ctrl = (Control)msg;
-				switch(ctrl.code){
-					case Control.Close:
-						close();
-						logger.debug("wire closed normally by peer");
-						break;
-					default:
-						close();
-						logger.error(String.format("unexpected control message detected: %s", ctrl));
-						break;
-				}
-			} else {
-				leftToRight.enqueue(msg);
-				if(logger.isTraceEnabled()){
-					logger.trace(String.format("message queued: %s", msg));
-				}
+			try {
+				leftToRight.enqueue(Priority.Normal, msg);
+			} catch(MessageQueue.HardLimitReached ex) {
+				logger.error("hard limit reached, closing wire: " + toString());
+				close();
+			} catch(MessageQueue.MaxSequenceReached ex) {
+				logger.error("queue expired, closing wire: " + toString());
+				close();
+			}
+			if(logger.isTraceEnabled()){
+				logger.trace(String.format("message queued: %s", msg));
 			}
 		} else {
 			logger.debug(String.format("arrival message disposed on closed wire: %s", msg));
 		}
 	}
 
+	// ==============================================================================================
+	// ワイヤーの参照
+	// ==============================================================================================
+	/**
+	 * メッセージの伝達が双方向に連結された Wire ペアを作成します。
+	 * @return 接続された長さ 2 の Wire 配列
+	 */
+	public static Wire[] newPipedWire(int softLimit, int hardLimit){
+		PipedWirePair pair = new PipedWirePair(softLimit, hardLimit);
+		return new Wire[]{ pair.wire1, pair.wire2 };
+	}
+
+	public static final class Priority {
+		public static final byte Normal = 0;
+		public static final byte Min = Byte.MIN_VALUE;
+		public static final byte Max = Byte.MAX_VALUE;
+		private Priority(){ }
+		public static byte lower(byte priority){
+			if(priority == Min){
+				return Min;
+			}
+			return (byte)(priority - 1);
+		}
+		public static byte upper(byte priority){
+			if(priority == Max){
+				return Max;
+			}
+			return (byte)(priority + 1);
+		}
+	}
+
+}
+
+class PipedWirePair {
+	private static final Executor executor = Executors.newSingleThreadExecutor();
+	public final Wire wire1;
+	public final Wire wire2;
+	private final AtomicBoolean closing = new AtomicBoolean(false);
+	public PipedWirePair(int softLimit, int hardLimit){
+		class PipedWire extends Wire {
+			private final boolean server;
+			public PipedWire(boolean isServer, Consumer<Message> dispatcher){
+				super(softLimit, hardLimit, b->{}, softLimit, hardLimit, b->{}, dispatcher, w->PipedWirePair.this.close(), executor);
+				this.server = isServer;
+			}
+			@Override
+			public boolean isServer() { return server; }
+			@Override
+			public Optional<SSLSession> getSSLSession() { return Optional.empty(); }
+			@Override
+			public String toString() { return server? "": ""; }
+		}
+		this.wire1 = new PipedWire(true, this::leftToRight);
+		this.wire2 = new PipedWire(false, this::rightToLeft);
+	}
+	private void leftToRight(Message msg){ wire2.receive(msg); }
+	private void rightToLeft(Message msg){ wire1.receive(msg); }
+	private void close(){
+		if(closing.compareAndSet(false, true)){
+			wire1.close();
+			wire2.close();
+		}
+	}
 }

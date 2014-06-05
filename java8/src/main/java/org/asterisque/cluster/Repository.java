@@ -3,59 +3,56 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package io.asterisque;
+package org.asterisque.cluster;
+
+import java.util.Optional;
+import java.util.UUID;
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// Control
+// Repository
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
- * Control メッセージはフレームワークによって他のメッセージより優先して送信されます。
+ * 単純な KVS の機能を提供します。
  *
  * @author Takami Torao
  */
-public final class Control extends Message {
-
-	public static final byte Close = 1;
+public interface Repository {
 
 	// ==============================================================================================
-	// ID
+	// オンメモリリポジトリ
 	// ==============================================================================================
 	/**
-	 * 制御コードです。
+	 * オンメモリでデータを保持するリポジトリのインスタンスです。
 	 */
-	public final byte code;
+	public static final Repository OnMemory = new MemoryRepository();
 
 	// ==============================================================================================
-	// データ
+	// 新規 UUID の取得
 	// ==============================================================================================
 	/**
-	 * 制御コードに対するデータを表すバイト配列です。
+	 * このリポジトリのスコープで新規の UUID を参照します。
 	 */
-	public final byte[] data;
+	public UUID nextUUID();
 
 	// ==============================================================================================
-	// コンストラクタ
+	// データの保存
 	// ==============================================================================================
 	/**
-	 * Control メッセージを構築します。
+	 * 指定されたバイナリデータを保存します。
+	 * @param id データの ID
+	 * @param binary バイナリデータ
+	 * @param expires データの有効期限 (現在時刻からのミリ秒)
 	 */
-	public Control(byte code, byte[] data){
-		super((short)0);
-		if(data == null){
-			throw new NullPointerException("data is null");
-		}
-		this.code = code;
-		this.data = data;
-	}
+	public void store(UUID id, byte[] binary, long expires);
 
 	// ==============================================================================================
-	// インスタンスの文字列化
+	// データの復元
 	// ==============================================================================================
 	/**
-	 * このインスタンスを文字列化します。
+	 * 指定された ID のデータを復元しリポジトリから削除します。
+	 * @param id データの ID
+	 * @return 復元されたデータ
 	 */
-	@Override
-	public String toString(){
-		return "Control(0x" + String.format("%02X", code & 0xFF) + "," + Debug.toString(data) + ")";
-	}
+	public Optional<byte[]> loadAndDelete(UUID id);
+
 }
