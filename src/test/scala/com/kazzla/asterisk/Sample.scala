@@ -13,6 +13,7 @@ import scala.concurrent.{Promise, Future, Await}
 import scala.concurrent.duration.Duration
 import org.slf4j.LoggerFactory
 import scala.concurrent.ExecutionContext.Implicits._
+import org.asterisque.Export
 
 object Sample {
 	val logger = LoggerFactory.getLogger(Sample.getClass)

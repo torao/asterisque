@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.{Future, Promise}
 import io.netty.channel.socket.SocketChannel
 import io.netty.handler.ssl.SslHandler
-import io.asterisque.codec.Codec
+import org.asterisque.codec.Codec
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Netty

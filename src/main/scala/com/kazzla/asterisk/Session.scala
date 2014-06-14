@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.Future
 import scala.annotation.tailrec
 import scala.util.Try
+import org.asterisque.Export
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Session

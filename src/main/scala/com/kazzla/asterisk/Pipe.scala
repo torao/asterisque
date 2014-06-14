@@ -12,6 +12,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.Promise
 import com.kazzla.asterisk.async.Source
+import org.asterisque.Export
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Pipe
@@ -217,7 +218,7 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
 
 	/**
 	 * このパイプが受信したブロックを `InputStream` として参照します。
-	 * @@[[com.kazzla.asterisk.Export]](stream=true) 宣言されているメソッドのパイプのみ使用することが
+	 * @@[[Export]](stream=true) 宣言されているメソッドのパイプのみ使用することが
 	 * 出来ます。
 	 */
 	private[this] var _in:Option[PipeInputStream] = None

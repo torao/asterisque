@@ -15,7 +15,7 @@ import java.security.cert.{CertificateException, X509Certificate}
 import java.security.KeyStore
 import scala.Some
 import java.util.concurrent.LinkedBlockingQueue
-import io.asterisque.codec.Codec
+import org.asterisque.codec.Codec
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Wire

@@ -10,6 +10,7 @@ import com.kazzla.asterisk.codec.MsgPackCodec
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
+import org.asterisque.Export
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // SessionSpec

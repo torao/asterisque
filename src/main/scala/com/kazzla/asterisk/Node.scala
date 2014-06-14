@@ -16,7 +16,7 @@ import scala.concurrent.{ExecutionContext, Promise, Future}
 import scala.util.Failure
 import scala.util.Success
 import com.kazzla.asterisk.Bridge.AcceptListener
-import io.asterisque.codec.Codec
+import org.asterisque.codec.Codec
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Node
