@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLEngine;
+import java.net.SocketAddress;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -72,14 +73,14 @@ public class Netty implements Bridge {
 	// ==============================================================================================
 	/**
 	 * 指定されたアドレスへの接続を行います。
-	 * @param config 接続設定
+	 * @param options 接続設定
 	 * @return Wire の Future
 	 */
-	public CompletableFuture<Wire> newWire(Config config, LocalNode local, RemoteNode remote) {
+	public CompletableFuture<Wire> newWire(LocalNode node, SocketAddress address, Options options) {
 		Bootstrap client = new Bootstrap();
 		CompletableFuture<Wire> future = new CompletableFuture<>();
 
-		Initializer factory = new Initializer(local, Optional.of(remote), false, config, wire -> {
+		Initializer factory = new Initializer(node, false, options, wire -> {
 			logger.debug("onConnect(" + wire + ")");
 			future.complete(wire);
 		});
@@ -87,11 +88,11 @@ public class Netty implements Bridge {
 		client
 			.group(worker())
 			.channel(NioSocketChannel.class)
-			.remoteAddress(remote.address)
+			.remoteAddress(address)
 			.option(ChannelOption.TCP_NODELAY, java.lang.Boolean.TRUE)
 			.handler(factory);
 
-		client.connect(remote.address).addListener(f -> {
+		client.connect(address).addListener(f -> {
 			if(f.isSuccess()) {
 				logger.debug("connection success");
 			} else {
@@ -110,12 +111,12 @@ public class Netty implements Bridge {
 	 *
 	 * @return Server の Future
 	 */
-	public CompletableFuture<Server> newServer(Config config, LocalNode local, Network network, Consumer<Wire> onAccept) {
+	public CompletableFuture<Server> newServer(LocalNode node, SocketAddress address, Options options, Consumer<Wire> onAccept) {
 		NioEventLoopGroup master = new NioEventLoopGroup();		// サーバソケットごとに生成、消滅
 		ServerBootstrap server = new ServerBootstrap();
 		CompletableFuture<Server> future = new CompletableFuture<>();
 
-		Initializer factory = new Initializer(local, Optional.empty(), true, config, wire -> {
+		Initializer factory = new Initializer(node, true, options, wire -> {
 			logger.debug("onAccept(" + wire + ")");
 			onAccept.accept(wire);
 		});
@@ -123,15 +124,15 @@ public class Netty implements Bridge {
 		server
 			.group(master, worker())
 			.channel(NioServerSocketChannel.class)
-			.localAddress(network.address)
-			.option(ChannelOption.SO_BACKLOG, config.backlog)
+			.localAddress(address)
+			.option(ChannelOption.SO_BACKLOG, options.get(Options.KEY_SERVER_BACKLOG).get())
 			.childOption(ChannelOption.TCP_NODELAY, Boolean.TRUE)
 			.childHandler(factory);
 
 		server.bind().addListener(f -> {
 			if(f.isSuccess()){
 				logger.debug("operationComplete(success)");
-				future.complete(new Server(config, local, network) {
+				future.complete(new Server(node, address, options) {
 					@Override
 					public void close() {
 						master.shutdownGracefully();
@@ -163,10 +164,9 @@ public class Netty implements Bridge {
 	}
 
 	private static class Initializer extends ChannelInitializer {
-		private final LocalNode local;
-		private final Optional<RemoteNode> remote;
+		private final LocalNode node;
 		private final boolean isServer;
-		private final Config config;
+		private final Options options;
 		private final Consumer<NettyWire> onWireCreate;
 		private final String sym;
 
@@ -175,11 +175,10 @@ public class Netty implements Bridge {
 		// ============================================================================================
 		/**
 		 */
-		public Initializer(LocalNode local, Optional<RemoteNode> remote, boolean isServer, Config config, Consumer<NettyWire> onWireCreate) {
-			this.local = local;
-			this.remote = remote;
+		public Initializer(LocalNode node, boolean isServer, Options options, Consumer<NettyWire> onWireCreate) {
+			this.node = node;
 			this.isServer = isServer;
-			this.config = config;
+			this.options = options;
 			this.onWireCreate = onWireCreate;
 			this.sym = isServer? "S": "C";
 		}
@@ -196,9 +195,9 @@ public class Netty implements Bridge {
 			ChannelPipeline pipeline = ch.pipeline();
 
 			Optional<SslHandler> sslHandler;
-			if(config.sslContext.isPresent()) {
+			if(options.get(Options.KEY_SSL_CONTEXT).isPresent()) {
 				// SSL あり
-				SSLEngine engine = config.sslContext.get().createSSLEngine();
+				SSLEngine engine = options.get(Options.KEY_SSL_CONTEXT).get().createSSLEngine();
 				engine.setUseClientMode(! isServer);
 				engine.setNeedClientAuth(true);					// TODO クライアント認証なしの接続を許可するか
 				if(logger.isTraceEnabled()) {
@@ -214,10 +213,10 @@ public class Netty implements Bridge {
 				sslHandler = Optional.empty();
 			}
 
-			RemoteNode r = remote.orElseGet(() -> new RemoteNode(ch.remoteAddress()));
-			pipeline.addLast("io.asterisque.frame.encoder", new MessageEncoder(config.codec));
-			pipeline.addLast("io.asterisque.frame.decoder", new MessageDecoder(config.codec));
-			pipeline.addLast("io.asterisque.service", new WireConnect(local, r, isServer, sslHandler, onWireCreate, config));
+			pipeline.addLast("io.asterisque.frame.encoder", new MessageEncoder(options.get(Options.KEY_CODEC).get()));
+			pipeline.addLast("io.asterisque.frame.decoder", new MessageDecoder(options.get(Options.KEY_CODEC).get()));
+			pipeline.addLast("io.asterisque.service",
+				new WireConnect(node, ch.localAddress(), ch.remoteAddress(), isServer, sslHandler, onWireCreate, options));
 		}
 	}
 }

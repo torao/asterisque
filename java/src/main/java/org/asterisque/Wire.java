@@ -6,6 +6,7 @@
 package org.asterisque;
 
 import javax.net.ssl.SSLSession;
+import java.net.SocketAddress;
 import java.util.Optional;
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -27,15 +28,23 @@ public interface Wire extends AutoCloseable {
 	/**
 	 * この Wire の {@link org.asterisque.LocalNode} を参照します。
 	 */
-	public LocalNode getLocalNode();
+	public LocalNode node();
+
+	// ==============================================================================================
+	// ローカルノードの参照
+	// ==============================================================================================
+	/**
+	 * この Wire のローカル側アドレスを参照します。
+	 */
+	public SocketAddress local();
 
 	// ==============================================================================================
 	// リモートノードの参照
 	// ==============================================================================================
 	/**
-	 * この Wire が接続している {@link org.asterisque.RemoteNode} を参照します。
+	 * この Wire のリモート側アドレスを参照します。
 	 */
-	public RemoteNode getRemoteNode();
+	public SocketAddress remote();
 
 	// ==============================================================================================
 	// サーバ側判定
@@ -117,10 +126,11 @@ public interface Wire extends AutoCloseable {
 		public void onClose(Wire wire);
 	}
 
-	public interface Priority {
+	public final class Priority {
 		public static final byte Max = Byte.MAX_VALUE;
 		public static final byte Min = Byte.MIN_VALUE;
 		public static final byte Normal = 0;
+		private Priority(){ }
 		public static byte upper(byte value){ return (byte)Math.min(value + 1, Max); }
 		public static byte lower(byte value){ return (byte)Math.max(value - 1, Min); }
 	}

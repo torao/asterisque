@@ -13,14 +13,13 @@ import org.slf4j.LoggerFactory;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.SocketAddress;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -36,15 +35,17 @@ public class Session {
 	private static final Logger logger = LoggerFactory.getLogger(Session.class);
 
 	public final UUID id;
-	public final LocalNode local;
-	public final RemoteNode remote;
+	public final LocalNode node;
 	public final boolean isServer;
 	public final Attributes attributes = new Attributes();
+
+	public Optional<SocketAddress> local(){ return wire.map(Wire::local); }
+	public Optional<SocketAddress> remote(){ return wire.map(Wire::remote); }
 
 	private final AtomicBoolean closing = new AtomicBoolean(false);
 	private final AtomicBoolean closed = new AtomicBoolean(false);
 
-	private final BiFunction<Consumer<Message>, Consumer<Wire>, CompletableFuture<Wire>> wireFactory;
+	private final Supplier<Optional<CompletableFuture<Wire>>> wireFactory;
 	private volatile Optional<Wire> wire = Optional.empty();
 	private volatile Service service;
 
@@ -73,18 +74,20 @@ public class Session {
 	/**
 	 *
 	 */
-	Session(UUID id, LocalNode local, RemoteNode remote, boolean isServer, Service defaultService,
-					int readSoftLimit, int readHardLimit, int writeSoftLimit, int writeHardLimit,
-					final Executor executor,
-					BiFunction<Consumer<Message>, Consumer<Wire>, CompletableFuture<Wire>> wireFactory){
+	Session(UUID id, LocalNode node, boolean isServer, Service defaultService, Options options,
+					Supplier<Optional<CompletableFuture<Wire>>> wireFactory){
 		this.id = id;
-		this.local = local;
-		this.remote = remote;
+		this.node = node;
 		this.isServer = isServer;
 		this.service = defaultService;
 		this.wireFactory = wireFactory;
 
 		this.writeBarrier = new LooseBarrier();
+
+		int readSoftLimit = options.get(Options.KEY_READ_SOFT_LIMIT).get();
+		int readHardLimit = options.get(Options.KEY_READ_HARD_LIMIT).get();
+		int writeSoftLimit = options.get(Options.KEY_WRITE_SOFT_LIMIT).get();
+		int writeHardLimit = options.get(Options.KEY_WRITE_HARD_LIMIT).get();
 
 		this.writeBreaker = new CircuitBreaker(writeSoftLimit, writeHardLimit) {
 			@Override
@@ -200,15 +203,21 @@ public class Session {
 	 * このセッションを非同期で接続状態にします。
 	 */
 	private void connect() {
-		wireFactory.apply(this::deliver, w -> {
-			if(! closing()){
-				connect();
-			}
-		}).thenAccept(w -> {
-			this.wire = Optional.of(w);
-			departure.wire(this.wire);
-			w.setPlug(Optional.of(plug));
-		});
+		Optional<CompletableFuture<Wire>> opt = wireFactory.get();
+		if(opt.isPresent()) {
+			opt.get().thenAccept(this::onConnect).exceptionally(ex -> {
+				logger.error("fail to connect: " + remote(), ex);
+				return null;
+			});
+		} else {
+			logger.debug("reconnection not supported: " + remote());
+		}
+	}
+
+	private void onConnect(Wire wire){
+		this.wire = Optional.of(wire);
+		this.departure.wire(Optional.of(wire));
+		wire.setPlug(Optional.of(this.plug));
 	}
 
 	private void reconnect() {

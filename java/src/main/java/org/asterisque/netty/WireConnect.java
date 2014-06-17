@@ -8,12 +8,16 @@ package org.asterisque.netty;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.ssl.SslHandler;
-import org.asterisque.*;
+import org.asterisque.Options;
+import org.asterisque.Debug;
+import org.asterisque.LocalNode;
+import org.asterisque.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLSession;
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -33,9 +37,10 @@ class WireConnect extends SimpleChannelInboundHandler<Message> {
 	 */
 	private static final AtomicInteger Sequence = new AtomicInteger(0);
 
-	private final LocalNode local;
-	private final RemoteNode remote;
-	private final Bridge.Config config;
+	private final LocalNode node;
+	private final SocketAddress local;
+	private final SocketAddress remote;
+	private final Options options;
 	private final Optional<SslHandler> sslHandler;
 	private final boolean isServer;
 	private final Consumer<NettyWire> onWireCreate;
@@ -56,14 +61,15 @@ class WireConnect extends SimpleChannelInboundHandler<Message> {
 	// ==============================================================================================
 	/**
 	 */
-	public WireConnect(LocalNode local, RemoteNode remote, boolean isServer, Optional<SslHandler> sslHandler,
-										 Consumer<NettyWire> onWireCreate, Bridge.Config config){
+	public WireConnect(LocalNode node, SocketAddress local, SocketAddress remote, boolean isServer,
+										 Optional<SslHandler> sslHandler, Consumer<NettyWire> onWireCreate, Options options){
+		this.node = node;
 		this.local = local;
 		this.remote = remote;
 		this.sslHandler = sslHandler;
 		this.isServer = isServer;
 		this.onWireCreate = onWireCreate;
-		this.config = config;
+		this.options = options;
 		this.sym = isServer? "S": "C";
 	}
 
@@ -103,7 +109,7 @@ class WireConnect extends SimpleChannelInboundHandler<Message> {
 		}
 
 		// Wire 構築
-		NettyWire w = new NettyWire(local, remote, isServer, future, ctx);
+		NettyWire w = new NettyWire(node, local, remote, isServer, future, ctx);
 		wire = Optional.of(w);
 
 		super.channelActive(ctx);

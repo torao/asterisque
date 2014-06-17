@@ -301,7 +301,7 @@ public abstract class Source<A> {
 
 	protected void sequence(A value){ traverse(new Sequence<A>(value)); }
 	protected void finish(){ traverse(new Finish<A>()); }
-	protected void failure(Throwable cause){ traverse(new Failure(cause)); }
+	protected void failure(Throwable cause){ traverse(new Failure<>(cause)); }
 
 	public static <A,B> CompletableFuture<B> apply(Iterable<A> t, Function<Source<A>,CompletableFuture<B>> op, Executor exec) {
 		class X extends Source<A> {

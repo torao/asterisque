@@ -91,9 +91,11 @@ class PipeSpace {
 		while(true) {
 			assert(! closing.get());
 			short id = (short) ((sequence.getAndIncrement() & 0x7FFF) | pipeMask);
-			Pipe pipe = new Pipe(id, priority, function, session);
-			if(pipes.putIfAbsent(id, pipe) == pipe){
-				return pipe;
+			if(id != 0){
+				Pipe pipe = new Pipe(id, priority, function, session);
+				if(pipes.putIfAbsent(id, pipe) == pipe){
+					return pipe;
+				}
 			}
 		}
 	}

@@ -8,11 +8,15 @@ package org.asterisque.netty;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
-import org.asterisque.*;
+import org.asterisque.Debug;
+import org.asterisque.LocalNode;
+import org.asterisque.Message;
+import org.asterisque.Wire;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLSession;
+import java.net.SocketAddress;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -29,8 +33,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 class NettyWire implements Wire {
 	private static final Logger logger = LoggerFactory.getLogger(NettyWire.class);
 
-	private final LocalNode local;
-	private final RemoteNode remote;
+	private final LocalNode node;
+	private final SocketAddress local;
+	private final SocketAddress remote;
 	private final boolean server;
 	private final CompletableFuture<Optional<SSLSession>> tls;
 	private final ChannelHandlerContext context;
@@ -62,9 +67,10 @@ class NettyWire implements Wire {
 	 * @param server この Wire 端点がサーバ側の場合 true
 	 * @param context チャネルコンテキスト
 	 */
-	public NettyWire(LocalNode local, RemoteNode remote,
+	public NettyWire(LocalNode node, SocketAddress local, SocketAddress remote,
 									 boolean server, CompletableFuture<Optional<SSLSession>> tls,
 									 ChannelHandlerContext context){
+		this.node = node;
 		this.local = local;
 		this.remote = remote;
 		this.server = server;
@@ -82,7 +88,15 @@ class NettyWire implements Wire {
 	/**
 	 * {@inheritDoc}
 	 */
-	public LocalNode getLocalNode(){ return local; }
+	public LocalNode node(){ return node; }
+
+	// ==============================================================================================
+	// ローカルノードの参照
+	// ==============================================================================================
+	/**
+	 * {@inheritDoc}
+	 */
+	public SocketAddress local(){ return local; }
 
 	// ==============================================================================================
 	// リモートノードの参照
@@ -90,7 +104,7 @@ class NettyWire implements Wire {
 	/**
 	 * {@inheritDoc}
 	 */
-	public RemoteNode getRemoteNode(){ return remote; }
+	public SocketAddress remote(){ return remote; }
 
 	// ==============================================================================================
 	// サーバ側判定

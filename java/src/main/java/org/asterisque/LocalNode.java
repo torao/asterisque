@@ -9,10 +9,14 @@ import org.asterisque.cluster.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
-import java.util.LinkedList;
+import java.net.SocketAddress;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // LocalNode
@@ -41,7 +45,7 @@ public class LocalNode {
 	/**
 	 * このノード上で使用されているすべてのセッション。ノードのシャットダウン時にクローズされる。
 	 */
-	private final Collection<Session> sessions = new LinkedList<>();
+	private final Map<UUID, Session> sessions = new ConcurrentHashMap<>();
 
 	/**
 	 * このノードの名前です。
@@ -92,6 +96,29 @@ public class LocalNode {
 		return old;
 	}
 
+	public CompletableFuture<Bridge.Server> listen(SocketAddress address, Options options, Consumer<Session> onAccept) {
+		Bridge bridge = options.get(Options.KEY_BRIDGE).get();
+		return bridge.newServer(this, address, options, wire -> {
+			UUID id = repository.nextUUID();
+			CompletableFuture<Wire> future = CompletableFuture.completedFuture(wire);
+			Optional<CompletableFuture<Wire>> of = Optional.of(future);
+			AtomicReference<Optional<CompletableFuture<Wire>>> ref = new AtomicReference<>(of);
+			Session session = new Session(id, this, true, service, options, () -> ref.getAndSet(Optional.empty()));
+			sessions.put(id, session);
+			session.onClosed.add(s -> sessions.remove(id));
+			onAccept.accept(session);
+		});
+	}
+
+	public Session connect(SocketAddress remote, Options options){
+		Bridge bridge = options.get(Options.KEY_BRIDGE).get();
+		UUID id = repository.nextUUID();
+		Session session = new Session(id, this, false, service, options, () -> Optional.of(bridge.newWire(this, remote, options)));
+		sessions.put(id, session);
+		session.onClosed.add(s -> sessions.remove(id));
+		return session;
+	}
+
 	// ==============================================================================================
 	// ノードのシャットダウン
 	// ==============================================================================================
@@ -105,7 +132,7 @@ public class LocalNode {
 			executor.shutdown();
 			servers.forEach(Bridge.Server::close);
 			servers.clear();
-			sessions.forEach(Session::close);
+			sessions.values().forEach(Session::close);
 			sessions.clear();
 		}
 	}

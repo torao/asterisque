@@ -11,7 +11,6 @@ import java.io.Serializable;
 // Message
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
- * {@link io.asterisque.MessageQueue}
  *
  * @author Takami Torao
  */
