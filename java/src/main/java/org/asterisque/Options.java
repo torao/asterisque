@@ -55,7 +55,7 @@ public class Options {
 	public <T> Optional<T> get(Key<T> key){
 		Optional<T> value = _get(key);
 		if(logger.isTraceEnabled()){
-			logger.trace(key + "=" + value);
+			logger.trace(key + "=" + Debug.toString(value));
 		}
 		return value;
 	}
@@ -72,8 +72,12 @@ public class Options {
 			if(value instanceof String && ! key.type.equals(String.class)){
 				return key.parse((String)value);
 			}
-			if(value.getClass().isAssignableFrom(key.type)) {
+			if(key.type.isAssignableFrom(value.getClass())) {
 				return Optional.of(key.type.cast(value));
+			} else {
+				logger.warn(key.key + ": current value " + Debug.toString(value) + " of type " + value.getClass().getName()
+					+ " is not compatible the required type " + key.type.getName() + "; apply default "
+					+ Debug.toString(key.defaultValue));
 			}
 		}
 		return key.defaultValue;
@@ -95,7 +99,7 @@ public class Options {
 	/**
 	 * 指定されたキーに対する値を設定します。null を設定することは出来ません。
 	 */
-	public <T> Options set(Key<T> key, T value){
+	public <T, U extends T> Options set(Key<T> key, U value){
 		if(value == null){
 			throw new NullPointerException("null is not acceptable for key: " + key);
 		}
@@ -103,19 +107,29 @@ public class Options {
 		return this;
 	}
 
+	// ##############################################################################################
+	/*
+	 * Scala で options.set(Key[Integer], Int) として参照する場合は Auto Boxing が効かず型パラメータとの整合
+	 * 性でコンパイルエラーになるため、プリミティブ型には明示的にメソッドを用意している (暗黙的型変換なども使用したが
+	 * 型パラメータがあるとうまく認識しない)。
+	 */
+
+	public Options set(Key<Boolean> key, boolean value){ set(key, Boolean.valueOf(value)); return this; }
+	public Options set(Key<Integer> key, int value){ set(key, Integer.valueOf(value)); return this; }
+
 	public static final Key<Bridge> KEY_BRIDGE            = new Key<>("org.asterisque.bridge", Bridge.class);
 	public static final Key<SSLContext> KEY_SSL_CONTEXT   = new Key<>("org.asterisque.ssl", SSLContext.class);
 	public static final Key<Codec> KEY_CODEC              = new Key<>("org.asterisque.codec", Codec.class, MessagePackCodec.getInstance());
 	// TODO 他に SocketOption など
 
 	//
-	public static final Key<Integer> KEY_READ_SOFT_LIMIT  = new IntKey("org.asterisque.wire.read.softlimit", 1024);
-	public static final Key<Integer> KEY_READ_HARD_LIMIT  = new IntKey("org.asterisque.wire.read.hardlimit", Integer.MAX_VALUE);
-	public static final Key<Integer> KEY_WRITE_SOFT_LIMIT = new IntKey("org.asterisque.wire.write.softlimit", 1024);
-	public static final Key<Integer> KEY_WRITE_HARD_LIMIT = new IntKey("org.asterisque.wire.write.hardlimit", Integer.MAX_VALUE);
+	public static final IntKey KEY_READ_SOFT_LIMIT  = new IntKey("org.asterisque.wire.read.softlimit", 1024);
+	public static final IntKey KEY_READ_HARD_LIMIT  = new IntKey("org.asterisque.wire.read.hardlimit", Integer.MAX_VALUE);
+	public static final IntKey KEY_WRITE_SOFT_LIMIT = new IntKey("org.asterisque.wire.write.softlimit", 1024);
+	public static final IntKey KEY_WRITE_HARD_LIMIT = new IntKey("org.asterisque.wire.write.hardlimit", Integer.MAX_VALUE);
 
 	// Server Options
-	public static final Key<Integer> KEY_SERVER_BACKLOG = new IntKey("org.asterisque.server.backlog", 50);
+	public static final IntKey KEY_SERVER_BACKLOG = new IntKey("org.asterisque.server.backlog", 50);
 
 	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	// Key
@@ -145,14 +159,14 @@ public class Options {
 		@Override
 		public String toString(){ return key; }
 		@Override
-		public int hashCode(){ return key.hashCode() + type.hashCode(); }
+		public int hashCode(){ return key.hashCode(); }
 		@Override
 		public boolean equals(Object o){
 			if(! (o instanceof Key)){
 				return false;
 			}
 			Key<?> other = (Key<?>)o;
-			return this.key.equals(other.key) && this.type.equals(other.type);
+			return this.key.equals(other.key);
 		}
 	}
 
@@ -164,10 +178,17 @@ public class Options {
 			try{
 				return Optional.of(Integer.parseInt(value));
 			} catch(NumberFormatException ex){
-				logger.warn("fail to parse as int: \"" + value + "\"");
+				logger.warn(key + ": fail to parse as int: " + Debug.toString(value));
 				return Optional.empty();
 			}
 		}
+	}
+
+	public static final class StringKey extends Key<String> {
+		public StringKey(String key, String def){ super(key, String.class, Optional.of(def)); }
+		public StringKey(String key){ super(key, String.class); }
+		@Override
+		public Optional<String> parse(String value){ return Optional.of(value); }
 	}
 
 }

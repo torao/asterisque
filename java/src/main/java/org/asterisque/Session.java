@@ -113,6 +113,7 @@ public class Session {
 				logger.error("read hard-limit reached, closing session");
 				reconnect();
 			}
+
 		};
 
 		this.departure = new DepartureGate(this, writeSoftLimit);
@@ -127,6 +128,8 @@ public class Session {
 			@Override
 			public void onClose(Wire wire) { reconnect(); }
 		};
+
+		logger.debug(id + ": session created");
 
 		// 非同期で Wire を構築してメッセージの開始
 		connect();
@@ -203,14 +206,15 @@ public class Session {
 	 * このセッションを非同期で接続状態にします。
 	 */
 	private void connect() {
+		logger.debug(id + ": connecting...");
 		Optional<CompletableFuture<Wire>> opt = wireFactory.get();
 		if(opt.isPresent()) {
 			opt.get().thenAccept(this::onConnect).exceptionally(ex -> {
-				logger.error("fail to connect: " + remote(), ex);
+				logger.error(id + ": fail to connect: " + remote(), ex);
 				return null;
 			});
 		} else {
-			logger.debug("reconnection not supported: " + remote());
+			logger.debug(id + ": reconnection not supported: " + remote());
 		}
 	}
 

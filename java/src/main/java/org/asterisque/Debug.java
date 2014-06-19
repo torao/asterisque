@@ -18,6 +18,8 @@ import java.text.DateFormat;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -59,7 +61,7 @@ public final class Debug {
 		}
 		if(value instanceof String) {
 			String str = (String) value;
-			return "\"" + str.chars().mapToObj(Debug::escape) + "\"";
+			return "\"" + str.chars().mapToObj(Debug::escape).collect(Collectors.joining()) + "\"";
 		}
 		if(value instanceof InetSocketAddress){
 			InetSocketAddress i = (InetSocketAddress)value;
@@ -68,6 +70,10 @@ public final class Debug {
 		if(value instanceof InetAddress){
 			InetAddress i = (InetAddress)value;
 			return i.getHostName() + "/" + i.getHostAddress();
+		}
+		if(value instanceof Optional<?>){
+			Optional<?> o = (Optional<?>)value;
+			return o.isPresent()? ("Some(" + toString(o.get()) + ")"): "None";
 		}
 		if(value instanceof Map<?, ?>) {
 			return "{" + String.join(",",
@@ -128,9 +134,9 @@ public final class Debug {
 				return "\\\"";
 			default:
 				if(Character.isISOControl(ch) || !Character.isDefined(ch)) {
-					return "\\u" + String.format("%04X", (int) ch);
+					return "\\u" + String.format("%04X", ch);
 				}
-				return String.valueOf(ch);
+				return String.valueOf((char)ch);
 		}
 	}
 

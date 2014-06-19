@@ -6,6 +6,7 @@
 package org
 
 import java.net.SocketAddress
+import java.util.Optional
 
 import scala.concurrent.{Promise, Future}
 import java.util.function._
@@ -29,6 +30,11 @@ package object asterisque {
 		override def andThen[V](after:Function[_ >: R, _ <: V]):BiFunction[T, U, V] = super.andThen(after)
 	}
 
+	implicit def IntToInteger(i:Int) = Integer.valueOf(i)
+
+	/** Java Optional to Scala Option */
+	implicit def OptionalToOption[T](option:Optional[T]) = if(option.isPresent) Some(option.get()) else None
+
 	/** Java CompletableFuture to Scala Future */
 	implicit class J2SCompletableFuture[T](future:CompletableFuture[T]) {
 		def toFuture:Future[T] = {
@@ -46,4 +52,5 @@ package object asterisque {
 			local.listen(address, config, onAccept).toFuture
 		}
 	}
+
 }
