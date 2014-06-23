@@ -9,13 +9,11 @@ package org.asterisque;
 // Asterisque
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-import org.slf4j.Logger;
-
-import javax.net.ssl.SSLSession;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.Charset;
-import java.security.cert.Certificate;
-import java.security.cert.X509Certificate;
-import java.text.DateFormat;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ThreadFactory;
 
 /**
@@ -76,4 +74,27 @@ public final class Asterisque {
 		return r -> newThread(role, r);
 	}
 
+	public static final UUID Zero = new UUID(0, 0);
+
+
+	public static final class Protocol {
+		private Protocol(){ }
+
+		/**
+		 * プロトコル識別子兼エンディアン確認用の 2 バイトのマジックナンバー。ASCII コードで "*Q" の順でバイナリスト
+		 * リームの先頭に出現しなければならない。
+		 */
+		public static final short Signature = 0x2A51;
+
+		/** プロトコルバージョン 0.1 を表す数値 */
+		public static final short Version_0_1 = 0x0001;
+
+		// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		// Header
+		// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		/**
+		 */
+		public static final class Header {
+		}
+	}
 }

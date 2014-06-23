@@ -3,13 +3,16 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package org.asterisque;
+package org.asterisque.message;
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Abort
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+import org.asterisque.Debug;
+
 /**
- * 処理の中断状況を表すために {@link org.asterisque.Close} に付加される情報です。
+ * 処理の中断状況を表すために {@link Close} に付加される情報です。
  *
  * @author Takami Torao
  */

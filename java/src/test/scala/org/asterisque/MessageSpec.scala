@@ -5,6 +5,7 @@
 */
 package org.asterisque
 
+import org.asterisque.message.{Message, Control}
 import org.specs2.Specification
 import java.lang.reflect.Modifier
 import scala.util.Random

@@ -48,6 +48,11 @@ public class LocalNode {
 	private final Map<UUID, Session> sessions = new ConcurrentHashMap<>();
 
 	/**
+	 * このノードの ID です。
+	 */
+	public final UUID id;
+
+	/**
 	 * このノードの名前です。
 	 */
 	public final String name;
@@ -74,7 +79,8 @@ public class LocalNode {
 	 * @param service ノードで発生したセッションのデフォルトのサービス
 	 * @param repository セッションを待避するリポジトリ
 	 */
-	public LocalNode(String name, ExecutorService executor, Service service, Repository repository){
+	public LocalNode(UUID id, String name, ExecutorService executor, Service service, Repository repository){
+		this.id = id;
 		this.name = name;
 		this.executor = executor;
 		this.service = service;
@@ -103,20 +109,25 @@ public class LocalNode {
 			CompletableFuture<Wire> future = CompletableFuture.completedFuture(wire);
 			Optional<CompletableFuture<Wire>> of = Optional.of(future);
 			AtomicReference<Optional<CompletableFuture<Wire>>> ref = new AtomicReference<>(of);
-			Session session = new Session(id, this, true, service, options, () -> ref.getAndSet(Optional.empty()));
+			Session session = new Session(id, this, service, options, () -> ref.getAndSet(Optional.empty()));
 			sessions.put(id, session);
 			session.onClosed.add(s -> sessions.remove(id));
 			onAccept.accept(session);
 		});
 	}
 
-	public Session connect(SocketAddress remote, Options options){
+	public CompletableFuture<Session> connect(SocketAddress remote, Options options){
 		Bridge bridge = options.get(Options.KEY_BRIDGE).get();
-		UUID id = repository.nextUUID();
-		Session session = new Session(id, this, false, service, options, () -> Optional.of(bridge.newWire(this, remote, options)));
-		sessions.put(id, session);
-		session.onClosed.add(s -> sessions.remove(id));
-		return session;
+		CompletableFuture<Session> future = new CompletableFuture<>();
+		new Session(this, service, options,
+			() -> Optional.of(bridge.newWire(this, remote, options)),
+			(Session _session, UUID id) -> {
+				sessions.put(id, _session);
+				_session.onClosed.add(s -> sessions.remove(id));
+				future.complete(_session);
+			}
+		);
+		return future;
 	}
 
 	// ==============================================================================================

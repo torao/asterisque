@@ -3,7 +3,9 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package org.asterisque;
+package org.asterisque.message;
+
+import org.asterisque.Debug;
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Control
@@ -15,6 +17,8 @@ package org.asterisque;
  */
 public final class Control extends Message {
 
+	public static final byte StreamHeader = 'Q';
+
 	public static final byte Close = 1;
 
 	// ==============================================================================================
@@ -22,6 +26,7 @@ public final class Control extends Message {
 	// ==============================================================================================
 	/**
 	 * 制御コードです。
+	 * 最上位ビットが 1 の場合に Struct を持ちます。
 	 */
 	public final byte code;
 
@@ -29,7 +34,7 @@ public final class Control extends Message {
 	// データ
 	// ==============================================================================================
 	/**
-	 * 制御コードに対するデータを表すバイト配列です。
+	 * コード値に付属するデータを表すバイナリです。
 	 */
 	public final byte[] data;
 
@@ -49,6 +54,18 @@ public final class Control extends Message {
 	}
 
 	// ==============================================================================================
+	// コンストラクタ
+	// ==============================================================================================
+	/**
+	 * Control メッセージを構築します。
+	 */
+	public Control(byte code){
+		super((short)0 /* not used */);
+		this.code = code;
+		this.data = new byte[0];
+	}
+
+	// ==============================================================================================
 	// インスタンスの文字列化
 	// ==============================================================================================
 	/**
@@ -58,4 +75,5 @@ public final class Control extends Message {
 	public String toString(){
 		return "Control(0x" + String.format("%02X", code & 0xFF) + "," + Debug.toString(data) + ")";
 	}
+
 }

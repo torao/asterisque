@@ -131,7 +131,7 @@ public class Netty implements Bridge {
 
 		server.bind().addListener(f -> {
 			if(f.isSuccess()){
-				logger.debug("operationComplete(success)");
+				logger.info("startup server: " + Debug.toString(address));
 				future.complete(new Server(node, address, options) {
 					@Override
 					public void close() {
@@ -139,7 +139,7 @@ public class Netty implements Bridge {
 					}
 				});
 			} else {
-				logger.debug("operationComplete(failure)");
+				logger.error("server bind failure: " + Debug.toString(address), f.cause());
 				future.completeExceptionally(f.cause());
 				master.shutdownGracefully();
 			}

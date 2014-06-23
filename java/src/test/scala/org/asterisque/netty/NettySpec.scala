@@ -29,6 +29,7 @@ sample bidirectional server and client interaction. $e0
 	val waitTime = Duration(3, TimeUnit.SECONDS)
 
 	def e0 = {
+
 		trait Echo {
 			@Export(100)
 			def echo(text:String):String
@@ -59,15 +60,14 @@ sample bidirectional server and client interaction. $e0
 			val r = session.bind(classOf[Reverse])
 			p0.success(r.reverse("ABCDEFG"))
 		}
-		locally {
-			Await.ready(future, waitTime)
-		}
+		Await.ready(future, waitTime)
 
 		val reverse = new LocalNode("reverse", exec, ReverseService, repository)
-		val session = reverse.connect(address, new Options()
+		val future2 = reverse.connect(address, new Options()
 			.set(Options.KEY_BRIDGE, bridge)
 			.set(Options.KEY_CODEC, MessagePackCodec.getInstance()))
 		locally {
+			val session = Await.result(future2, waitTime)
 			val e = session.bind(classOf[Echo])
 			p1.success(e.echo("XYZ"))
 		}

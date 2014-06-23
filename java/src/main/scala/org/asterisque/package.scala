@@ -36,20 +36,18 @@ package object asterisque {
 	implicit def OptionalToOption[T](option:Optional[T]) = if(option.isPresent) Some(option.get()) else None
 
 	/** Java CompletableFuture to Scala Future */
-	implicit class J2SCompletableFuture[T](future:CompletableFuture[T]) {
-		def toFuture:Future[T] = {
-			val promise = Promise[T]()
-			val f = Function2ToBiConsumer({ (t:T, ex:Throwable) =>
-				if(ex == null) promise.success(t) else promise.failure(ex)
-			})
-			future.whenComplete(f)
-			promise.future
-		}
+	implicit def CompletableFuture2Future[T](future:CompletableFuture[T]):Future[T] = {
+		val promise = Promise[T]()
+		val f = Function2ToBiConsumer({ (t:T, ex:Throwable) =>
+			if(ex == null) promise.success(t) else promise.failure(ex)
+		})
+		future.whenComplete(f)
+		promise.future
 	}
 
 	implicit class RichLocalHost(local:LocalNode) {
 		def listen(address:SocketAddress, config:Options)(onAccept:(Session)=>Unit):Future[Bridge.Server] = {
-			local.listen(address, config, onAccept).toFuture
+			local.listen(address, config, onAccept)
 		}
 	}
 

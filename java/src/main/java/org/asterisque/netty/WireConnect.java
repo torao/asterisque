@@ -8,10 +8,12 @@ package org.asterisque.netty;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.ssl.SslHandler;
-import org.asterisque.Options;
+import org.asterisque.Asterisque;
 import org.asterisque.Debug;
 import org.asterisque.LocalNode;
-import org.asterisque.Message;
+import org.asterisque.Options;
+import org.asterisque.message.Message;
+import org.asterisque.message.StreamHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

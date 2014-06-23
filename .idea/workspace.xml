@@ -8,10 +8,40 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Debug.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Debug.java" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/message/Control.java" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/message/StreamHeader.java" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Sync.java" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Control.java" afterPath="" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Abort.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/message/Abort.java" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Block.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/message/Block.java" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Close.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/message/Close.java" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Message.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/message/Message.java" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Open.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/message/Open.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Asterisque.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Asterisque.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/codec/Codec.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/codec/Codec.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/DepartureGate.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/DepartureGate.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/codec/JavaCodec.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/codec/JavaCodec.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/LocalNode.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/LocalNode.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/MessageDecoder.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/MessageDecoder.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/MessageEncoder.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/MessageEncoder.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/test/scala/org/asterisque/MessageSpec.scala" afterPath="$PROJECT_DIR$/java/src/test/scala/org/asterisque/MessageSpec.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/Netty.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/Netty.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/test/scala/org/asterisque/netty/NettySpec.scala" afterPath="$PROJECT_DIR$/java/src/test/scala/org/asterisque/netty/NettySpec.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/NettyWire.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/NettyWire.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Options.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Options.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/test/scala/org/asterisque/OptionsSpec.scala" afterPath="$PROJECT_DIR$/java/src/test/scala/org/asterisque/OptionsSpec.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Pipe.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Pipe.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/PipeInputStream.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/PipeInputStream.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/PipeMessageSink.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/PipeMessageSink.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/PipeMessageSource.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/PipeMessageSource.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/PipeOutputStream.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/PipeOutputStream.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/PipeSpace.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/PipeSpace.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/cluster/Repository.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/cluster/Repository.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Service.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Service.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Session.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Session.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/codec/Struct.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/codec/Struct.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Wire.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Wire.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/WireConnect.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/WireConnect.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/test/resources/log4j.properties" afterPath="$PROJECT_DIR$/java/src/test/resources/log4j.properties" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/scala/org/asterisque/package.scala" afterPath="$PROJECT_DIR$/java/src/main/scala/org/asterisque/package.scala" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
@@ -68,8 +98,8 @@
         <option name="LOG_MESSAGE" value="" />
       </breakpoint>
     </breakpoint_any>
-    <breakpoint_rules converted="true" />
     <ui_properties converted="true" />
+    <breakpoint_rules converted="true" />
   </component>
   <component name="ExecutionTargetManager" SELECTED_TARGET="default_target" />
   <component name="FavoritesManager">
@@ -77,55 +107,37 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="NettySpec.scala" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/java/src/test/scala/org/asterisque/netty/NettySpec.scala">
+      <file leaf-file-name="Control.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/message/Control.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="203" max-vertical-offset="1050">
-              <caret line="42" column="38" selection-start-line="42" selection-start-column="38" selection-end-line="42" selection-end-column="38" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="21" max-vertical-offset="1215">
+              <caret line="64" column="28" selection-start-line="64" selection-start-column="28" selection-end-line="64" selection-end-column="28" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Service.java" pinned="false" current="true" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Service.java">
+      <file leaf-file-name="Struct.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/codec/Struct.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.3328551" vertical-offset="1778" max-vertical-offset="3600">
-              <caret line="149" column="15" selection-start-line="149" selection-start-column="15" selection-end-line="149" selection-end-column="15" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="121" max-vertical-offset="825">
+              <caret line="51" column="0" selection-start-line="27" selection-start-column="0" selection-end-line="51" selection-end-column="0" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Session.java" pinned="false" current="false" current-in-tab="false">
+      <file leaf-file-name="Session.java" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Session.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="3630" max-vertical-offset="6135">
-              <caret line="216" column="27" selection-start-line="216" selection-start-column="27" selection-end-line="216" selection-end-column="27" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="package.scala" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/java/src/main/scala/org/asterisque/package.scala">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="286" max-vertical-offset="930">
-              <caret line="36" column="0" selection-start-line="36" selection-start-column="0" selection-end-line="36" selection-end-column="0" />
+            <state vertical-scroll-proportion="-0.08522727" vertical-offset="5535" max-vertical-offset="7935">
+              <caret line="390" column="42" selection-start-line="390" selection-start-column="42" selection-end-line="390" selection-end-column="42" />
               <folding>
-                <element signature="n#!!doc" expanded="true" />
-                <element signature="e#182#211#0" expanded="true" />
+                <element signature="e#15237#15238#0" expanded="true" />
+                <element signature="e#15265#15266#0" expanded="true" />
+                <element signature="e#17513#17514#0" expanded="true" />
+                <element signature="e#17542#17543#0" expanded="true" />
               </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="Wire.java" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Wire.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="1591" max-vertical-offset="2160">
-              <caret line="120" column="47" selection-start-line="120" selection-start-column="47" selection-end-line="120" selection-end-column="47" />
-              <folding />
             </state>
           </provider>
         </entry>
@@ -133,39 +145,69 @@
       <file leaf-file-name="Options.java" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Options.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="389" max-vertical-offset="2760">
-              <caret line="168" column="39" selection-start-line="168" selection-start-column="39" selection-end-line="168" selection-end-column="39" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="921" max-vertical-offset="2880">
+              <caret line="54" column="25" selection-start-line="54" selection-start-column="25" selection-end-line="54" selection-end-column="25" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Debug.java" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Debug.java">
+      <file leaf-file-name="Repository.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/cluster/Repository.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="425" max-vertical-offset="2535">
-              <caret line="63" column="83" selection-start-line="63" selection-start-column="83" selection-end-line="63" selection-end-column="83" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="196" max-vertical-offset="900">
+              <caret line="57" column="59" selection-start-line="57" selection-start-column="59" selection-end-line="57" selection-end-column="59" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Collectors.java" pinned="false" current="false" current-in-tab="false">
-        <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0.jdk/Contents/Home/src.zip!/java/util/stream/Collectors.java">
+      <file leaf-file-name="StreamHeader.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/message/StreamHeader.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="545" max-vertical-offset="22440">
-              <caret line="103" column="19" selection-start-line="103" selection-start-column="19" selection-end-line="103" selection-end-column="19" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="540" max-vertical-offset="2280">
+              <caret line="141" column="41" selection-start-line="141" selection-start-column="41" selection-end-line="141" selection-end-column="41" />
+              <folding>
+                <element signature="e#0#4782#0" expanded="true" />
+                <element signature="imports" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="NettyWire.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/NettyWire.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="0.0" vertical-offset="1666" max-vertical-offset="3195">
+              <caret line="108" column="38" selection-start-line="108" selection-start-column="38" selection-end-line="108" selection-end-column="38" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Specification.scala" pinned="false" current="false" current-in-tab="false">
-        <entry file="jar://$PROJECT_DIR$/lib/specs2_2.11-2.3.12-sources.jar!/org/specs2/Specification.scala">
+      <file leaf-file-name="Message.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/message/Message.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="35" max-vertical-offset="810">
-              <caret line="21" column="0" selection-start-line="21" selection-start-column="0" selection-end-line="21" selection-end-column="0" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="615">
+              <caret line="14" column="23" selection-start-line="14" selection-start-column="23" selection-end-line="14" selection-end-column="23" />
               <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="Asterisque.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Asterisque.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="0.0" vertical-offset="886" max-vertical-offset="1590">
+              <caret line="97" column="0" selection-start-line="97" selection-start-column="0" selection-end-line="97" selection-end-column="0" />
+              <folding>
+                <element signature="e#0#3213#0" expanded="true" />
+                <element signature="imports" expanded="true" />
+                <element signature="e#2184#2185#0" expanded="true" />
+                <element signature="e#2241#2242#0" expanded="true" />
+                <element signature="e#2560#2561#0" expanded="true" />
+                <element signature="e#2597#2598#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -173,8 +215,8 @@
       <file leaf-file-name="WireConnect.java" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/WireConnect.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="1665" max-vertical-offset="2940">
-              <caret line="111" column="45" selection-start-line="111" selection-start-column="45" selection-end-line="111" selection-end-column="45" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="1246" max-vertical-offset="2640">
+              <caret line="112" column="0" selection-start-line="112" selection-start-column="0" selection-end-line="112" selection-end-column="0" />
               <folding />
             </state>
           </provider>
@@ -198,15 +240,6 @@
   <component name="IdeDocumentHistory">
     <option name="changedFiles">
       <list>
-        <option value="$PROJECT_DIR$/java8/src/main/java/io/asterisque/Session.java" />
-        <option value="$PROJECT_DIR$/java8/src/main/java/org/asterisque/Wire.java" />
-        <option value="$PROJECT_DIR$/java8/src/main/java/org/asterisque/MessageQueue.java" />
-        <option value="$PROJECT_DIR$/java8/src/main/java/org/asterisque/WireQueue.java" />
-        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/MessageQueue.java" />
-        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/WireQueue.java" />
-        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/EventHandlers.java" />
-        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/PipePool.java" />
-        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Open.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/io/asterisque/Session.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/util/Breaker.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/util/CircuitBreaker.java" />
@@ -216,7 +249,6 @@
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Export.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/PipeInputStream.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/util/ConditionalBarrier.java" />
-        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Pipe.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/util/LooseBarrier.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/io/asterisque/Pipe.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/TrafficControl.java" />
@@ -228,26 +260,36 @@
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Attributes.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Close.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Block.java" />
-        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/codec/Codec.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Message.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/util/Source.java" />
-        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/PipeSpace.java" />
         <option value="$PROJECT_DIR$/java/src/test/scala/org/asterisque/MessageSpec.scala" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Config.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Network.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/j2s.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/j2s/AbstractConsumer.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/NettyWire.java" />
-        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/WireConnect.java" />
-        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/LocalNode.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Bridge.java" />
-        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/Netty.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Wire.java" />
-        <option value="$PROJECT_DIR$/java/src/test/scala/org/asterisque/netty/NettySpec.scala" />
-        <option value="$PROJECT_DIR$/java/src/main/scala/org/asterisque/package.scala" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Debug.java" />
         <option value="$PROJECT_DIR$/java/src/test/scala/org/asterisque/OptionsSpec.scala" />
+        <option value="$PROJECT_DIR$/java/src/test/resources/log4j.properties" />
+        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Pipe.java" />
+        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/PipeSpace.java" />
+        <option value="$PROJECT_DIR$/java/src/test/scala/org/asterisque/netty/NettySpec.scala" />
+        <option value="$PROJECT_DIR$/java/src/main/scala/org/asterisque/package.scala" />
+        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Control.java" />
+        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/codec/Struct.java" />
+        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/message/Sync.java" />
+        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Sync.java" />
+        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/Netty.java" />
+        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/LocalNode.java" />
+        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Asterisque.java" />
+        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/message/Control.java" />
+        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/codec/Codec.java" />
+        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/WireConnect.java" />
+        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/message/StreamHeader.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Options.java" />
+        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/cluster/Repository.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Session.java" />
       </list>
     </option>
@@ -311,6 +353,8 @@
       <sortByType />
     </navigator>
     <panes>
+      <pane id="PackagesPane" />
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <PATH>
@@ -326,6 +370,42 @@
             </PATH_ELEMENT>
             <PATH_ELEMENT>
               <option name="myItemId" value="asterisk" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisque" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisk" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="test" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="scala" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisque" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisk" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
               <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -497,10 +577,110 @@
               <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisque" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisk" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="java" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="main" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="java" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisque" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="netty" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisque" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisk" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="java" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="main" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="java" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisque" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="message" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisque" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisk" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="java" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="main" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="java" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="asterisque" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="codec" />
+              <option name="myItemType" value="com.android.tools.idea.gradle.projectView.AndroidPsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
         </subPane>
       </pane>
-      <pane id="PackagesPane" />
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -546,12 +726,13 @@
       <recent name="$PROJECT_DIR$/docs" />
       <recent name="$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk" />
     </key>
+    <key name="MoveClassesOrPackagesDialog.RECENTS_KEY">
+      <recent name="org.asterisque" />
+      <recent name="com.kazzla.asterisk" />
+    </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/java/src/test" />
       <recent name="$PROJECT_DIR$/src" />
-    </key>
-    <key name="MoveClassesOrPackagesDialog.RECENTS_KEY">
-      <recent name="com.kazzla.asterisk" />
     </key>
   </component>
   <component name="RunManager" selected="Specs2.NettySpec">
@@ -678,6 +859,14 @@
       <option name="FILTER_LOGCAT_AUTOMATICALLY" value="true" />
       <method />
     </configuration>
+    <configuration default="true" type="Remote" factoryName="Remote">
+      <option name="USE_SOCKET_TRANSPORT" value="true" />
+      <option name="SERVER_MODE" value="false" />
+      <option name="SHMEM_ADDRESS" value="javadebug" />
+      <option name="HOST" value="localhost" />
+      <option name="PORT" value="5005" />
+      <method />
+    </configuration>
     <configuration default="true" type="Specs2RunConfiguration" factoryName="Specs2">
       <module name="" />
       <setting name="path" value="" />
@@ -691,12 +880,17 @@
       <setting name="showProgressMessages" value="true" />
       <method />
     </configuration>
-    <configuration default="true" type="Remote" factoryName="Remote">
-      <option name="USE_SOCKET_TRANSPORT" value="true" />
-      <option name="SERVER_MODE" value="false" />
-      <option name="SHMEM_ADDRESS" value="javadebug" />
-      <option name="HOST" value="localhost" />
-      <option name="PORT" value="5005" />
+    <configuration default="true" type="Applet" factoryName="Applet">
+      <module name="" />
+      <option name="MAIN_CLASS_NAME" />
+      <option name="HTML_FILE_NAME" />
+      <option name="HTML_USED" value="false" />
+      <option name="WIDTH" value="400" />
+      <option name="HEIGHT" value="300" />
+      <option name="POLICY_FILE" value="$APPLICATION_HOME_DIR$/bin/appletviewer.policy" />
+      <option name="VM_PARAMETERS" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
+      <option name="ALTERNATIVE_JRE_PATH" />
       <method />
     </configuration>
     <configuration default="true" type="TestNG" factoryName="TestNG">
@@ -724,19 +918,6 @@
       <envs />
       <properties />
       <listeners />
-      <method />
-    </configuration>
-    <configuration default="true" type="Applet" factoryName="Applet">
-      <module name="" />
-      <option name="MAIN_CLASS_NAME" />
-      <option name="HTML_FILE_NAME" />
-      <option name="HTML_USED" value="false" />
-      <option name="WIDTH" value="400" />
-      <option name="HEIGHT" value="300" />
-      <option name="POLICY_FILE" value="$APPLICATION_HOME_DIR$/bin/appletviewer.policy" />
-      <option name="VM_PARAMETERS" />
-      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
-      <option name="ALTERNATIVE_JRE_PATH" />
       <method />
     </configuration>
     <configuration default="true" type="Application" factoryName="Application">
@@ -786,6 +967,19 @@
       <patterns />
       <method />
     </configuration>
+    <configuration default="true" type="ScalaTestRunConfiguration" factoryName="ScalaTest">
+      <module name="" />
+      <setting name="path" value="" />
+      <setting name="package" value="" />
+      <setting name="vmparams" value="" />
+      <setting name="params" value="" />
+      <setting name="workingDirectory" value="$PROJECT_DIR$" />
+      <setting name="searchForTest" value="Across module dependencies" />
+      <setting name="testName" value="" />
+      <setting name="testKind" value="Class" />
+      <setting name="showProgressMessages" value="true" />
+      <method />
+    </configuration>
     <configuration default="true" type="AndroidRunConfigurationType" factoryName="Android Application">
       <module name="" />
       <option name="ACTIVITY_CLASS" value="" />
@@ -804,19 +998,6 @@
       <option name="CLEAR_LOGCAT" value="false" />
       <option name="SHOW_LOGCAT_AUTOMATICALLY" value="true" />
       <option name="FILTER_LOGCAT_AUTOMATICALLY" value="true" />
-      <method />
-    </configuration>
-    <configuration default="true" type="ScalaTestRunConfiguration" factoryName="ScalaTest">
-      <module name="" />
-      <setting name="path" value="" />
-      <setting name="package" value="" />
-      <setting name="vmparams" value="" />
-      <setting name="params" value="" />
-      <setting name="workingDirectory" value="$PROJECT_DIR$" />
-      <setting name="searchForTest" value="Across module dependencies" />
-      <setting name="testName" value="" />
-      <setting name="testKind" value="Class" />
-      <setting name="showProgressMessages" value="true" />
       <method />
     </configuration>
     <list size="5">
@@ -884,14 +1065,13 @@
       <window_info id="Designer" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.22142857" sideWeight="0.4945055" order="11" side_tool="false" content_ui="tabs" />
-      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.22606924" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="SBT Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.327551" sideWeight="0.4932845" order="15" side_tool="false" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.23673469" sideWeight="0.6984127" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.23030907" sideWeight="0.6984127" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.29897958" sideWeight="0.5" order="1" side_tool="true" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="true" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32959184" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
-      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.36558044" sideWeight="0.3015873" order="14" side_tool="true" content_ui="tabs" />
+      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.2311609" sideWeight="0.3015873" order="14" side_tool="true" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32892057" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.20818071" sideWeight="0.67016804" order="7" side_tool="false" content_ui="tabs" x="1080" y="45" width="408" height="952" />
       <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
@@ -903,6 +1083,7 @@
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
       <window_info id="JetGradle" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.22606924" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
       <window_info id="SBT Execute" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="true" content_ui="tabs" />
       <window_info id="Dependency Viewer" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.43382353" sideWeight="0.5" order="13" side_tool="false" content_ui="tabs" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25510204" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
@@ -926,15 +1107,7 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Service.java</url>
-          <line>150</line>
-          <properties />
-          <option name="timeStamp" value="9" />
-        </line-breakpoint>
-      </breakpoints>
-      <option name="time" value="10" />
+      <option name="time" value="12" />
     </breakpoint-manager>
   </component>
   <component name="antWorkspaceConfiguration">
@@ -942,55 +1115,6 @@
     <option name="FILTER_TARGETS" value="false" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/util/LooseBarrier.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="64" max-vertical-offset="675">
-          <caret line="20" column="26" selection-start-line="20" selection-start-column="26" selection-end-line="20" selection-end-column="26" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/PipeOutputStream.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="299" max-vertical-offset="1530">
-          <caret line="28" column="10" selection-start-line="28" selection-start-column="10" selection-end-line="28" selection-end-column="10" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0.jdk/Contents/Home/src.zip!/java/util/concurrent/PriorityBlockingQueue.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="2.4973147" vertical-offset="0" max-vertical-offset="14700">
-          <caret line="202" column="11" selection-start-line="202" selection-start-column="11" selection-end-line="202" selection-end-column="11" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/ProtocolViolationException.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.1572327" vertical-offset="0" max-vertical-offset="954">
-          <caret line="14" column="13" selection-start-line="14" selection-start-column="13" selection-end-line="14" selection-end-column="13" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/DepartureGate.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.8647799" vertical-offset="0" max-vertical-offset="3075">
-          <caret line="59" column="0" selection-start-line="59" selection-start-column="0" selection-end-line="59" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Export.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="390">
-          <caret line="7" column="0" selection-start-line="7" selection-start-column="0" selection-end-line="7" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Close.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="105" max-vertical-offset="1335">
-          <caret line="54" column="9" selection-start-line="54" selection-start-column="9" selection-end-line="54" selection-end-column="9" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/main/scala/com/kazzla/asterisk/Node.scala">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.528914" vertical-offset="0" max-vertical-offset="3420">
@@ -998,21 +1122,7 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/codec/Codec.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="6465">
-          <caret line="53" column="28" selection-start-line="53" selection-start-column="28" selection-end-line="53" selection-end-column="28" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/test/resources/log4j.properties">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="929">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Abort.java">
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/message/Abort.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="945">
           <caret line="16" column="0" selection-start-line="16" selection-start-column="0" selection-end-line="16" selection-end-column="0" />
@@ -1026,7 +1136,7 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Block.java">
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/message/Block.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="1080" max-vertical-offset="2535">
           <caret line="102" column="9" selection-start-line="102" selection-start-column="9" selection-end-line="102" selection-end-column="9" />
@@ -1057,20 +1167,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/PipeSpace.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="960" max-vertical-offset="1935">
-          <caret line="98" column="0" selection-start-line="98" selection-start-column="0" selection-end-line="98" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Message.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.27027026" vertical-offset="0" max-vertical-offset="615">
-          <caret line="14" column="23" selection-start-line="14" selection-start-column="23" selection-end-line="14" selection-end-column="23" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/test/scala/com/kazzla/asterisk/MessageSpec.scala">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="750">
@@ -1093,21 +1189,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Pipe.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="945" max-vertical-offset="5085">
-          <caret line="263" column="5" selection-start-line="263" selection-start-column="4" selection-end-line="263" selection-end-column="5" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Asterisque.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="-0.5675676" vertical-offset="495" max-vertical-offset="1050">
-          <caret line="23" column="19" selection-start-line="23" selection-start-column="19" selection-end-line="23" selection-end-column="19" />
-        </state>
-      </provider>
-    </entry>
     <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0.jdk/Contents/Home/src.zip!/java/net/InetAddress.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="1.7911733" vertical-offset="19336" max-vertical-offset="22845">
@@ -1122,7 +1203,7 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Open.java">
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/message/Open.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="435" max-vertical-offset="1035">
           <caret line="52" column="29" selection-start-line="52" selection-start-column="29" selection-end-line="52" selection-end-column="29" />
@@ -1141,22 +1222,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="750">
           <caret line="62" column="58" selection-start-line="62" selection-start-column="12" selection-end-line="62" selection-end-column="58" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/NettyWire.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="3195">
-          <caret line="108" column="38" selection-start-line="108" selection-start-column="38" selection-end-line="108" selection-end-column="38" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/Netty.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="734" max-vertical-offset="3030">
-          <caret line="82" column="46" selection-start-line="82" selection-start-column="46" selection-end-line="82" selection-end-column="46" />
           <folding />
         </state>
       </provider>
@@ -1184,27 +1249,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/WireConnect.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="180" max-vertical-offset="2640">
-          <caret line="111" column="45" selection-start-line="111" selection-start-column="45" selection-end-line="111" selection-end-column="45" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Wire.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="1116" max-vertical-offset="2070">
-          <caret line="120" column="47" selection-start-line="120" selection-start-column="47" selection-end-line="120" selection-end-column="47" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="jar://$PROJECT_DIR$/lib/specs2_2.11-2.3.12-sources.jar!/org/specs2/Specification.scala">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="35" max-vertical-offset="810">
           <caret line="21" column="0" selection-start-line="21" selection-start-column="0" selection-end-line="21" selection-end-column="0" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -1212,7 +1260,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.33333334" vertical-offset="95" max-vertical-offset="1815">
           <caret line="23" column="0" selection-start-line="23" selection-start-column="0" selection-end-line="23" selection-end-column="0" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -1220,7 +1267,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.33333334" vertical-offset="230" max-vertical-offset="1365">
           <caret line="27" column="0" selection-start-line="27" selection-start-column="0" selection-end-line="27" selection-end-column="0" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -1228,15 +1274,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.027522936" vertical-offset="0" max-vertical-offset="545">
           <caret line="1" column="21" selection-start-line="1" selection-start-column="21" selection-end-line="1" selection-end-column="21" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0.jdk/Contents/Home/src.zip!/java/lang/Class.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.33333334" vertical-offset="19175" max-vertical-offset="51540">
-          <caret line="1368" column="18" selection-start-line="1368" selection-start-column="18" selection-end-line="1368" selection-end-column="18" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -1252,7 +1289,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="545" max-vertical-offset="22440">
           <caret line="103" column="19" selection-start-line="103" selection-start-column="19" selection-end-line="103" selection-end-column="19" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -1272,62 +1308,224 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Options.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="389" max-vertical-offset="2760">
-          <caret line="168" column="39" selection-start-line="168" selection-start-column="39" selection-end-line="168" selection-end-column="39" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/LocalNode.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.18388791" vertical-offset="165" max-vertical-offset="1965">
-          <caret line="33" column="0" selection-start-line="33" selection-start-column="0" selection-end-line="33" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0.jdk/Contents/Home/src.zip!/java/io/FileOutputStream.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.33274958" vertical-offset="3530" max-vertical-offset="5730">
           <caret line="282" column="24" selection-start-line="282" selection-start-column="24" selection-end-line="282" selection-end-column="24" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/java/src/test/resources/log4j.properties">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="210">
+          <caret line="3" column="37" selection-start-line="3" selection-start-column="37" selection-end-line="3" selection-end-column="37" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Service.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="1793" max-vertical-offset="3600">
+          <caret line="150" column="0" selection-start-line="150" selection-start-column="0" selection-end-line="150" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/codec/SimpleCodec.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.6542857" vertical-offset="112" max-vertical-offset="2625">
+          <caret line="45" column="10" selection-start-line="45" selection-start-column="10" selection-end-line="45" selection-end-column="10" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/ProtocolViolationException.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="360">
+          <caret line="20" column="9" selection-start-line="20" selection-start-column="9" selection-end-line="20" selection-end-column="9" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Pipe.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="4500" max-vertical-offset="5520">
+          <caret line="300" column="23" selection-start-line="300" selection-start-column="23" selection-end-line="300" selection-end-column="23" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/PipeSpace.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="1935" max-vertical-offset="2160">
+          <caret line="129" column="81" selection-start-line="129" selection-start-column="81" selection-end-line="129" selection-end-column="81" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/java/src/main/scala/org/asterisque/package.scala">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="286" max-vertical-offset="930">
-          <caret line="36" column="0" selection-start-line="36" selection-start-column="0" selection-end-line="36" selection-end-column="0" />
-          <folding>
-            <element signature="n#!!doc" expanded="true" />
-            <element signature="e#182#211#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Session.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="3630" max-vertical-offset="6135">
-          <caret line="216" column="27" selection-start-line="216" selection-start-column="27" selection-end-line="216" selection-end-column="27" />
+        <state vertical-scroll-proportion="0.0" vertical-offset="197" max-vertical-offset="900">
+          <caret line="52" column="0" selection-start-line="52" selection-start-column="0" selection-end-line="52" selection-end-column="0" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/java/src/test/scala/org/asterisque/netty/NettySpec.scala">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="203" max-vertical-offset="1050">
-          <caret line="42" column="38" selection-start-line="42" selection-start-column="38" selection-end-line="42" selection-end-column="38" />
+        <state vertical-scroll-proportion="0.0" vertical-offset="346" max-vertical-offset="1050">
+          <caret line="70" column="0" selection-start-line="70" selection-start-column="0" selection-end-line="70" selection-end-column="0" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Service.java">
+    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0.jdk/Contents/Home/src.zip!/java/lang/Class.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.3328551" vertical-offset="1778" max-vertical-offset="3600">
-          <caret line="149" column="15" selection-start-line="149" selection-start-column="15" selection-end-line="149" selection-end-column="15" />
+        <state vertical-scroll-proportion="0.70354456" vertical-offset="21215" max-vertical-offset="51540">
+          <caret line="1541" column="19" selection-start-line="1541" selection-start-column="19" selection-end-line="1541" selection-end-column="19" />
           <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Sync.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="315">
+          <caret line="15" column="0" selection-start-line="15" selection-start-column="0" selection-end-line="15" selection-end-column="0" />
+          <folding>
+            <element signature="e#0#402#0" expanded="true" />
+            <element signature="imports" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Wire.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="1366" max-vertical-offset="2070">
+          <caret line="120" column="0" selection-start-line="120" selection-start-column="0" selection-end-line="120" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/Netty.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="1170" max-vertical-offset="3030">
+          <caret line="96" column="0" selection-start-line="96" selection-start-column="0" selection-end-line="96" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/LocalNode.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="465" max-vertical-offset="2130">
+          <caret line="82" column="17" selection-start-line="82" selection-start-column="17" selection-end-line="82" selection-end-column="17" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Asterisque.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="886" max-vertical-offset="1590">
+          <caret line="97" column="0" selection-start-line="97" selection-start-column="0" selection-end-line="97" selection-end-column="0" />
+          <folding>
+            <element signature="e#0#3213#0" expanded="true" />
+            <element signature="imports" expanded="true" />
+            <element signature="e#2184#2185#0" expanded="true" />
+            <element signature="e#2241#2242#0" expanded="true" />
+            <element signature="e#2560#2561#0" expanded="true" />
+            <element signature="e#2597#2598#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/codec/Struct.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="121" max-vertical-offset="825">
+          <caret line="51" column="0" selection-start-line="27" selection-start-column="0" selection-end-line="51" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/codec/Codec.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="3.174716" vertical-offset="0" max-vertical-offset="6705">
+          <caret line="157" column="0" selection-start-line="157" selection-start-column="0" selection-end-line="157" selection-end-column="0" />
+          <folding>
+            <element signature="e#11658#11659#0" expanded="true" />
+            <element signature="e#11700#11701#0" expanded="true" />
+            <element signature="e#11802#11803#0" expanded="true" />
+            <element signature="e#11838#11839#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/message/Message.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="615">
+          <caret line="14" column="23" selection-start-line="14" selection-start-column="23" selection-end-line="14" selection-end-column="23" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/message/Control.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="21" max-vertical-offset="1215">
+          <caret line="64" column="28" selection-start-line="64" selection-start-column="28" selection-end-line="64" selection-end-column="28" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/NettyWire.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="1666" max-vertical-offset="3195">
+          <caret line="108" column="38" selection-start-line="108" selection-start-column="38" selection-end-line="108" selection-end-column="38" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/netty/WireConnect.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="1246" max-vertical-offset="2640">
+          <caret line="112" column="0" selection-start-line="112" selection-start-column="0" selection-end-line="112" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/message/StreamHeader.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="540" max-vertical-offset="2280">
+          <caret line="141" column="41" selection-start-line="141" selection-start-column="41" selection-end-line="141" selection-end-column="41" />
+          <folding>
+            <element signature="e#0#4782#0" expanded="true" />
+            <element signature="imports" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Options.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="1476" max-vertical-offset="2880">
+          <caret line="54" column="25" selection-start-line="54" selection-start-column="25" selection-end-line="54" selection-end-column="25" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/cluster/Repository.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="196" max-vertical-offset="900">
+          <caret line="57" column="59" selection-start-line="57" selection-start-column="59" selection-end-line="57" selection-end-column="59" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Session.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-0.08522727" vertical-offset="5535" max-vertical-offset="7935">
+          <caret line="390" column="42" selection-start-line="390" selection-start-column="42" selection-end-line="390" selection-end-column="42" />
+          <folding>
+            <element signature="e#15237#15238#0" expanded="true" />
+            <element signature="e#15265#15266#0" expanded="true" />
+            <element signature="e#17513#17514#0" expanded="true" />
+            <element signature="e#17542#17543#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>

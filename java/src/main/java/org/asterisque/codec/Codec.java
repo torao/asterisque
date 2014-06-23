@@ -5,7 +5,8 @@
 */
 package org.asterisque.codec;
 
-import org.asterisque.*;
+import org.asterisque.Asterisque;
+import org.asterisque.message.*;
 
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -73,8 +74,8 @@ public interface Codec {
 				}
 				m.writeBinary(block.payload, block.offset, block.length);
 			}
-		} else if(msg instanceof Control){
-			Control control = (Control)msg;
+		} else if(msg instanceof Control) {
+			Control control = (Control) msg;
 			m.writeTag(Msg.Control);
 			m.writeInt8(control.code);
 			m.writeBinary(control.data);
@@ -172,10 +173,10 @@ public interface Codec {
 	public Unmarshal newUnmarshal(ByteBuffer buffer);
 
 	public interface Msg {
-		public final byte Control = 0;
-		public final byte Open = 1;
-		public final byte Close = 2;
-		public final byte Block = 3;
+		public final byte Control = '*';
+		public final byte Open = 'O';
+		public final byte Close = 'C';
+		public final byte Block = 'B';
 	}
 
 	public interface Tag {
@@ -203,11 +204,18 @@ public interface Codec {
 		public default void writeTrue(){ writeTag(Tag.True); }
 		public default void writeFalse(){ writeTag(Tag.False); }
 		public void writeInt8(byte i);
+		public default void writeUInt8(short i){
+			if(i < 0 || i > 0xFF){
+				throw new IllegalArgumentException(String.format("out of unsigned int16 range: %d", i));
+			}
+			writeInt8((byte) (i & 0xFF));
+		}
 		public void writeInt16(short i);
 		public default void writeUInt16(int i){
 			if(i < 0 || i > 0xFFFF){
 				throw new IllegalArgumentException(String.format("out of unsigned int16 range: %d", i));
 			}
+			writeInt16((short)(i & 0xFFFF));
 		}
 		public void writeInt32(int i);
 		public void writeInt64(long i);
@@ -236,8 +244,12 @@ public interface Codec {
 			}
 		}
 		public default void writeStruct(Struct b){
+			if(b.count() > Struct.MaxFields){
+				throw new IllegalArgumentException(
+					"field count of " + b.getClass().getName() + " is too large: " + b.count() + " / " + Struct.MaxFields);
+			}
 			writeString(b.schema());
-			writeUInt16(b.count());
+			writeUInt8((short) (b.count() & 0xFF));
 			for(int i=0; i<b.count(); i++){
 				write(b.valueAt(i));
 			}
@@ -333,6 +345,9 @@ public interface Codec {
 			}
 		}
 		public byte readInt8() throws Unsatisfied;
+		public default short readUInt8() throws Unsatisfied {
+			return (short)(readInt8() & 0xFF);
+		}
 		public short readInt16() throws Unsatisfied;
 		public default int readUInt16() throws Unsatisfied {
 			return readInt16() & 0xFFFF;
@@ -370,7 +385,7 @@ public interface Codec {
 		}
 		public default Struct readStruct() throws Unsatisfied{
 			String schema = readString();
-			int length = readUInt16();
+			int length = readUInt8();
 			Object[] values = new Object[length];
 			for(int i=0; i<length; i++){
 				values[i] = read();

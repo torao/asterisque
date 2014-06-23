@@ -5,6 +5,7 @@
 */
 package org.asterisque;
 
+import org.asterisque.message.Block;
 import org.asterisque.util.CircuitBreaker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -5,6 +5,9 @@
 */
 package org.asterisque;
 
+import org.asterisque.message.Abort;
+import org.asterisque.message.Close;
+import org.asterisque.message.Open;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -124,7 +127,7 @@ class PipeSpace {
 			if(graceful){
 				// 残っているすべてのパイプに Close メッセージを送信
 				pipes.values().forEach( pipe -> {
-					Abort abort = new Abort(Abort.SessionClosing, "session " + session.id + " closing");
+					Abort abort = new Abort(Abort.SessionClosing, "session " + session.id() + " closing");
 					pipe.close(new Close(pipe.id, abort));
 				});
 			}

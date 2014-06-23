@@ -128,8 +128,16 @@ public class Options {
 	public static final IntKey KEY_WRITE_SOFT_LIMIT = new IntKey("org.asterisque.wire.write.softlimit", 1024);
 	public static final IntKey KEY_WRITE_HARD_LIMIT = new IntKey("org.asterisque.wire.write.hardlimit", Integer.MAX_VALUE);
 
+	// Client Options
+	public static final IntKey KEY_PING_REQUEST = new IntKey("org.asterisque.client.ping", 3);
+	public static final IntKey KEY_SESSION_TIMEOUT_REQUEST = new IntKey("org.asterisque.client.session.timeout", 30 * 60);
+
 	// Server Options
 	public static final IntKey KEY_SERVER_BACKLOG = new IntKey("org.asterisque.server.backlog", 50);
+	public static final IntKey KEY_MAX_PING = new IntKey("org.asterisque.server.ping.max", 60);
+	public static final IntKey KEY_MIN_PING = new IntKey("org.asterisque.server.ping.min", 1);
+	public static final IntKey KEY_MAX_SESSION_TIMEOUT = new IntKey("org.asterisque.server.session.timeout.max", 60 * 60);
+	public static final IntKey KEY_MIN_SESSION_TIMEOUT = new IntKey("org.asterisque.server.session.timeout.min", 60);
 
 	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	// Key

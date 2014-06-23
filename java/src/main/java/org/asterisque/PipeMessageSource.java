@@ -5,6 +5,7 @@
 */
 package org.asterisque;
 
+import org.asterisque.message.Block;
 import org.asterisque.util.Source;
 
 import java.util.function.Consumer;

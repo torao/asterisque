@@ -5,6 +5,7 @@
 */
 package org.asterisque.cluster;
 
+import java.security.Principal;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,6 +32,7 @@ public interface Repository {
 	// ==============================================================================================
 	/**
 	 * このリポジトリのスコープで新規の UUID を参照します。
+	 * {@link org.asterisque.Asterisque#Zero} と同値の UUID は予約されています。
 	 */
 	public UUID nextUUID();
 
@@ -43,7 +45,7 @@ public interface Repository {
 	 * @param binary バイナリデータ
 	 * @param expires データの有効期限 (現在時刻からのミリ秒)
 	 */
-	public void store(UUID id, byte[] binary, long expires);
+	public void store(Principal principal, UUID id, byte[] binary, long expires);
 
 	// ==============================================================================================
 	// データの復元
@@ -53,6 +55,6 @@ public interface Repository {
 	 * @param id データの ID
 	 * @return 復元されたデータ
 	 */
-	public Optional<byte[]> loadAndDelete(UUID id);
+	public Optional<byte[]> loadAndDelete(Optional<Principal> principal, UUID id);
 
 }

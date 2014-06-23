@@ -5,7 +5,7 @@
 */
 package org.asterisque.netty;
 
-import org.asterisque.Message;
+import org.asterisque.message.Message;
 import org.asterisque.codec.Codec;
 import org.asterisque.codec.CodecException;
 import io.netty.buffer.ByteBuf;

@@ -5,7 +5,7 @@
 */
 package org.asterisque.codec;
 
-import org.asterisque.Message;
+import org.asterisque.message.Message;
 
 import java.io.*;
 import java.nio.ByteBuffer;

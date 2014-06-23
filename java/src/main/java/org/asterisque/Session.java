@@ -5,19 +5,23 @@
 */
 package org.asterisque;
 
+import org.asterisque.message.*;
 import org.asterisque.util.CircuitBreaker;
 import org.asterisque.util.LooseBarrier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.ssl.SSLPeerUnverifiedException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.SocketAddress;
+import java.security.Principal;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -34,10 +38,13 @@ import java.util.stream.Stream;
 public class Session {
 	private static final Logger logger = LoggerFactory.getLogger(Session.class);
 
-	public final UUID id;
+	public final UUID id(){ return _id; }
 	public final LocalNode node;
 	public final boolean isServer;
 	public final Attributes attributes = new Attributes();
+
+	private UUID _id = Asterisque.Zero;
+	private Optional<StreamHeader> header = Optional.empty();
 
 	public Optional<SocketAddress> local(){ return wire.map(Wire::local); }
 	public Optional<SocketAddress> remote(){ return wire.map(Wire::remote); }
@@ -49,6 +56,7 @@ public class Session {
 	private volatile Optional<Wire> wire = Optional.empty();
 	private volatile Service service;
 
+	private final Options options;
 	private final DepartureGate departure;
 	private final PipeSpace pipes;
 	private final Wire.Plug plug;
@@ -68,22 +76,40 @@ public class Session {
 	 */
 	public final EventHandlers<Session> onClosed = new EventHandlers<>();
 
+	private final BiConsumer<Session,UUID> onSync;
+
 	// ==============================================================================================
 	// コンストラクタ
 	// ==============================================================================================
 	/**
 	 *
 	 */
-	Session(UUID id, LocalNode node, boolean isServer, Service defaultService, Options options,
+	Session(LocalNode node, Service defaultService, Options options,
+					Supplier<Optional<CompletableFuture<Wire>>> wireFactory, BiConsumer<Session,UUID> onSync) {
+		this(Asterisque.Zero, node, false, defaultService, options, wireFactory, onSync);
+	}
+
+	Session(UUID id, LocalNode node, Service defaultService, Options options,
 					Supplier<Optional<CompletableFuture<Wire>>> wireFactory){
-		this.id = id;
+		this(id, node, true, defaultService, options, wireFactory, (s,u)->{});
+	}
+
+	private Session(UUID id, LocalNode node, boolean isServer, Service defaultService, Options options,
+					Supplier<Optional<CompletableFuture<Wire>>> wireFactory, BiConsumer<Session,UUID> onSync){
+		if(isServer && id.equals(Asterisque.Zero)){
+			throw new IllegalArgumentException("server have invalid session-id");
+		}
+		assert(isServer || id.equals(Asterisque.Zero));
+		this._id = id;
 		this.node = node;
 		this.isServer = isServer;
 		this.service = defaultService;
 		this.wireFactory = wireFactory;
+		this.onSync = onSync;
 
 		this.writeBarrier = new LooseBarrier();
 
+		this.options = options;
 		int readSoftLimit = options.get(Options.KEY_READ_SOFT_LIMIT).get();
 		int readHardLimit = options.get(Options.KEY_READ_HARD_LIMIT).get();
 		int writeSoftLimit = options.get(Options.KEY_WRITE_SOFT_LIMIT).get();
@@ -184,7 +210,7 @@ public class Session {
 			pipes.close(graceful);
 
 			if(graceful){
-				post(Wire.Priority.Normal, new Control(Control.Close, new byte[0]));
+				post(Wire.Priority.Normal, new Control(Control.Close));
 			}
 
 			// 以降のメッセージ送信をすべて例外に変更して送信を終了
@@ -206,15 +232,15 @@ public class Session {
 	 * このセッションを非同期で接続状態にします。
 	 */
 	private void connect() {
-		logger.debug(id + ": connecting...");
+		logger.debug(id() + ": connecting...");
 		Optional<CompletableFuture<Wire>> opt = wireFactory.get();
 		if(opt.isPresent()) {
 			opt.get().thenAccept(this::onConnect).exceptionally(ex -> {
-				logger.error(id + ": fail to connect: " + remote(), ex);
+				logger.error(id() + ": fail to connect: " + remote(), ex);
 				return null;
 			});
 		} else {
-			logger.debug(id + ": reconnection not supported: " + remote());
+			logger.debug(id() + ": reconnection not supported: " + remote());
 		}
 	}
 
@@ -222,6 +248,15 @@ public class Session {
 		this.wire = Optional.of(wire);
 		this.departure.wire(Optional.of(wire));
 		wire.setPlug(Optional.of(this.plug));
+
+		// クライアントであればヘッダの送信
+		if(! isServer){
+			// ※サーバ側からセッションIDが割り当てられていない場合は Zero が送信される
+			int ping = options.get(Options.KEY_PING_REQUEST);
+			int timeout = options.get(Options.KEY_SESSION_TIMEOUT_REQUEST);
+			StreamHeader header = new StreamHeader(node.id, Asterisque.Zero, System.currentTimeMillis(), ping, timeout);
+			post(Wire.Priority.Normal, header.toControl());
+		}
 	}
 
 	private void reconnect() {
@@ -231,6 +266,7 @@ public class Session {
 	}
 
 	private void disconnect(){
+		header = Optional.empty();
 		wire.ifPresent(w -> {
 			wire = Optional.empty();
 			w.setPlug(Optional.empty());
@@ -278,6 +314,9 @@ public class Session {
 		if(msg instanceof Control){
 			Control ctrl = (Control)msg;
 			switch(ctrl.code){
+				case Control.StreamHeader:
+					sync(StreamHeader.parse(ctrl));
+					break;
 				case Control.Close:
 					close(false);
 					break;
@@ -333,6 +372,87 @@ public class Session {
 		}
 	}
 
+	/**
+	 * @return ping 間隔 (秒)。接続していない場合は 0。
+	 */
+	public int getPingInterval(){
+		return header.map( h -> {
+			if(isServer){
+				int maxPing = options.get(Options.KEY_MAX_PING);
+				int minPing = options.get(Options.KEY_MIN_PING);
+				return Math.min(maxPing, Math.max(minPing, h.ping));
+			} else {
+				return h.ping;
+			}
+		}).orElse(0);
+	}
+
+	/**
+	 * @return セッションタイムアウト (秒)。接続していない場合は 0。
+	 */
+	public int getTimeout(){
+		return header.map( h -> {
+			if(isServer){
+				int maxSession = options.get(Options.KEY_MAX_SESSION_TIMEOUT);
+				int minSession = options.get(Options.KEY_MIN_SESSION_TIMEOUT);
+				return Math.min(maxSession, Math.max(minSession, h.sessionTimeout));
+			} else {
+				return h.sessionTimeout;
+			}
+		}).orElse(0);
+	}
+
+	// ==============================================================================================
+	// セッション同期の実行
+	// ==============================================================================================
+	/**
+	 * 新たな Wire 接続から受信したストリームヘッダでこのセッションの内容を初期化します。
+	 */
+	private void sync(StreamHeader header) throws ProtocolViolationException {
+		if(this.header.isPresent()){
+			throw new ProtocolViolationException("multiple sync message");
+		}
+		this.header = Optional.of(header);
+		if(isServer){
+			// サーバ側の場合は応答を返す
+			if(header.sessionId.equals(Asterisque.Zero)){
+				// 新規セッションの開始
+				this._id = node.repository.nextUUID();
+				StreamHeader ack = new StreamHeader(
+					Asterisque.Protocol.Version_0_1, node.id, _id, System.currentTimeMillis(), getPingInterval(), getTimeout());
+				post(Wire.Priority.Normal, ack.toControl());
+			} else {
+				Optional<Principal> principal = Optional.empty();
+				try {
+					principal = Optional.of(wire.get().getSSLSession().get().getPeerPrincipal());
+				} catch(SSLPeerUnverifiedException ex){
+					// TODO クライアント認証が無効な場合? 動作確認
+					logger.debug("client authentication ignored: " + ex);
+				}
+				// TODO リポジトリからセッション?サービス?を復元する
+				Optional<byte[]> service = node.repository.loadAndDelete(principal, header.sessionId);
+				if(service.isPresent()) {
+					StreamHeader ack = new StreamHeader(
+						Asterisque.Protocol.Version_0_1, node.id, _id, System.currentTimeMillis(), getPingInterval(), getTimeout());
+					post(Wire.Priority.Normal, ack.toControl());
+				} else {
+					// TODO retry after
+				}
+			}
+		} else {
+			// クライアントの場合はサーバが指定したセッション ID を保持
+			if(header.sessionId.equals(Asterisque.Zero)){
+				throw new ProtocolViolationException("session-id is not specified from server: " + header.sessionId);
+			}
+			if(this._id.equals(Asterisque.Zero)) {
+				this._id = header.sessionId;
+			} else if(! this._id.equals(header.sessionId)){
+				throw new ProtocolViolationException("unexpected session-id specified from server: " + header.sessionId + " != " + this._id);
+			}
+		}
+		onSync.accept(this, header.sessionId);
+	}
+
 	// ==============================================================================================
 	// メッセージの送信
 	// ==============================================================================================
@@ -341,7 +461,7 @@ public class Session {
 	 */
 	void post(byte priority, Message msg) {
 		if(closing()){
-			logger.error("session " + id + " closed");
+			logger.error("session " + id() + " closed");
 		} else {
 			try {
 				departure.forward(priority, msg);
@@ -422,7 +542,7 @@ public class Session {
 
 	@Override
 	public String toString(){
-		return id.toString();
+		return id().toString();
 	}
 
 }

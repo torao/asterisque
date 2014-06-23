@@ -5,6 +5,10 @@
 */
 package org.asterisque;
 
+import org.asterisque.message.Abort;
+import org.asterisque.message.Block;
+import org.asterisque.message.Close;
+import org.asterisque.message.Open;
 import org.asterisque.util.Source;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -294,7 +298,7 @@ public final class Pipe {
 	 */
 	@Override
 	public String toString(){
-		return session.id + "#" + (session.isServer? "S": "C") + (id & 0xFFFF);
+		return session.id() + "#" + (session.isServer? "S": "C") + (id & 0xFFFF);
 	}
 
 	/**
