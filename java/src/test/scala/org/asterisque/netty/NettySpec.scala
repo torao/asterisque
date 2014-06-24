@@ -6,6 +6,7 @@
 package org.asterisque.netty
 
 import java.net.InetSocketAddress
+import java.util.UUID
 
 import org.specs2.Specification
 import org.asterisque._
@@ -53,7 +54,7 @@ sample bidirectional server and client interaction. $e0
 		val bridge = new Netty()
 
 		val address = new InetSocketAddress(9433)
-		val echo = new LocalNode("echo", exec, EchoService, repository)
+		val echo = new LocalNode(UUID.randomUUID(), "echo", exec, EchoService, repository)
 		val future = echo.listen(address, new Options()
 			.set(Options.KEY_BRIDGE, bridge)
 			.set(Options.KEY_CODEC, MessagePackCodec.getInstance())){ session =>
@@ -62,7 +63,7 @@ sample bidirectional server and client interaction. $e0
 		}
 		Await.ready(future, waitTime)
 
-		val reverse = new LocalNode("reverse", exec, ReverseService, repository)
+		val reverse = new LocalNode(UUID.randomUUID(), "reverse", exec, ReverseService, repository)
 		val future2 = reverse.connect(address, new Options()
 			.set(Options.KEY_BRIDGE, bridge)
 			.set(Options.KEY_CODEC, MessagePackCodec.getInstance()))

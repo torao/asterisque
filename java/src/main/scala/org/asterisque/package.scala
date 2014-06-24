@@ -13,6 +13,7 @@ import java.util.function._
 import java.util.concurrent.CompletableFuture
 
 package object asterisque {
+	import scala.language.implicitConversions
 
 	implicit def Function0ToSupplier[T](f:()=>T) = new Supplier[T] {
 		override def get():T = f()

@@ -5,7 +5,7 @@
 */
 package org.asterisque;
 
-import org.asterisque.message.*;
+import org.asterisque.msg.*;
 import org.asterisque.util.CircuitBreaker;
 import org.asterisque.util.LooseBarrier;
 import org.slf4j.Logger;
@@ -44,7 +44,7 @@ public class Session {
 	public final Attributes attributes = new Attributes();
 
 	private UUID _id = Asterisque.Zero;
-	private Optional<StreamHeader> header = Optional.empty();
+	private Optional<SyncConfig> header = Optional.empty();
 
 	public Optional<SocketAddress> local(){ return wire.map(Wire::local); }
 	public Optional<SocketAddress> remote(){ return wire.map(Wire::remote); }
@@ -252,9 +252,9 @@ public class Session {
 		// クライアントであればヘッダの送信
 		if(! isServer){
 			// ※サーバ側からセッションIDが割り当てられていない場合は Zero が送信される
-			int ping = options.get(Options.KEY_PING_REQUEST);
-			int timeout = options.get(Options.KEY_SESSION_TIMEOUT_REQUEST);
-			StreamHeader header = new StreamHeader(node.id, Asterisque.Zero, System.currentTimeMillis(), ping, timeout);
+			int ping = options.get(Options.KEY_PING_REQUEST).get();
+			int timeout = options.get(Options.KEY_SESSION_TIMEOUT_REQUEST).get();
+			SyncConfig header = new SyncConfig(node.id, Asterisque.Zero, System.currentTimeMillis(), ping, timeout);
 			post(Wire.Priority.Normal, header.toControl());
 		}
 	}
@@ -314,8 +314,8 @@ public class Session {
 		if(msg instanceof Control){
 			Control ctrl = (Control)msg;
 			switch(ctrl.code){
-				case Control.StreamHeader:
-					sync(StreamHeader.parse(ctrl));
+				case Control.SyncConfig:
+					sync(SyncConfig.parse(ctrl));
 					break;
 				case Control.Close:
 					close(false);
@@ -378,8 +378,8 @@ public class Session {
 	public int getPingInterval(){
 		return header.map( h -> {
 			if(isServer){
-				int maxPing = options.get(Options.KEY_MAX_PING);
-				int minPing = options.get(Options.KEY_MIN_PING);
+				int maxPing = options.get(Options.KEY_MAX_PING).get();
+				int minPing = options.get(Options.KEY_MIN_PING).get();
 				return Math.min(maxPing, Math.max(minPing, h.ping));
 			} else {
 				return h.ping;
@@ -393,8 +393,8 @@ public class Session {
 	public int getTimeout(){
 		return header.map( h -> {
 			if(isServer){
-				int maxSession = options.get(Options.KEY_MAX_SESSION_TIMEOUT);
-				int minSession = options.get(Options.KEY_MIN_SESSION_TIMEOUT);
+				int maxSession = options.get(Options.KEY_MAX_SESSION_TIMEOUT).get();
+				int minSession = options.get(Options.KEY_MIN_SESSION_TIMEOUT).get();
 				return Math.min(maxSession, Math.max(minSession, h.sessionTimeout));
 			} else {
 				return h.sessionTimeout;
@@ -406,9 +406,9 @@ public class Session {
 	// セッション同期の実行
 	// ==============================================================================================
 	/**
-	 * 新たな Wire 接続から受信したストリームヘッダでこのセッションの内容を初期化します。
+	 * 新たな Wire 接続から受信したストリームヘッダでこのセッションの内容を同期化します。
 	 */
-	private void sync(StreamHeader header) throws ProtocolViolationException {
+	private void sync(SyncConfig header) throws ProtocolViolationException {
 		if(this.header.isPresent()){
 			throw new ProtocolViolationException("multiple sync message");
 		}
@@ -418,7 +418,7 @@ public class Session {
 			if(header.sessionId.equals(Asterisque.Zero)){
 				// 新規セッションの開始
 				this._id = node.repository.nextUUID();
-				StreamHeader ack = new StreamHeader(
+				SyncConfig ack = new SyncConfig(
 					Asterisque.Protocol.Version_0_1, node.id, _id, System.currentTimeMillis(), getPingInterval(), getTimeout());
 				post(Wire.Priority.Normal, ack.toControl());
 			} else {
@@ -432,11 +432,12 @@ public class Session {
 				// TODO リポジトリからセッション?サービス?を復元する
 				Optional<byte[]> service = node.repository.loadAndDelete(principal, header.sessionId);
 				if(service.isPresent()) {
-					StreamHeader ack = new StreamHeader(
+					SyncConfig ack = new SyncConfig(
 						Asterisque.Protocol.Version_0_1, node.id, _id, System.currentTimeMillis(), getPingInterval(), getTimeout());
 					post(Wire.Priority.Normal, ack.toControl());
 				} else {
 					// TODO retry after
+					post(Wire.Priority.Normal, new Control(Control.Close));
 				}
 			}
 		} else {

@@ -3,11 +3,12 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package org.asterisque
+package org.asterisque.msg
 
-import org.asterisque.message.{Message, Control}
-import org.specs2.Specification
 import java.lang.reflect.Modifier
+
+import org.specs2.Specification
+
 import scala.util.Random
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

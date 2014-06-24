@@ -45,7 +45,7 @@ public interface Repository {
 	 * @param binary バイナリデータ
 	 * @param expires データの有効期限 (現在時刻からのミリ秒)
 	 */
-	public void store(Principal principal, UUID id, byte[] binary, long expires);
+	public void store(Optional<Principal> principal, UUID id, byte[] binary, long expires);
 
 	// ==============================================================================================
 	// データの復元

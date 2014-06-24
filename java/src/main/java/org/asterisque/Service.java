@@ -6,7 +6,7 @@
 package org.asterisque;
 
 import org.asterisque.codec.TypeConversion;
-import org.asterisque.message.Open;
+import org.asterisque.msg.Open;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

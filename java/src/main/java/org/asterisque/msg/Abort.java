@@ -3,66 +3,53 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package org.asterisque.message;
+package org.asterisque.msg;
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// Abort
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 import org.asterisque.Debug;
 
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// Control
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
- * Control メッセージはフレームワークによって他のメッセージより優先して送信されます。
+ * 処理の中断状況を表すために {@link Close} に付加される情報です。
  *
  * @author Takami Torao
  */
-public final class Control extends Message {
+public final class Abort extends Exception {
 
-	public static final byte StreamHeader = 'Q';
-
-	public static final byte Close = 1;
-
-	// ==============================================================================================
-	// ID
-	// ==============================================================================================
-	/**
-	 * 制御コードです。
-	 * 最上位ビットが 1 の場合に Struct を持ちます。
-	 */
-	public final byte code;
+	public static final int Unexpected = -1;
+	public static final int SessionClosing = -2;		// セッションがクローズ中
 
 	// ==============================================================================================
-	// データ
+	// 中断コード
 	// ==============================================================================================
 	/**
-	 * コード値に付属するデータを表すバイナリです。
+	 * この中断理由を受信側で識別するためのコード値です。
 	 */
-	public final byte[] data;
+	public final int code;
+
+	// ==============================================================================================
+	// 中断メッセージ
+	// ==============================================================================================
+	/**
+	 * この中断理由を人間が読める形式で表したメッセージです。
+	 */
+	public final String message;
 
 	// ==============================================================================================
 	// コンストラクタ
 	// ==============================================================================================
 	/**
-	 * Control メッセージを構築します。
+	 * 中断コードとメッセージを指定して構築を行います。
 	 */
-	public Control(byte code, byte[] data){
-		super((short)0 /* not used */);
-		if(data == null){
-			throw new NullPointerException("data is null");
+	public Abort(int code, String message){
+		super(code + ": " + message);
+		if(message == null){
+			throw new NullPointerException("message is null");
 		}
 		this.code = code;
-		this.data = data;
-	}
-
-	// ==============================================================================================
-	// コンストラクタ
-	// ==============================================================================================
-	/**
-	 * Control メッセージを構築します。
-	 */
-	public Control(byte code){
-		super((short)0 /* not used */);
-		this.code = code;
-		this.data = new byte[0];
+		this.message = message;
 	}
 
 	// ==============================================================================================
@@ -73,7 +60,7 @@ public final class Control extends Message {
 	 */
 	@Override
 	public String toString(){
-		return "Control(0x" + String.format("%02X", code & 0xFF) + "," + Debug.toString(data) + ")";
+		return "Abort(" + code + "," + Debug.toString(message) + ")";
 	}
 
 }

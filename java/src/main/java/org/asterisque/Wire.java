@@ -5,7 +5,7 @@
 */
 package org.asterisque;
 
-import org.asterisque.message.Message;
+import org.asterisque.msg.Message;
 
 import javax.net.ssl.SSLSession;
 import java.net.SocketAddress;
@@ -84,7 +84,7 @@ public interface Wire extends AutoCloseable {
 	// 入力可能設定
 	// ==============================================================================================
 	/**
-	 * スタブの {@link org.asterisque.Wire.Plug#consume(org.asterisque.message.Message)} が管理するキューの状態に対してメッセージを受け
+	 * スタブの {@link org.asterisque.Wire.Plug#consume(org.asterisque.msg.Message)} が管理するキューの状態に対してメッセージを受け
 	 * 取れる/受け取れない状態が切り替わったときに呼び出されます。
 	 *
 	 * サブクラスはデフォルトで enable = false の状態を持ちます。

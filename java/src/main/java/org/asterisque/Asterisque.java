@@ -9,10 +9,7 @@ package org.asterisque;
 // Asterisque
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.charset.Charset;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ThreadFactory;
 
@@ -88,6 +85,9 @@ public final class Asterisque {
 
 		/** プロトコルバージョン 0.1 を表す数値 */
 		public static final short Version_0_1 = 0x0001;
+
+		/** 現在の実装がサポートしているバージョン */
+		public static final short CurrentVersion = Version_0_1;
 
 		// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		// Header

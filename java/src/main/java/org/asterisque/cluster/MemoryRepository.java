@@ -5,6 +5,7 @@
 */
 package org.asterisque.cluster;
 
+import java.security.Principal;
 import java.util.*;
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -42,7 +43,7 @@ class MemoryRepository implements Repository {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void store(UUID id, byte[] binary, long expires) {
+	public void store(Optional<Principal> principal, UUID id, byte[] binary, long expires) {
 		synchronized(Repository){
 			if(Repository.size() == 0){
 				timer(true);
@@ -55,7 +56,7 @@ class MemoryRepository implements Repository {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public Optional<byte[]> loadAndDelete(UUID id) {
+	public Optional<byte[]> loadAndDelete(Optional<Principal> principal, UUID id) {
 		synchronized(Repository){
 			Value value = Repository.remove(id);
 			if(Repository.size() == 0){

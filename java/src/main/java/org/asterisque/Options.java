@@ -54,6 +54,9 @@ public class Options {
 	 */
 	public <T> Optional<T> get(Key<T> key){
 		Optional<T> value = _get(key);
+		if(! value.isPresent()){
+			value = key.defaultValue;
+		}
 		if(logger.isTraceEnabled()){
 			logger.trace(key + "=" + Debug.toString(value));
 		}

@@ -5,7 +5,7 @@
 */
 package org.asterisque;
 
-import org.asterisque.message.Message;
+import org.asterisque.msg.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -109,7 +109,7 @@ class DepartureGate {
 	 * SelectionKey.OP_WRITE を制御する事が出来ます。
 	 *
 	 * キューに投入するメッセージの優先順位付けは行われません。
-	 * {@link org.asterisque.message.Control} はキューの先頭へ優先的に追加されます。
+	 * {@link org.asterisque.msg.Control} はキューの先頭へ優先的に追加されます。
 	 *
 	 * @author Takami Torao
 	 */

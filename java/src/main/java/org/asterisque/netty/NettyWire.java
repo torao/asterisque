@@ -10,7 +10,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.asterisque.Debug;
 import org.asterisque.LocalNode;
-import org.asterisque.message.Message;
+import org.asterisque.msg.Message;
 import org.asterisque.Wire;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

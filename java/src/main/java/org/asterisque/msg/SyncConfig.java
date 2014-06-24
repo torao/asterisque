@@ -3,7 +3,7 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package org.asterisque.message;
+package org.asterisque.msg;
 
 import org.asterisque.Debug;
 import org.asterisque.ProtocolViolationException;
@@ -13,22 +13,21 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.UUID;
 
-import static org.asterisque.Asterisque.Protocol.Version_0_1;
+import static org.asterisque.Asterisque.Protocol.CurrentVersion;
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// StreamHeader
+// SyncConfig
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
- * TCP のようなストリームをベースとした通信実装でストリームの先頭に出現しバージョン確認などをを行うためのバイ
- * ナリを表すクラスです。{@link org.asterisque.Wire} によって送受信されるものであり Session の
- * {@link org.asterisque.message.Message} とは別です。
+ * {@link Control#SyncConfig} を持つ Control メッセージのヘルパークラスです。
+ * TCP のようなストリームをベースとした通信実装で端点の設定を同期します。
  *
  * @author Takami Torao
  */
-public final class StreamHeader {
+public final class SyncConfig {
 
 	/**
-	 * StreamHeader に必要な Control の data の長さ。
+	 * SyncConfig に必要な Control の data の長さ。
 	 */
 	public static final int DataLength = Short.BYTES + Long.BYTES * 2 + Long.BYTES * 2 + Long.BYTES + Integer.BYTES + Integer.BYTES;
 
@@ -70,7 +69,7 @@ public final class StreamHeader {
 	/**
 	 *
 	 */
-	public StreamHeader(short version, UUID nodeId, UUID sessionId, long utcTime, int ping, int sessionTimeout) {
+	public SyncConfig(short version, UUID nodeId, UUID sessionId, long utcTime, int ping, int sessionTimeout) {
 		this.version = version;
 		this.nodeId = nodeId;
 		this.sessionId = sessionId;
@@ -85,8 +84,8 @@ public final class StreamHeader {
 	/**
 	 *
 	 */
-	public StreamHeader(UUID nodeId, UUID sessionId, long utcTime, int ping, int sessionTimeout) {
-		this.version = Version_0_1;
+	public SyncConfig(UUID nodeId, UUID sessionId, long utcTime, int ping, int sessionTimeout) {
+		this.version = CurrentVersion;
 		this.nodeId = nodeId;
 		this.sessionId = sessionId;
 		this.utcTime = utcTime;
@@ -101,7 +100,7 @@ public final class StreamHeader {
 	 * このインスタンスの内容でストリームヘッダのバイナリを生成します。
 	 */
 	public Control toControl(){
-		// StreamHeader は Codec 実装に依存しない
+		// SyncConfig は Codec 実装に依存しない
 		ByteBuffer buffer = ByteBuffer.allocate(DataLength);
 		buffer.order(ByteOrder.BIG_ENDIAN)
 			.putShort(version)
@@ -113,7 +112,7 @@ public final class StreamHeader {
 			.putInt(ping)
 			.putInt(sessionTimeout);
 		assert(buffer.capacity() == buffer.limit());
-		return new Control(Control.StreamHeader, buffer.array());
+		return new Control(Control.SyncConfig, buffer.array());
 	}
 
 	// ==========================================================================================
@@ -123,8 +122,8 @@ public final class StreamHeader {
 	 * 指定されたバイトバッファからインスタンスを構築します。
 	 * @throws org.asterisque.ProtocolViolationException asterisque のストリームではない場合
 	 */
-	public static StreamHeader parse(Control control) throws ProtocolViolationException{
-		if(control.code != Control.StreamHeader){
+	public static SyncConfig parse(Control control) throws ProtocolViolationException{
+		if(control.code != Control.SyncConfig){
 			throw new ProtocolViolationException(
 				String.format("invalid asterisque protocol: 0x%02X%02X", Codec.Msg.Control & 0xFF, control.code & 0xFF));
 		}
@@ -140,7 +139,7 @@ public final class StreamHeader {
 		long utcTime = buffer.getLong();
 		int ping = buffer.getInt();
 		int sessionTimeout = buffer.getInt();
-		return new StreamHeader(version, nodeId, sessionId, utcTime, ping, sessionTimeout);
+		return new SyncConfig(version, nodeId, sessionId, utcTime, ping, sessionTimeout);
 	}
 
 }

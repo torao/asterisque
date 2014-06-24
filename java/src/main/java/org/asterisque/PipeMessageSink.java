@@ -5,7 +5,7 @@
 */
 package org.asterisque;
 
-import org.asterisque.message.Block;
+import org.asterisque.msg.Block;
 
 import java.nio.ByteBuffer;
 

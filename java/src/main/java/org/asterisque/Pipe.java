@@ -5,10 +5,10 @@
 */
 package org.asterisque;
 
-import org.asterisque.message.Abort;
-import org.asterisque.message.Block;
-import org.asterisque.message.Close;
-import org.asterisque.message.Open;
+import org.asterisque.msg.Abort;
+import org.asterisque.msg.Block;
+import org.asterisque.msg.Close;
+import org.asterisque.msg.Open;
 import org.asterisque.util.Source;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
