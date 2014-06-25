@@ -144,7 +144,9 @@ class WireConnect extends SimpleChannelInboundHandler<Message> {
 
 		// メッセージを通知
 		assert(wire.isPresent());
-		wire.get().receive(msg);
+		wire.ifPresent( w -> {
+			w.receive(msg);
+		});
 
 		// super.channelRead0(ctx, msg) スーパークラスは未実装
 	}
@@ -158,7 +160,7 @@ class WireConnect extends SimpleChannelInboundHandler<Message> {
 	 */
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause){
-		logger.debug("exception caught", cause);
+		logger.debug(id() + ": exception caught", cause);
 		closeWire();
 	}
 
@@ -177,14 +179,18 @@ class WireConnect extends SimpleChannelInboundHandler<Message> {
 
 	private void debug(String log) {
 		if(logger.isDebugEnabled()) {
-			logger.debug(sym + "[" + id + "] " + log);
+			logger.debug(id() + ": " + log);
 		}
 	}
 
 	private void trace(String log){
 		if(logger.isTraceEnabled()){
-			logger.trace(sym + "[" + id + "] " + log);
+			logger.trace(id() + ": " + log);
 		}
+	}
+
+	public String id() {
+		return wire.map(NettyWire::id).orElse("-:--------");
 	}
 
 }

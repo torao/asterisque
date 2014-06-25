@@ -126,6 +126,8 @@ public interface Wire extends AutoCloseable {
 		public void consume(Message msg);
 		/** Wire がクローズされたときに呼び出す処理。 */
 		public void onClose(Wire wire);
+		/** ログ出力で識別するための文字列 */
+		public String id();
 	}
 
 	public final class Priority {

@@ -96,7 +96,7 @@ class PipeSpace {
 			short id = (short) ((sequence.getAndIncrement() & 0x7FFF) | pipeMask);
 			if(id != 0){
 				Pipe pipe = new Pipe(id, priority, function, session);
-				if(pipes.putIfAbsent(id, pipe) == pipe){
+				if(pipes.putIfAbsent(id, pipe) == null){
 					return pipe;
 				}
 			}

@@ -63,6 +63,8 @@ public class Netty implements Bridge {
 			NioEventLoopGroup w = new NioEventLoopGroup();
 			if(! worker.compareAndSet(null, w)){
 				w.shutdownGracefully();
+			} else {
+				logger.debug("worker NioEventLoop created");
 			}
 		}
 		return worker.get();

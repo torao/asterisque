@@ -50,9 +50,12 @@ class NettyWire implements Wire {
 	 */
 	private final GenericFutureListener<Future<Void>> writeComplete = future -> {
 		if(future.isSuccess()){
+			if(logger.isTraceEnabled()){
+				logger.trace(id() + ": post and flush success, polling next message");
+			}
 			writeNext();
 		} else {
-			logger.error("message write failure, closing wire: " + this, future.cause());
+			logger.error(id() + ": message write failure, closing wire: " + this, future.cause());
 			close();
 		}
 	};
@@ -121,6 +124,7 @@ class NettyWire implements Wire {
 	 * {@inheritDoc}
 	 */
 	public void setPlug(Optional<Plug> plug) {
+		logger.trace(id() + ": setPlug(" + Debug.toString(plug) + ")");
 		this.plug = plug;
 		if(plug.isPresent()){
 			writeNext();
@@ -134,6 +138,7 @@ class NettyWire implements Wire {
 	 * {@inheritDoc}
 	 */
 	public void setWritable(boolean writable){
+		logger.trace(id() + ": setWritable(" + writable + ")");
 		this.writable = writable;
 		writeNext();
 	}
@@ -145,6 +150,7 @@ class NettyWire implements Wire {
 	 * {@inheritDoc}
 	 */
 	public void setReadable(boolean readable){
+		logger.trace(id() + ": setReadable(" + readable + ")");
 		context.channel().config().setAutoRead(readable);
 	}
 
@@ -177,7 +183,7 @@ class NettyWire implements Wire {
 	public void close() {
 		if(closing.compareAndSet(false, true)){
 			if(logger.isTraceEnabled()){
-				logger.trace(sym + ": close()");
+				logger.trace(id() + ": close()");
 			}
 			context.channel().close();
 			plug.ifPresent(p -> p.onClose(this) );
@@ -205,7 +211,7 @@ class NettyWire implements Wire {
 			plug.ifPresent(p -> {
 				Message msg = p.produce();
 				if(logger.isTraceEnabled()) {
-					logger.trace(sym + ": send(" + msg + ")");
+					logger.trace(id() + ": send(" + msg + ")");
 				}
 				// 出力完了の通知を受けたら次のメッセージを送信する処理を実行
 				context.channel().writeAndFlush(msg).addListener(writeComplete);
@@ -221,9 +227,13 @@ class NettyWire implements Wire {
 	 */
 	void receive(Message msg) {
 		if(logger.isTraceEnabled()){
-			logger.trace(sym + ": receive(" + msg + ")");
+			logger.trace(id() + ": receive(" + msg + ")");
 		}
 		plug.ifPresent(p -> p.consume(msg));
+	}
+
+	public String id() {
+		return plug.map(Plug::id).orElse("-:--------");
 	}
 
 }

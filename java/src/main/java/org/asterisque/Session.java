@@ -123,7 +123,7 @@ public class Session {
 			}
 			@Override
 			protected void broken() {
-				logger.error("write hard-limit reached, closing session");
+				logger.error(id() + ": write hard-limit reached, closing session");
 				reconnect();
 			}
 		};
@@ -136,7 +136,7 @@ public class Session {
 			}
 			@Override
 			protected void broken() {
-				logger.error("read hard-limit reached, closing session");
+				logger.error(id() + ": read hard-limit reached, closing session");
 				reconnect();
 			}
 
@@ -153,9 +153,11 @@ public class Session {
 			public void consume(Message msg) { deliver(msg); }
 			@Override
 			public void onClose(Wire wire) { reconnect(); }
+			@Override
+			public String id(){ return logId(); }
 		};
 
-		logger.debug(id + ": session created");
+		logger.info(logId() + ": " + id() + ": session created");
 
 		// 非同期で Wire を構築してメッセージの開始
 		connect();
@@ -204,7 +206,7 @@ public class Session {
 	 */
 	public void close(boolean graceful) {
 		if(closing.compareAndSet(false, true)) {
-			logger.trace("close(" + graceful + ")");
+			logger.trace(logId() + ": close(" + graceful + ")");
 
 			// 残っているすべてのパイプに Close メッセージを送信
 			pipes.close(graceful);
@@ -232,7 +234,7 @@ public class Session {
 	 * このセッションを非同期で接続状態にします。
 	 */
 	private void connect() {
-		logger.debug(id() + ": connecting...");
+		logger.debug(logId() + ": connecting...");
 		Optional<CompletableFuture<Wire>> opt = wireFactory.get();
 		if(opt.isPresent()) {
 			opt.get().thenAccept(this::onConnect).exceptionally(ex -> {
@@ -240,7 +242,7 @@ public class Session {
 				return null;
 			});
 		} else {
-			logger.debug(id() + ": reconnection not supported: " + remote());
+			logger.debug(logId() + ": reconnection not supported: " + remote());
 		}
 	}
 
@@ -248,6 +250,8 @@ public class Session {
 		this.wire = Optional.of(wire);
 		this.departure.wire(Optional.of(wire));
 		wire.setPlug(Optional.of(this.plug));
+
+		wire.setReadable(true);
 
 		// クライアントであればヘッダの送信
 		if(! isServer){
@@ -307,7 +311,7 @@ public class Session {
 	 */
 	private void deliver(Message msg){
 		if(logger.isTraceEnabled()){
-			logger.trace("deliver: " + msg);
+			logger.trace(logId() + ": deliver: " + msg);
 		}
 
 		// Control メッセージはこのセッション内で処理する
@@ -321,7 +325,7 @@ public class Session {
 					close(false);
 					break;
 				default:
-					logger.error("unsupported control code: 0x" + Integer.toHexString(ctrl.code & 0xFF));
+					logger.error(id() + ": unsupported control code: 0x" + Integer.toHexString(ctrl.code & 0xFF));
 					throw new ProtocolViolationException("");
 			}
 			return;
@@ -338,11 +342,11 @@ public class Session {
 		// パイプが定義されていない場合
 		if(! _pipe.isPresent()) {
 			if(msg instanceof Close) {
-				logger.debug("both of sessions unknown pipe #" + msg.pipeId);
+				logger.debug(logId() + ": both of sessions unknown pipe #" + msg.pipeId);
 			} else if(msg instanceof Open){
 				post(Wire.Priority.Normal, Close.unexpectedError(msg.pipeId, "duplicate pipe-id specified: " + msg.pipeId));
 			} else if(msg instanceof Block){
-				logger.debug("unknown pipe-id: " + msg);
+				logger.debug(logId() + ": unknown pipe-id: " + msg);
 				post(Wire.Priority.Normal, Close.unexpectedError(msg.pipeId, "unknown pipe-id specified: " + msg.pipeId));
 			}
 			return;
@@ -364,7 +368,7 @@ public class Session {
 				throw new IllegalStateException("unexpected message: " + msg);
 			}
 		} catch(Throwable ex){
-			logger.error("unexpected error: " + msg + ", closing pipe " + pipe, ex);
+			logger.error(id() + ": unexpected error: " + msg + ", closing pipe " + pipe, ex);
 			post(pipe.priority, Close.unexpectedError(msg.pipeId, "internal error"));
 			if(ex instanceof ThreadDeath){
 				throw (ThreadDeath)ex;
@@ -427,7 +431,7 @@ public class Session {
 					principal = Optional.of(wire.get().getSSLSession().get().getPeerPrincipal());
 				} catch(SSLPeerUnverifiedException ex){
 					// TODO クライアント認証が無効な場合? 動作確認
-					logger.debug("client authentication ignored: " + ex);
+					logger.debug(logId() + ": client authentication ignored: " + ex);
 				}
 				// TODO リポジトリからセッション?サービス?を復元する
 				Optional<byte[]> service = node.repository.loadAndDelete(principal, header.sessionId);
@@ -467,13 +471,13 @@ public class Session {
 			try {
 				departure.forward(priority, msg);
 				if(logger.isTraceEnabled()) {
-					logger.trace("post: " + msg);
+					logger.trace(logId() + ": post: " + msg);
 				}
 			} catch(DepartureGate.MaxSequenceReached ex) {
-				logger.warn("max sequence reached on wire, reconnecting", ex);
+				logger.warn(id() + ": max sequence reached on wire, reconnecting", ex);
 				reconnect();
 			} catch(DepartureGate.HardLimitReached ex){
-				logger.error("write queue reached hard limit by pending messages, reconnecting", ex);
+				logger.error(id() + ": write queue reached hard limit by pending messages, reconnecting", ex);
 				reconnect();
 			}
 		}
@@ -513,6 +517,14 @@ public class Session {
 				throw new IllegalArgumentException(
 					"@" + Export.class.getSimpleName() + " annotation is not specified on: " + methods.get());
 			}
+			// 指定されたインターフェースの全てのメソッドが CompletableFuture の返値を持つことを確認
+			// TODO Scala の Future も許可したい
+			Stream.of(clazz.getDeclaredMethods())
+				.filter(m -> ! m.getReturnType().equals(CompletableFuture.class))
+				.map(Debug::getSimpleName).reduce((a, b) -> a + "," + b).ifPresent( name -> {
+					throw new IllegalArgumentException(
+						"methods without return-type CompletableFuture<?> exists: " + name);
+				});
 		}
 
 		// ============================================================================================
@@ -529,10 +541,11 @@ public class Session {
 			Export export = method.getAnnotation(Export.class);
 			if(export == null){
 				// toString() や hashCode() など Object 型のメソッド呼び出し?
-				logger.debug("normal method: " + Debug.getSimpleName(method));
+				logger.debug(logId() + ": normal method: " + Debug.getSimpleName(method));
 				return method.invoke(this, args);
 			} else {
 				// there is no way to receive block in interface binding
+				logger.debug(logId() + ": calling remote method: " + Debug.getSimpleName(method));
 				byte priority = export.priority();
 				short function = export.value();
 				return open(priority, function, (args==null? new Object[0]: args));
@@ -544,6 +557,10 @@ public class Session {
 	@Override
 	public String toString(){
 		return id().toString();
+	}
+
+	String logId() {
+		return (isServer? 'S': 'C') + ":" + id().toString().substring(0, 8).toUpperCase();
 	}
 
 }

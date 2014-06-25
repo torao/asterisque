@@ -298,7 +298,7 @@ public final class Pipe {
 	 */
 	@Override
 	public String toString(){
-		return session.id() + "#" + (session.isServer? "S": "C") + (id & 0xFFFF);
+		return session.logId() + "#" + (id & 0xFFFF);
 	}
 
 	/**

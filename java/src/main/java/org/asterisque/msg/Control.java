@@ -25,7 +25,7 @@ public final class Control extends Message {
 	 */
 	public static final byte SyncConfig = 'Q';
 
-	public static final byte Close = 1;
+	public static final byte Close = 'C';
 
 	private static final byte[] Empty = new byte[0];
 
@@ -80,7 +80,7 @@ public final class Control extends Message {
 	 */
 	@Override
 	public String toString(){
-		return "Control(0x" + String.format("%02X", code & 0xFF) + "," + Debug.toString(data) + ")";
+		return "Control(" + ((char)code) + "," + Debug.toString(data) + ")";
 	}
 
 }

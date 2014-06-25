@@ -8,9 +8,10 @@ package org.asterisque.netty
 import java.net.InetSocketAddress
 import java.util.UUID
 
+import org.slf4j.LoggerFactory
 import org.specs2.Specification
 import org.asterisque._
-import java.util.concurrent.{TimeUnit, Executors}
+import java.util.concurrent.{CompletableFuture, TimeUnit, Executors}
 import org.asterisque.cluster.Repository
 import org.asterisque.codec.MessagePackCodec
 
@@ -27,9 +28,49 @@ class NettySpec extends Specification{ def is = s2"""
 Netty should:
 sample bidirectional server and client interaction. $e0
 """
+	val logger = LoggerFactory.getLogger(classOf[NettySpec])
 	val waitTime = Duration(3, TimeUnit.SECONDS)
 
 	def e0 = {
+
+		trait Echo {
+			@Export(100)
+			def echo(text:String):CompletableFuture[String]
+		}
+		object EchoService extends Service {
+			def echo(text:String) = {
+				logger.info(s"echo($text)")
+				val c = new CompletableFuture[String]()
+				c.complete(text)
+				c
+			}
+		}
+
+		val repository = Repository.OnMemory
+		val exec = Executors.newCachedThreadPool(Asterisque.newThreadFactory("test"))
+		val bridge = new Netty()
+
+		val address = new InetSocketAddress(9433)
+		val server = new LocalNode(UUID.randomUUID(), "echo", exec, EchoService, repository)
+		val startup = server.listen(address, new Options()
+			.set(Options.KEY_BRIDGE, bridge)
+			.set(Options.KEY_CODEC, MessagePackCodec.getInstance())){ session => None }
+		Await.ready(startup, waitTime)
+
+		val client = new LocalNode(UUID.randomUUID(), "reverse", exec, new Service {}, repository)
+		val future2 = client.connect(address, new Options()
+			.set(Options.KEY_BRIDGE, bridge)
+			.set(Options.KEY_CODEC, MessagePackCodec.getInstance()))
+		val future = locally {
+			val session = Await.result(future2, waitTime)
+			val e = session.bind(classOf[Echo])
+			e.echo("XYZ")
+		}
+
+		Await.result(future, waitTime) === "XYZ"
+	}
+
+	def e1 = {
 
 		trait Echo {
 			@Export(100)
@@ -40,10 +81,10 @@ sample bidirectional server and client interaction. $e0
 		}
 		trait Reverse {
 			@Export(100)
-			def reverse(text:String):String
+			def reverse(text:String):CompletableFuture[String]
 		}
 		object ReverseService extends Service {
-			def reverse(text:String) = new StringBuilder(text).reverse.toString
+			def reverse(text:String) = new StringBuilder(text).reverse.toString()
 		}
 
 		val p0 = Promise[String]()
@@ -59,7 +100,7 @@ sample bidirectional server and client interaction. $e0
 			.set(Options.KEY_BRIDGE, bridge)
 			.set(Options.KEY_CODEC, MessagePackCodec.getInstance())){ session =>
 			val r = session.bind(classOf[Reverse])
-			p0.success(r.reverse("ABCDEFG"))
+			p0.completeWith(r.reverse("ABCDEFG"))
 		}
 		Await.ready(future, waitTime)
 
