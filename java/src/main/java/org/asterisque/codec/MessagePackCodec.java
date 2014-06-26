@@ -8,6 +8,8 @@ package org.asterisque.codec;
 import org.msgpack.MessagePack;
 import org.msgpack.packer.BufferPacker;
 import org.msgpack.unpacker.BufferUnpacker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -24,6 +26,7 @@ import java.nio.ByteBuffer;
  * @author Takami Torao
  */
 public class MessagePackCodec implements Codec {
+	private static final Logger logger = LoggerFactory.getLogger(MessagePackCodec.class);
 
 	// ==============================================================================================
 	// Singleton インスタンス

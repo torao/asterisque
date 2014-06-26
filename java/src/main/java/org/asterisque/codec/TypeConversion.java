@@ -16,7 +16,7 @@ import java.util.function.Function;
 // TypeConversion
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
- * API 呼び出し時のパラメータや返値を Asterisque で転送可能な型へ変換したり、転送可能な型から実際に API で使用
+ * API 呼び出し時のパラメータや返値を asterisque で転送可能な型へ変換したり、転送可能な型から実際に API で使用
  * されている型に逆変換を行うクラスです。{@link #addExtension(TypeConversion)} を使用してアプリケーションや
  * フレームワーク、実行環境固有の型変換を追加することが出来ます。
  *
@@ -211,8 +211,6 @@ public abstract class TypeConversion {
 	private static final Set<Class<?>> SafeType;
 
 	static {
-		// デフォルトの変換定義を追加
-		addExtension(new DefaultConversion());
 
 		// 転送可能型を定義
 		Set<Class<?>> types = new HashSet<>();
@@ -231,6 +229,9 @@ public abstract class TypeConversion {
 		types.add(Map.class);
 		types.add(Struct.class);
 		SafeType = Collections.unmodifiableSet(types);
+
+		// デフォルトの変換定義を追加
+		addExtension(new DefaultConversion());
 	}
 
 	// ==============================================================================================

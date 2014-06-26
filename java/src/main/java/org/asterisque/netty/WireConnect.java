@@ -63,6 +63,7 @@ class WireConnect extends SimpleChannelInboundHandler<Message> {
 	 */
 	public WireConnect(LocalNode node, SocketAddress local, SocketAddress remote, boolean isServer,
 										 Optional<SslHandler> sslHandler, Consumer<NettyWire> onWireCreate, Options options){
+		super(Message.class);
 		this.node = node;
 		this.local = local;
 		this.remote = remote;

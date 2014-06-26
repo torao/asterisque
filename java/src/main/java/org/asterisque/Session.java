@@ -220,7 +220,7 @@ public class Session {
 			closed.set(true);
 
 			// Wire のクローズ
-			wire.get().close();
+			wire.ifPresent(Wire::close);
 
 			// セッションのクローズを通知
 			onClosed.accept(this);
@@ -455,6 +455,7 @@ public class Session {
 				throw new ProtocolViolationException("unexpected session-id specified from server: " + header.sessionId + " != " + this._id);
 			}
 		}
+		logger.debug(logId() + ": sync-configuration success, beginning session");
 		onSync.accept(this, header.sessionId);
 	}
 

@@ -7,6 +7,8 @@ package org.asterisque.codec;
 
 import org.asterisque.Asterisque;
 import org.asterisque.msg.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -22,6 +24,9 @@ import java.util.*;
  * @author Takami Torao
  */
 public interface Codec {
+	static final class L {
+		private static final Logger logger = LoggerFactory.getLogger(Codec.class);
+	}
 
 	// ==============================================================================================
 	// 最大メッセージ長
@@ -41,6 +46,9 @@ public interface Codec {
 	 * @throws org.asterisque.codec.CodecException シリアライズに失敗した場合
 	 */
 	public default ByteBuffer encode(Message msg) throws CodecException{
+		if(L.logger.isTraceEnabled()){
+			L.logger.trace("encode(" + msg + ")");
+		}
 		assert(msg != null);
 		Marshal m = newMarshal();
 		if(msg instanceof Open) {
@@ -110,6 +118,9 @@ public interface Codec {
 	 * @return デコードしたメッセージ
 	 */
 	public default Optional<Message> decode(ByteBuffer buffer){
+		if(L.logger.isTraceEnabled()){
+			L.logger.trace("decode(" + buffer + ")");
+		}
 		int pos = buffer.position();
 		try {
 			Unmarshal u = newUnmarshal(buffer);
@@ -174,9 +185,9 @@ public interface Codec {
 
 	public interface Msg {
 		public final byte Control = '*';
-		public final byte Open = 'O';
-		public final byte Close = 'C';
-		public final byte Block = 'B';
+		public final byte Open = '(';
+		public final byte Close = ')';
+		public final byte Block = '#';
 	}
 
 	public interface Tag {

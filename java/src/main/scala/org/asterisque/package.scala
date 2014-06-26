@@ -12,6 +12,8 @@ import scala.concurrent.{Promise, Future}
 import java.util.function._
 import java.util.concurrent.CompletableFuture
 
+import scala.util.{Failure, Success}
+
 package object asterisque {
 	import scala.language.implicitConversions
 
@@ -44,6 +46,17 @@ package object asterisque {
 		})
 		future.whenComplete(f)
 		promise.future
+	}
+
+	/** Scala Future to Java CompletableFuture */
+	implicit def Future2CompletableFuture[T](future:Future[T]):CompletableFuture[T] = {
+		import scala.concurrent.ExecutionContext.Implicits.global
+		val cf = new CompletableFuture[T]()
+		future.onComplete {
+			case Success(result) => cf.complete(result)
+			case Failure(ex) => cf.completeExceptionally(ex)
+		}
+		cf
 	}
 
 	implicit class RichLocalHost(local:LocalNode) {

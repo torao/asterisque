@@ -83,7 +83,7 @@ public abstract class Service {
 	private final Map<Short,Function> functions = new HashMap<>();
 
 	protected Service(){
-		logger.debug("binding " + getClass().getSimpleName() + " as service");
+		logger.debug("binding " + (getClass().isAnonymousClass()? "<anonymous>": getClass().getSimpleName()) + " as service");
 
 		// このインスタンスに対するファンクションの定義
 		declare(getClass());

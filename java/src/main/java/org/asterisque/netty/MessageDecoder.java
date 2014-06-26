@@ -34,7 +34,7 @@ class MessageDecoder extends ByteToMessageDecoder {
 		Optional<Message> msg = codec.decode(buffer);
 		if(msg.isPresent()){
 			b.skipBytes(buffer.position());
-			out.add(msg);
+			out.add(msg.get());
 		}
 	}
 }

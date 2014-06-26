@@ -15,7 +15,7 @@ import java.util.concurrent.{CompletableFuture, TimeUnit, Executors}
 import org.asterisque.cluster.Repository
 import org.asterisque.codec.MessagePackCodec
 
-import scala.concurrent.{Promise, Await}
+import scala.concurrent.{Future, Promise, Await}
 import scala.concurrent.duration.Duration
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -26,7 +26,8 @@ import scala.concurrent.duration.Duration
  */
 class NettySpec extends Specification{ def is = s2"""
 Netty should:
-sample bidirectional server and client interaction. $e0
+sample bidirectional server and client interaction. $todo
+$e1
 """
 	val logger = LoggerFactory.getLogger(classOf[NettySpec])
 	val waitTime = Duration(3, TimeUnit.SECONDS)
@@ -37,9 +38,9 @@ sample bidirectional server and client interaction. $e0
 			@Export(100)
 			def echo(text:String):CompletableFuture[String]
 		}
-		object EchoService extends Service {
+		object EchoService extends Service with Echo {
 			def echo(text:String) = {
-				logger.info(s"echo($text)")
+				logger.info(s"echo(${Debug.toString(text)})")
 				val c = new CompletableFuture[String]()
 				c.complete(text)
 				c
@@ -67,24 +68,26 @@ sample bidirectional server and client interaction. $e0
 			e.echo("XYZ")
 		}
 
-		Await.result(future, waitTime) === "XYZ"
+		val result = Await.result(future, waitTime) === "XYZ"
+		server.shutdown()
+		result
 	}
 
 	def e1 = {
 
 		trait Echo {
 			@Export(100)
-			def echo(text:String):String
+			def echo(text:String):CompletableFuture[String]
 		}
-		object EchoService extends Service {
-			def echo(text:String) = text
+		object EchoService extends Service with Echo {
+			def echo(text:String) = Future(text)
 		}
 		trait Reverse {
 			@Export(100)
 			def reverse(text:String):CompletableFuture[String]
 		}
-		object ReverseService extends Service {
-			def reverse(text:String) = new StringBuilder(text).reverse.toString()
+		object ReverseService extends Service with Reverse {
+			def reverse(text:String) = Future(new StringBuilder(text).reverse.toString())
 		}
 
 		val p0 = Promise[String]()
@@ -94,7 +97,7 @@ sample bidirectional server and client interaction. $e0
 		val exec = Executors.newCachedThreadPool(Asterisque.newThreadFactory("test"))
 		val bridge = new Netty()
 
-		val address = new InetSocketAddress(9433)
+		val address = new InetSocketAddress(9434)
 		val echo = new LocalNode(UUID.randomUUID(), "echo", exec, EchoService, repository)
 		val future = echo.listen(address, new Options()
 			.set(Options.KEY_BRIDGE, bridge)
@@ -111,9 +114,12 @@ sample bidirectional server and client interaction. $e0
 		locally {
 			val session = Await.result(future2, waitTime)
 			val e = session.bind(classOf[Echo])
-			p1.success(e.echo("XYZ"))
+			p1.completeWith(e.echo("XYZ"))
 		}
 
-		(Await.result(p0.future, waitTime) === "GFEDCBA") and (Await.result(p1.future, waitTime) === "XYZ")
+		val result = (Await.result(p0.future, waitTime) === "GFEDCBA") and (Await.result(p1.future, waitTime) === "XYZ")
+		echo.shutdown()
+		reverse.shutdown()
+		result
 	}
 }
