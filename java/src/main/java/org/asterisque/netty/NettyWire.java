@@ -8,6 +8,7 @@ package org.asterisque.netty;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import org.asterisque.Asterisque;
 import org.asterisque.Debug;
 import org.asterisque.LocalNode;
 import org.asterisque.msg.Message;
@@ -233,7 +234,7 @@ class NettyWire implements Wire {
 	}
 
 	public String id() {
-		return plug.map(Plug::id).orElse("-:--------");
+		return plug.map(Plug::id).orElse(Asterisque.logPrefix(server));
 	}
 
 }

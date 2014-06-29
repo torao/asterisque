@@ -118,8 +118,9 @@ public abstract class Service {
 				"method with @Export annotation must have Future return type: " + Debug.getSimpleName(m));
 		}
 		short id = export.value();
-		logger.debug("  function " + id + " to " + Debug.getSimpleName(m));
-		accept(id, args -> {
+		String name = Debug.getSimpleName(m);
+		logger.debug("  function " + id + " to " + name);
+		accept(id, name, args -> {
 			try {
 				Class<?>[] types = m.getParameterTypes();
 				if(args.length != types.length) {
@@ -166,20 +167,22 @@ public abstract class Service {
 	 * @param pipe パイプ
 	 * @param open 受信した Open メッセージ
 	 */
-	void dispatch(Pipe pipe, Open open){
+	void dispatch(Pipe pipe, Open open, String id){
 		Function func = functions.get(pipe.function);
 		if(func != null) {
 			pipe.future.whenComplete(func::disconnect);
+			logger.debug(id + ": calling local method: " + func.name);
 			func.apply(open.params).whenComplete((result, ex) -> {
+				logger.trace(id + ": whenComplete(" + Debug.toString(result) + "," + ex + ")");
 				if(ex == null) {
 					pipe.close(result);
 				} else {
-					logger.error("unexpected exception: " + ex, ex);
+					logger.error(id + ": unexpected exception: " + ex, ex);
 					pipe.close(ex, "unexpected error");
 				}
 			});
 		} else {
-			logger.debug("function unbound on: " + pipe.function + ", " + pipe + ", " + open);
+			logger.debug(id + ": function unbound on: " + pipe.function + ", " + pipe + ", " + open);
 			pipe.close(new Exception("function unbound on: " + pipe.function), "function not found: " + pipe.function);
 		}
 	}
@@ -193,14 +196,14 @@ public abstract class Service {
 	 * @param f 処理
 	 * @return 関数定義
 	 */
-	protected Function accept(int function, java.util.function.Function<Object[],CompletableFuture<Object>> f){
+	protected Function accept(int function, String name, java.util.function.Function<Object[],CompletableFuture<Object>> f){
 		if((short)function != function){
 			throw new IllegalStateException("function id out of range for Short: " + function);
 		}
 		if(functions.containsKey((short)function)){
 			throw new IllegalArgumentException("function " + function + " already defined");
 		}
-		Function func = new Function(f);
+		Function func = new Function(name, f);
 		functions.put((short)function, func);
 		return func;
 	}
@@ -212,12 +215,14 @@ public abstract class Service {
 	 * サービスのファンクション番号に関連づけられている処理の実体。
 	 */
 	public class Function {
+		private final String name;
 		private final java.util.function.Function<Object[],CompletableFuture<Object>> onAccept;
 		private Consumer<Object> onDisconnect = o -> {};
 		/**
 		 * @param onAccept ファンクションが呼び出されたときに実行する処理
 		 */
-		Function(java.util.function.Function<Object[],CompletableFuture<Object>> onAccept) {
+		Function(String name, java.util.function.Function<Object[],CompletableFuture<Object>> onAccept) {
+			this.name = name;
 			this.onAccept = onAccept;
 		}
 

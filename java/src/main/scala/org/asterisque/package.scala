@@ -8,6 +8,8 @@ package org
 import java.net.SocketAddress
 import java.util.Optional
 
+import org.slf4j.LoggerFactory
+
 import scala.concurrent.{Promise, Future}
 import java.util.function._
 import java.util.concurrent.CompletableFuture
@@ -15,6 +17,7 @@ import java.util.concurrent.CompletableFuture
 import scala.util.{Failure, Success}
 
 package object asterisque {
+	val logger = LoggerFactory.getLogger("org.asterisque.package")
 	import scala.language.implicitConversions
 
 	implicit def Function0ToSupplier[T](f:()=>T) = new Supplier[T] {
@@ -42,10 +45,23 @@ package object asterisque {
 	implicit def CompletableFuture2Future[T](future:CompletableFuture[T]):Future[T] = {
 		val promise = Promise[T]()
 		val f = Function2ToBiConsumer({ (t:T, ex:Throwable) =>
-			if(ex == null) promise.success(t) else promise.failure(ex)
+			if(promise.isCompleted) {
+				logger.warn(s"CompletableFuture callback two or more call: result=${Debug.toString(t)}, exception=$ex")
+			} else {
+				if (ex == null) {
+					promise.success(t)
+				} else {
+					promise.failure(ex)
+				}
+			}
 		})
 		future.whenComplete(f)
 		promise.future
+	}
+
+	/** Java CompletableFuture to Scala Future */
+	implicit class RichCompletableFuture[T](future:CompletableFuture[T]) {
+		def toFuture:Future[T] = CompletableFuture2Future(future)
 	}
 
 	/** Scala Future to Java CompletableFuture */

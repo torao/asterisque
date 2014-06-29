@@ -97,4 +97,10 @@ public final class Asterisque {
 		public static final class Header {
 		}
 	}
+
+	public static String logPrefix(){ return "-:--------"; }
+	public static String logPrefix(boolean isServer){ return logPrefix(isServer, null); }
+	public static String logPrefix(boolean isServer, UUID id){
+		return (isServer? 'S': 'C') + ":" + (id == null? "--------": id.toString().substring(0, 8).toUpperCase());
+	}
 }

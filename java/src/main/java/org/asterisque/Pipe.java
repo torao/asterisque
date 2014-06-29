@@ -110,7 +110,7 @@ public final class Pipe {
 
 		this.out = new PipeOutputStream(this, session.writeBarrier);
 
-		logger.trace(this + ": pipe created");
+		logger.trace(this + ": pipe " + id + " for function " + function + " with priority " + priority + " created");
 		// ブロックを受信したらメッセージソースに通知
 		onBlock.add((PipeMessageSource)src);
 	}
@@ -191,9 +191,9 @@ public final class Pipe {
 			session.post(priority, new Close(id, result));
 			future.complete(result);
 			session.destroy(id);
-			logger.trace(this + ": pipe is closed with success: " + result);
+			logger.trace(this + ": pipe is closed with success: " + Debug.toString(result));
 		} else {
-			logger.debug(this + ": pipe already closed: " + result);
+			logger.debug(this + ": pipe already closed: " + Debug.toString(result));
 		}
 	}
 
@@ -229,8 +229,10 @@ public final class Pipe {
 		if(closed.compareAndSet(false, true)) {
 			onClosing.accept(false);
 			if(close.abort.isPresent()) {
+				logger.trace(this + ": close(" + close + "): aborted: " + close.abort.get());
 				future.completeExceptionally(close.abort.get());
 			} else {
+				logger.trace(this + ": close(" + close + "): success: " + Debug.toString(close.result.get()));
 				future.complete(close.result.get());
 			}
 			session.destroy(id);

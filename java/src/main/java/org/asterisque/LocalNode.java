@@ -103,23 +103,28 @@ public class LocalNode {
 	}
 
 	public CompletableFuture<Bridge.Server> listen(SocketAddress address, Options options, Consumer<Session> onAccept) {
+		logger.trace(Asterisque.logPrefix(true) + ": listen(" + Debug.toString(address) + "," + options + ",onAccept)");
 		Bridge bridge = options.get(Options.KEY_BRIDGE).get();
 		return bridge.newServer(this, address, options, wire -> {
-			UUID id = repository.nextUUID();
 			CompletableFuture<Wire> future = CompletableFuture.completedFuture(wire);
 			Optional<CompletableFuture<Wire>> of = Optional.of(future);
 			AtomicReference<Optional<CompletableFuture<Wire>>> ref = new AtomicReference<>(of);
-			Session session = new Session(id, this, service, options, () -> ref.getAndSet(Optional.empty()));
-			sessions.put(id, session);
-			session.onClosed.add(s -> sessions.remove(id));
-			onAccept.accept(session);
+			new Session(this, true, service, options,
+				() -> ref.getAndSet(Optional.empty()),
+				(Session _session, UUID id) -> {
+					sessions.put(id, _session);
+					_session.onClosed.add(s -> sessions.remove(id));
+					logger.debug(_session.logId() + ": onAccept() callback: " + Debug.toString(address));
+					onAccept.accept(_session);
+				});
 		});
 	}
 
 	public CompletableFuture<Session> connect(SocketAddress remote, Options options){
+		logger.trace(Asterisque.logPrefix(false) + ": connect(" + remote + "," + options + ")");
 		Bridge bridge = options.get(Options.KEY_BRIDGE).get();
 		CompletableFuture<Session> future = new CompletableFuture<>();
-		new Session(this, service, options,
+		new Session(this, false, service, options,
 			() -> Optional.of(bridge.newWire(this, remote, options)),
 			(Session _session, UUID id) -> {
 				sessions.put(id, _session);
@@ -138,8 +143,8 @@ public class LocalNode {
 	 */
 	public void shutdown() {
 		if(closing.compareAndSet(false, true)){
-			logger.debug("shutting-down " + name + ";" +
-				" all available " + sessions.size() + " sessions, " + servers.size() + "servers will be closed");
+			logger.debug("shutting-down node \"" + name + "\";" +
+				" all available " + sessions.size() + " sessions, " + servers.size() + " servers will be closed");
 			executor.shutdown();
 			servers.forEach(Bridge.Server::close);
 			servers.clear();

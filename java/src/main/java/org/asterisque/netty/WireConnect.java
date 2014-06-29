@@ -8,6 +8,7 @@ package org.asterisque.netty;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.ssl.SslHandler;
+import org.asterisque.Asterisque;
 import org.asterisque.Debug;
 import org.asterisque.LocalNode;
 import org.asterisque.Options;
@@ -191,7 +192,7 @@ class WireConnect extends SimpleChannelInboundHandler<Message> {
 	}
 
 	public String id() {
-		return wire.map(NettyWire::id).orElse("-:--------");
+		return wire.map(NettyWire::id).orElse(Asterisque.logPrefix(isServer));
 	}
 
 }

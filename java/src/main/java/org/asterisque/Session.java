@@ -84,23 +84,9 @@ public class Session {
 	/**
 	 *
 	 */
-	Session(LocalNode node, Service defaultService, Options options,
-					Supplier<Optional<CompletableFuture<Wire>>> wireFactory, BiConsumer<Session,UUID> onSync) {
-		this(Asterisque.Zero, node, false, defaultService, options, wireFactory, onSync);
-	}
-
-	Session(UUID id, LocalNode node, Service defaultService, Options options,
-					Supplier<Optional<CompletableFuture<Wire>>> wireFactory){
-		this(id, node, true, defaultService, options, wireFactory, (s,u)->{});
-	}
-
-	private Session(UUID id, LocalNode node, boolean isServer, Service defaultService, Options options,
+	Session(LocalNode node, boolean isServer, Service defaultService, Options options,
 					Supplier<Optional<CompletableFuture<Wire>>> wireFactory, BiConsumer<Session,UUID> onSync){
-		if(isServer && id.equals(Asterisque.Zero)){
-			throw new IllegalArgumentException("server have invalid session-id");
-		}
-		assert(isServer || id.equals(Asterisque.Zero));
-		this._id = id;
+		this._id = Asterisque.Zero;
 		this.node = node;
 		this.isServer = isServer;
 		this.service = defaultService;
@@ -150,14 +136,21 @@ public class Session {
 			@Override
 			public Message produce() { return departure.ship(); }
 			@Override
-			public void consume(Message msg) { deliver(msg); }
+			public void consume(Message msg) {
+				try {
+					deliver(msg);
+				} catch(ProtocolViolationException ex){
+					logger.error(logId() + ": protocol violation", ex);
+					close(true);
+				}
+			}
 			@Override
 			public void onClose(Wire wire) { reconnect(); }
 			@Override
 			public String id(){ return logId(); }
 		};
 
-		logger.info(logId() + ": " + id() + ": session created");
+		logger.debug(logId() + ": session created, waiting sync-config");
 
 		// 非同期で Wire を構築してメッセージの開始
 		connect();
@@ -206,7 +199,7 @@ public class Session {
 	 */
 	public void close(boolean graceful) {
 		if(closing.compareAndSet(false, true)) {
-			logger.trace(logId() + ": close(" + graceful + ")");
+			logger.debug(logId() + ": closing session with " + (graceful? "graceful": "forceful"));
 
 			// 残っているすべてのパイプに Close メッセージを送信
 			pipes.close(graceful);
@@ -220,7 +213,7 @@ public class Session {
 			closed.set(true);
 
 			// Wire のクローズ
-			wire.ifPresent(Wire::close);
+			disconnect();
 
 			// セッションのクローズを通知
 			onClosed.accept(this);
@@ -313,6 +306,7 @@ public class Session {
 		if(logger.isTraceEnabled()){
 			logger.trace(logId() + ": deliver: " + msg);
 		}
+		ensureSessionStarted(msg);
 
 		// Control メッセージはこのセッション内で処理する
 		if(msg instanceof Control){
@@ -326,7 +320,7 @@ public class Session {
 					break;
 				default:
 					logger.error(id() + ": unsupported control code: 0x" + Integer.toHexString(ctrl.code & 0xFF));
-					throw new ProtocolViolationException("");
+					throw new ProtocolViolationException("unsupported control");
 			}
 			return;
 		}
@@ -357,7 +351,7 @@ public class Session {
 			if(msg instanceof Open) {
 				// サービスを起動しメッセージポンプの開始
 				Open open = (Open)msg;
-				service.dispatch(pipe, open);
+				service.dispatch(pipe, open, logId());
 			} else if(msg instanceof Block) {
 				// Open は受信したがサービスの処理が完了していない状態でメッセージを受信した場合にパイプのキューに保存できるよう
 				// 一度パイプを経由して deliver(Pipe,Message) を実行する
@@ -375,6 +369,7 @@ public class Session {
 			}
 		}
 	}
+
 
 	/**
 	 * @return ping 間隔 (秒)。接続していない場合は 0。
@@ -422,6 +417,7 @@ public class Session {
 			if(header.sessionId.equals(Asterisque.Zero)){
 				// 新規セッションの開始
 				this._id = node.repository.nextUUID();
+				logger.trace(logId() + ": new session-id is issued: " + this._id);
 				SyncConfig ack = new SyncConfig(
 					Asterisque.Protocol.Version_0_1, node.id, _id, System.currentTimeMillis(), getPingInterval(), getTimeout());
 				post(Wire.Priority.Normal, ack.toControl());
@@ -451,11 +447,12 @@ public class Session {
 			}
 			if(this._id.equals(Asterisque.Zero)) {
 				this._id = header.sessionId;
+				logger.trace(logId() + ": new session-id is specified: " + this._id);
 			} else if(! this._id.equals(header.sessionId)){
 				throw new ProtocolViolationException("unexpected session-id specified from server: " + header.sessionId + " != " + this._id);
 			}
 		}
-		logger.debug(logId() + ": sync-configuration success, beginning session");
+		logger.info(logId() + ": sync-configuration success, beginning session");
 		onSync.accept(this, header.sessionId);
 	}
 
@@ -466,7 +463,7 @@ public class Session {
 	 * ピアに対して指定されたメッセージを送信します。
 	 */
 	void post(byte priority, Message msg) {
-		if(closing()){
+		if(closed() || (closing() && ! (msg instanceof Control))){
 			logger.error("session " + id() + " closed");
 		} else {
 			try {
@@ -561,7 +558,15 @@ public class Session {
 	}
 
 	String logId() {
-		return (isServer? 'S': 'C') + ":" + id().toString().substring(0, 8).toUpperCase();
+		return Asterisque.logPrefix(isServer, id());
+	}
+
+	/** このセッションが開始していることを保証する処理。*/
+	private void ensureSessionStarted(Message msg){
+		if(! header.isPresent() && (! (msg instanceof Control) || ((Control)msg).code != Control.SyncConfig)) {
+			logger.error(id() + ": unexpected message received; session is not initialized yet: " + msg);
+			throw new ProtocolViolationException("unexpected message received");
+		}
 	}
 
 }

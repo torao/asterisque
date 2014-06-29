@@ -83,7 +83,7 @@ public class Netty implements Bridge {
 		CompletableFuture<Wire> future = new CompletableFuture<>();
 
 		Initializer factory = new Initializer(node, false, options, wire -> {
-			logger.debug("onConnect(" + wire + ")");
+			logger.debug(Asterisque.logPrefix(false) + ": onConnect(" + wire + ")");
 			future.complete(wire);
 		});
 
@@ -96,9 +96,9 @@ public class Netty implements Bridge {
 
 		client.connect(address).addListener(f -> {
 			if(f.isSuccess()) {
-				logger.debug("connection success");
+				logger.debug(Asterisque.logPrefix(false) + ": connection success");
 			} else {
-				logger.debug("connection failure");
+				logger.debug(Asterisque.logPrefix(false) + ": connection failure");
 				future.completeExceptionally(f.cause());
 			}
 		});
@@ -119,7 +119,7 @@ public class Netty implements Bridge {
 		CompletableFuture<Server> future = new CompletableFuture<>();
 
 		Initializer factory = new Initializer(node, true, options, wire -> {
-			logger.debug("onAccept(" + wire + ")");
+			logger.debug(Asterisque.logPrefix(true) + ": onAccept(" + wire + ")");
 			onAccept.accept(wire);
 		});
 
@@ -133,7 +133,7 @@ public class Netty implements Bridge {
 
 		server.bind().addListener(f -> {
 			if(f.isSuccess()){
-				logger.info("startup server: " + Debug.toString(address));
+				logger.info(Asterisque.logPrefix(true) + ": startup server: " + Debug.toString(address));
 				future.complete(new Server(node, address, options) {
 					@Override
 					public void close() {
@@ -141,7 +141,7 @@ public class Netty implements Bridge {
 					}
 				});
 			} else {
-				logger.error("server bind failure: " + Debug.toString(address), f.cause());
+				logger.error(Asterisque.logPrefix(true) + ": server bind failure: " + Debug.toString(address), f.cause());
 				future.completeExceptionally(f.cause());
 				master.shutdownGracefully();
 			}
@@ -182,7 +182,7 @@ public class Netty implements Bridge {
 			this.isServer = isServer;
 			this.options = options;
 			this.onWireCreate = onWireCreate;
-			this.sym = isServer? "S": "C";
+			this.sym = Asterisque.logPrefix(isServer);
 		}
 
 		// ============================================================================================
@@ -221,4 +221,5 @@ public class Netty implements Bridge {
 				new WireConnect(node, ch.localAddress(), ch.remoteAddress(), isServer, sslHandler, onWireCreate, options));
 		}
 	}
+
 }

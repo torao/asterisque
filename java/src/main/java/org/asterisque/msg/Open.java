@@ -66,7 +66,7 @@ public final class Open extends Message {
 	 */
 	@Override
 	public String toString(){
-		return "Open(" + pipeId + "," + functionId + "," + Debug.toString(params) + ")";
+		return "Open(" + pipeId + "," + priority + "," + functionId + "," + Debug.toString(params) + ")";
 	}
 
 }

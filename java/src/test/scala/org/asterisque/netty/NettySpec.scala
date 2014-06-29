@@ -7,6 +7,7 @@ package org.asterisque.netty
 
 import java.net.InetSocketAddress
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 
 import org.slf4j.LoggerFactory
 import org.specs2.Specification
@@ -14,6 +15,7 @@ import org.asterisque._
 import java.util.concurrent.{CompletableFuture, TimeUnit, Executors}
 import org.asterisque.cluster.Repository
 import org.asterisque.codec.MessagePackCodec
+import org.specs2.matcher.MatchResult
 
 import scala.concurrent.{Future, Promise, Await}
 import scala.concurrent.duration.Duration
@@ -26,70 +28,44 @@ import scala.concurrent.duration.Duration
  */
 class NettySpec extends Specification{ def is = s2"""
 Netty should:
-sample bidirectional server and client interaction. $todo
-$e1
+sample mono-directional function call from client to server. $e0
+sample bi-directional between server and client interaction. $e1
+bi-directional heavy call between nodes. $e2
 """
 	val logger = LoggerFactory.getLogger(classOf[NettySpec])
 	val waitTime = Duration(3, TimeUnit.SECONDS)
+	val wait1Min = Duration(60, TimeUnit.SECONDS)
+	val port = new AtomicInteger(9000)
 
 	def e0 = {
-
-		trait Echo {
-			@Export(100)
-			def echo(text:String):CompletableFuture[String]
-		}
-		object EchoService extends Service with Echo {
-			def echo(text:String) = {
-				logger.info(s"echo(${Debug.toString(text)})")
-				val c = new CompletableFuture[String]()
-				c.complete(text)
-				c
-			}
-		}
-
 		val repository = Repository.OnMemory
 		val exec = Executors.newCachedThreadPool(Asterisque.newThreadFactory("test"))
 		val bridge = new Netty()
 
-		val address = new InetSocketAddress(9433)
+		val address = new InetSocketAddress(port.getAndIncrement)
 		val server = new LocalNode(UUID.randomUUID(), "echo", exec, EchoService, repository)
 		val startup = server.listen(address, new Options()
 			.set(Options.KEY_BRIDGE, bridge)
 			.set(Options.KEY_CODEC, MessagePackCodec.getInstance())){ session => None }
-		Await.ready(startup, waitTime)
+		val stub = Await.result(startup, waitTime)
 
 		val client = new LocalNode(UUID.randomUUID(), "reverse", exec, new Service {}, repository)
 		val future2 = client.connect(address, new Options()
 			.set(Options.KEY_BRIDGE, bridge)
 			.set(Options.KEY_CODEC, MessagePackCodec.getInstance()))
-		val future = locally {
-			val session = Await.result(future2, waitTime)
-			val e = session.bind(classOf[Echo])
-			e.echo("XYZ")
-		}
+		val session = Await.result(future2, waitTime)
+		val e = session.bind(classOf[Echo])
+		val result = Await.result(e.echo("XYZ"), waitTime)
 
-		val result = Await.result(future, waitTime) === "XYZ"
+		session.close(true)
+		stub.close()
 		server.shutdown()
-		result
+		client.shutdown()
+
+		result === "XYZ"
 	}
 
 	def e1 = {
-
-		trait Echo {
-			@Export(100)
-			def echo(text:String):CompletableFuture[String]
-		}
-		object EchoService extends Service with Echo {
-			def echo(text:String) = Future(text)
-		}
-		trait Reverse {
-			@Export(100)
-			def reverse(text:String):CompletableFuture[String]
-		}
-		object ReverseService extends Service with Reverse {
-			def reverse(text:String) = Future(new StringBuilder(text).reverse.toString())
-		}
-
 		val p0 = Promise[String]()
 		val p1 = Promise[String]()
 
@@ -97,29 +73,99 @@ $e1
 		val exec = Executors.newCachedThreadPool(Asterisque.newThreadFactory("test"))
 		val bridge = new Netty()
 
-		val address = new InetSocketAddress(9434)
+		val address = new InetSocketAddress(port.getAndIncrement)
 		val echo = new LocalNode(UUID.randomUUID(), "echo", exec, EchoService, repository)
 		val future = echo.listen(address, new Options()
 			.set(Options.KEY_BRIDGE, bridge)
 			.set(Options.KEY_CODEC, MessagePackCodec.getInstance())){ session =>
+			logger.info("server onAccept() callback")
 			val r = session.bind(classOf[Reverse])
 			p0.completeWith(r.reverse("ABCDEFG"))
 		}
-		Await.ready(future, waitTime)
+		val stub = Await.result(future, waitTime)
 
 		val reverse = new LocalNode(UUID.randomUUID(), "reverse", exec, ReverseService, repository)
 		val future2 = reverse.connect(address, new Options()
 			.set(Options.KEY_BRIDGE, bridge)
 			.set(Options.KEY_CODEC, MessagePackCodec.getInstance()))
-		locally {
-			val session = Await.result(future2, waitTime)
-			val e = session.bind(classOf[Echo])
-			p1.completeWith(e.echo("XYZ"))
-		}
+		val session = Await.result(future2, waitTime)
+		val e = session.bind(classOf[Echo])
+		val result1 = Await.result(p0.future, waitTime)
+		val result2 = Await.result(e.echo("XYZ"), waitTime)
+		session.close(true)
 
-		val result = (Await.result(p0.future, waitTime) === "GFEDCBA") and (Await.result(p1.future, waitTime) === "XYZ")
+		stub.close()
 		echo.shutdown()
 		reverse.shutdown()
-		result
+		(result1 === "GFEDCBA") and (result2 === "XYZ")
+	}
+
+	def e2 = {
+		val repository = Repository.OnMemory
+		val exec = Executors.newCachedThreadPool(Asterisque.newThreadFactory("test"))
+		val bridge = new Netty()
+
+		val p0 = Promise[MatchResult[Any]]()
+		val address = new InetSocketAddress(port.getAndIncrement)
+		val echo = new LocalNode(UUID.randomUUID(), "echo", exec, EchoService, repository)
+		val future = echo.listen(address, new Options()
+			.set(Options.KEY_BRIDGE, bridge)
+			.set(Options.KEY_CODEC, MessagePackCodec.getInstance())){ session =>
+			val r = session.bind(classOf[Reverse])
+			val f = Future.sequence((0 until 10).map{ i => CompletableFuture2Future(r.reverse(i.toString)) })
+			p0.completeWith(f.map{ _.zipWithIndex.map{ case (s, i) => this.reverse(s) === i.toString }.reduce{ (a, b) => a and b } })
+		}
+		Await.ready(future, waitTime)
+
+		val p1 = Promise[MatchResult[Any]]()
+		val reverse = new LocalNode(UUID.randomUUID(), "reverse", exec, ReverseService, repository)
+		val future2 = reverse.connect(address, new Options()
+			.set(Options.KEY_BRIDGE, bridge)
+			.set(Options.KEY_CODEC, MessagePackCodec.getInstance())
+		).map{ session =>
+			val e = session.bind(classOf[Echo])
+			val f = (0 until 10).map{ i =>
+				logger.info(s"echo($i) calling")
+				val future = e.echo(i.toString)
+				future.onComplete{ _ => logger.info(s"echo($i) completed")}
+				future.toFuture
+			}
+			val r = p1.completeWith(Future.sequence(f).map {
+				_.zipWithIndex.map { case (s, i) =>
+					this.reverse(s) === i.toString
+				}.reduce { (a, b) => a and b }
+			}.map { r => session.close(); r })
+			r
+		}
+
+		val r0 = Await.result(p0.future, waitTime)
+		val r1 = Await.result(p1.future, wait1Min)
+		echo.shutdown()
+		reverse.shutdown()
+		r0 and r1
+	}
+
+	def reverse(text:String):String = new StringBuilder(text).reverse.toString()
+
+	trait Echo {
+		@Export(100)
+		def echo(text:String):CompletableFuture[String]
+	}
+	object EchoService extends Service with Echo {
+		def echo(text:String) = {
+			logger.info(s"echo(" + Debug.toString(text) + ")")
+			CompletableFuture.completedFuture(text)
+		}
+	}
+	trait Reverse {
+		@Export(100)
+		def reverse(text:String):CompletableFuture[String]
+	}
+	object ReverseService extends Service with Reverse {
+		def reverse(text:String) = {
+			val r = NettySpec.this.reverse(text)
+			logger.info(s"reverse(" + Debug.toString(text) + "): " + Debug.toString(r))
+			CompletableFuture.completedFuture(r)
+		}
 	}
 }
