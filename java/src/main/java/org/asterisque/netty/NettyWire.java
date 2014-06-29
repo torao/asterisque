@@ -10,7 +10,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.asterisque.Asterisque;
 import org.asterisque.Debug;
-import org.asterisque.LocalNode;
+import org.asterisque.Node;
 import org.asterisque.msg.Message;
 import org.asterisque.Wire;
 import org.slf4j.Logger;
@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 class NettyWire implements Wire {
 	private static final Logger logger = LoggerFactory.getLogger(NettyWire.class);
 
-	private final LocalNode node;
+	private final Node node;
 	private final SocketAddress local;
 	private final SocketAddress remote;
 	private final boolean server;
@@ -71,7 +71,7 @@ class NettyWire implements Wire {
 	 * @param server この Wire 端点がサーバ側の場合 true
 	 * @param context チャネルコンテキスト
 	 */
-	public NettyWire(LocalNode node, SocketAddress local, SocketAddress remote,
+	public NettyWire(Node node, SocketAddress local, SocketAddress remote,
 									 boolean server, CompletableFuture<Optional<SSLSession>> tls,
 									 ChannelHandlerContext context){
 		this.node = node;
@@ -92,7 +92,7 @@ class NettyWire implements Wire {
 	/**
 	 * {@inheritDoc}
 	 */
-	public LocalNode node(){ return node; }
+	public Node node(){ return node; }
 
 	// ==============================================================================================
 	// ローカルノードの参照

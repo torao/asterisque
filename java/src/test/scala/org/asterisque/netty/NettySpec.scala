@@ -43,13 +43,13 @@ bi-directional heavy call between nodes. $e2
 		val bridge = new Netty()
 
 		val address = new InetSocketAddress(port.getAndIncrement)
-		val server = new LocalNode(UUID.randomUUID(), "echo", exec, EchoService, repository)
+		val server = new Node(UUID.randomUUID(), "echo", exec, EchoService, repository)
 		val startup = server.listen(address, new Options()
 			.set(Options.KEY_BRIDGE, bridge)
 			.set(Options.KEY_CODEC, MessagePackCodec.getInstance())){ session => None }
 		val stub = Await.result(startup, waitTime)
 
-		val client = new LocalNode(UUID.randomUUID(), "reverse", exec, new Service {}, repository)
+		val client = new Node(UUID.randomUUID(), "reverse", exec, new Service {}, repository)
 		val future2 = client.connect(address, new Options()
 			.set(Options.KEY_BRIDGE, bridge)
 			.set(Options.KEY_CODEC, MessagePackCodec.getInstance()))
@@ -74,7 +74,7 @@ bi-directional heavy call between nodes. $e2
 		val bridge = new Netty()
 
 		val address = new InetSocketAddress(port.getAndIncrement)
-		val echo = new LocalNode(UUID.randomUUID(), "echo", exec, EchoService, repository)
+		val echo = new Node(UUID.randomUUID(), "echo", exec, EchoService, repository)
 		val future = echo.listen(address, new Options()
 			.set(Options.KEY_BRIDGE, bridge)
 			.set(Options.KEY_CODEC, MessagePackCodec.getInstance())){ session =>
@@ -84,7 +84,7 @@ bi-directional heavy call between nodes. $e2
 		}
 		val stub = Await.result(future, waitTime)
 
-		val reverse = new LocalNode(UUID.randomUUID(), "reverse", exec, ReverseService, repository)
+		val reverse = new Node(UUID.randomUUID(), "reverse", exec, ReverseService, repository)
 		val future2 = reverse.connect(address, new Options()
 			.set(Options.KEY_BRIDGE, bridge)
 			.set(Options.KEY_CODEC, MessagePackCodec.getInstance()))
@@ -107,7 +107,7 @@ bi-directional heavy call between nodes. $e2
 
 		val p0 = Promise[MatchResult[Any]]()
 		val address = new InetSocketAddress(port.getAndIncrement)
-		val echo = new LocalNode(UUID.randomUUID(), "echo", exec, EchoService, repository)
+		val echo = new Node(UUID.randomUUID(), "echo", exec, EchoService, repository)
 		val future = echo.listen(address, new Options()
 			.set(Options.KEY_BRIDGE, bridge)
 			.set(Options.KEY_CODEC, MessagePackCodec.getInstance())){ session =>
@@ -118,7 +118,7 @@ bi-directional heavy call between nodes. $e2
 		Await.ready(future, waitTime)
 
 		val p1 = Promise[MatchResult[Any]]()
-		val reverse = new LocalNode(UUID.randomUUID(), "reverse", exec, ReverseService, repository)
+		val reverse = new Node(UUID.randomUUID(), "reverse", exec, ReverseService, repository)
 		val future2 = reverse.connect(address, new Options()
 			.set(Options.KEY_BRIDGE, bridge)
 			.set(Options.KEY_CODEC, MessagePackCodec.getInstance())

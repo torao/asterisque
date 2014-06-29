@@ -19,13 +19,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// LocalNode
+// Node
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
  * @author Takami Torao
  */
-public class LocalNode {
-	private static final Logger logger = LoggerFactory.getLogger(LocalNode.class);
+public class Node {
+	private static final Logger logger = LoggerFactory.getLogger(Node.class);
 
 	/**
 	 * ピアへいかなるファンクションも公開していないデフォルト状態のサービスです。
@@ -79,7 +79,7 @@ public class LocalNode {
 	 * @param service ノードで発生したセッションのデフォルトのサービス
 	 * @param repository セッションを待避するリポジトリ
 	 */
-	public LocalNode(UUID id, String name, ExecutorService executor, Service service, Repository repository){
+	public Node(UUID id, String name, ExecutorService executor, Service service, Repository repository){
 		this.id = id;
 		this.name = name;
 		this.executor = executor;

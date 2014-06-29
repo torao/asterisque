@@ -39,7 +39,7 @@ public class Session {
 	private static final Logger logger = LoggerFactory.getLogger(Session.class);
 
 	public final UUID id(){ return _id; }
-	public final LocalNode node;
+	public final Node node;
 	public final boolean isServer;
 	public final Attributes attributes = new Attributes();
 
@@ -84,7 +84,7 @@ public class Session {
 	/**
 	 *
 	 */
-	Session(LocalNode node, boolean isServer, Service defaultService, Options options,
+	Session(Node node, boolean isServer, Service defaultService, Options options,
 					Supplier<Optional<CompletableFuture<Wire>>> wireFactory, BiConsumer<Session,UUID> onSync){
 		this._id = Asterisque.Zero;
 		this.node = node;

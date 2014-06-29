@@ -10,7 +10,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.ssl.SslHandler;
 import org.asterisque.Asterisque;
 import org.asterisque.Debug;
-import org.asterisque.LocalNode;
+import org.asterisque.Node;
 import org.asterisque.Options;
 import org.asterisque.msg.Message;
 import org.slf4j.Logger;
@@ -38,7 +38,7 @@ class WireConnect extends SimpleChannelInboundHandler<Message> {
 	 */
 	private static final AtomicInteger Sequence = new AtomicInteger(0);
 
-	private final LocalNode node;
+	private final Node node;
 	private final SocketAddress local;
 	private final SocketAddress remote;
 	private final Options options;
@@ -62,7 +62,7 @@ class WireConnect extends SimpleChannelInboundHandler<Message> {
 	// ==============================================================================================
 	/**
 	 */
-	public WireConnect(LocalNode node, SocketAddress local, SocketAddress remote, boolean isServer,
+	public WireConnect(Node node, SocketAddress local, SocketAddress remote, boolean isServer,
 										 Optional<SslHandler> sslHandler, Consumer<NettyWire> onWireCreate, Options options){
 		super(Message.class);
 		this.node = node;

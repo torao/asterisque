@@ -33,7 +33,7 @@ public interface Bridge extends AutoCloseable {
 	 * @param options 接続設定
 	 * @return Wire の Future
 	 */
-	public CompletableFuture<Wire> newWire(LocalNode local, SocketAddress address, Options options);
+	public CompletableFuture<Wire> newWire(Node local, SocketAddress address, Options options);
 
 	// ==============================================================================================
 	// 受付の実行
@@ -43,7 +43,7 @@ public interface Bridge extends AutoCloseable {
 	 * @param options 接続設定
 	 * @return Server の Future
 	 */
-	public CompletableFuture<Server> newServer(LocalNode local, SocketAddress address, Options options, Consumer<Wire> onAccept);
+	public CompletableFuture<Server> newServer(Node local, SocketAddress address, Options options, Consumer<Wire> onAccept);
 
 	// ==============================================================================================
 	// クローズ
@@ -57,14 +57,14 @@ public interface Bridge extends AutoCloseable {
 	// Server
 	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	/**
-	 * {@link #newServer(LocalNode, java.net.SocketAddress, Options, java.util.function.Consumer)}
+	 * {@link #newServer(Node, java.net.SocketAddress, Options, java.util.function.Consumer)}
 	 * によって生成されるサーバをクローズするために使用するクラスです。
 	 */
 	public static abstract class Server implements Closeable {
-		public final LocalNode node;
+		public final Node node;
 		public final SocketAddress address;
 		public final Options options;
-		protected Server(LocalNode node, SocketAddress address, Options options){
+		protected Server(Node node, SocketAddress address, Options options){
 			this.node = node;
 			this.address = address;
 			this.options = options;

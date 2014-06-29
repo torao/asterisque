@@ -78,7 +78,7 @@ public class Netty implements Bridge {
 	 * @param options 接続設定
 	 * @return Wire の Future
 	 */
-	public CompletableFuture<Wire> newWire(LocalNode node, SocketAddress address, Options options) {
+	public CompletableFuture<Wire> newWire(Node node, SocketAddress address, Options options) {
 		Bootstrap client = new Bootstrap();
 		CompletableFuture<Wire> future = new CompletableFuture<>();
 
@@ -113,7 +113,7 @@ public class Netty implements Bridge {
 	 *
 	 * @return Server の Future
 	 */
-	public CompletableFuture<Server> newServer(LocalNode node, SocketAddress address, Options options, Consumer<Wire> onAccept) {
+	public CompletableFuture<Server> newServer(Node node, SocketAddress address, Options options, Consumer<Wire> onAccept) {
 		NioEventLoopGroup master = new NioEventLoopGroup();		// サーバソケットごとに生成、消滅
 		ServerBootstrap server = new ServerBootstrap();
 		CompletableFuture<Server> future = new CompletableFuture<>();
@@ -166,7 +166,7 @@ public class Netty implements Bridge {
 	}
 
 	private static class Initializer extends ChannelInitializer {
-		private final LocalNode node;
+		private final Node node;
 		private final boolean isServer;
 		private final Options options;
 		private final Consumer<NettyWire> onWireCreate;
@@ -177,7 +177,7 @@ public class Netty implements Bridge {
 		// ============================================================================================
 		/**
 		 */
-		public Initializer(LocalNode node, boolean isServer, Options options, Consumer<NettyWire> onWireCreate) {
+		public Initializer(Node node, boolean isServer, Options options, Consumer<NettyWire> onWireCreate) {
 			this.node = node;
 			this.isServer = isServer;
 			this.options = options;

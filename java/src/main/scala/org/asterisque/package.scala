@@ -75,7 +75,7 @@ package object asterisque {
 		cf
 	}
 
-	implicit class RichLocalHost(local:LocalNode) {
+	implicit class RichLocalHost(local:Node) {
 		def listen(address:SocketAddress, config:Options)(onAccept:(Session)=>Unit):Future[Bridge.Server] = {
 			local.listen(address, config, onAccept)
 		}
