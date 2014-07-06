@@ -20,17 +20,20 @@ public final class Control extends Message {
 	/**
 	 * バイナリストリーム上で {@code *Q} を表すために {@link org.asterisque.codec.Codec.Msg#Control} が
 	 * {@code *}、{@code SyncConfig} が {@code Q} の値を取ります。
-	 * SyncConfig はヘルパークラス {@link org.asterisque.msg.SyncConfig} によってアクセスすることが出来
-	 * ます。
+	 * SyncConfig のフィールドはヘルパークラス {@link org.asterisque.msg.SyncConfig} 経由でアクセスすること
+	 * が出来ます。
 	 */
 	public static final byte SyncConfig = 'Q';
 
+	/**
+	 * セッションの終了を表す制御コード。有効なデータデーは付随しない。
+	 */
 	public static final byte Close = 'C';
 
 	private static final byte[] Empty = new byte[0];
 
 	// ==============================================================================================
-	// ID
+	// 制御コード
 	// ==============================================================================================
 	/**
 	 * 制御コードです。

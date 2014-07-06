@@ -29,12 +29,15 @@ public final class Block extends Message {
 	public static int MaxPayloadSize = 0xFFFF - (4 * 1024);
 
 	// ==============================================================================================
-	// 消失可能フラグ
+	// 損失率
 	// ==============================================================================================
 	/**
-	 * このブロックの情報が過負荷によって消失しても問題ないかを示すフラグです。
+	 * このブロックが過負荷などによって消失しても良い確率を表す 0〜127 までの値です。
+	 * 0 はこのブロックが消失しないことを表し、127 は 100% の消失が発生しても良い事を示します。
+	 * EOF を示す場合は必ず 0 になります。
+	 * 消失判定を行い生き残ったブロックは 0 に変更されます。
 	 */
-	public final boolean lossy;
+	public final byte loss;
 
 	// ==============================================================================================
 	// データ
@@ -75,7 +78,7 @@ public final class Block extends Message {
 	 * Block メッセージを構築します。
 	 * {@link #MaxPayloadSize} より大きいペイロードを指定すると例外が発生します。
 	 */
-	private Block(short pipeId, boolean lossy, byte[] payload, int offset, int length, boolean eof){
+	private Block(short pipeId, byte loss, byte[] payload, int offset, int length, boolean eof){
 		super(pipeId);
 		if(payload == null){
 			throw new NullPointerException("payload is null");
@@ -89,7 +92,10 @@ public final class Block extends Message {
 		if(length > MaxPayloadSize){
 			throw new IllegalArgumentException("too long payload: " + length + ", max=" + MaxPayloadSize);
 		}
-		this.lossy = lossy;
+		if(loss < 0){
+			throw new IllegalArgumentException("invalid loss-rate: " + loss);
+		}
+		this.loss = loss;
 		this.payload = payload;
 		this.offset = offset;
 		this.length = length;
@@ -102,8 +108,18 @@ public final class Block extends Message {
 	/**
 	 * Block メッセージを構築します。
 	 */
-	public Block(short pipeId, boolean lossy, byte[] payload, int offset, int length){
-		this(pipeId, lossy, payload, offset, length, false);
+	public Block(short pipeId, byte loss, byte[] payload, int offset, int length){
+		this(pipeId, loss, payload, offset, length, false);
+	}
+
+	// ==============================================================================================
+	// コンストラクタ
+	// ==============================================================================================
+	/**
+	 * Block メッセージを構築します。
+	 */
+	public Block(short pipeId, byte[] payload, int offset, int length){
+		this(pipeId, (byte)0, payload, offset, length, false);
 	}
 
 	// ==============================================================================================
@@ -111,6 +127,7 @@ public final class Block extends Message {
 	// ==============================================================================================
 	/**
 	 * このブロックのペイロードを ByteBuffer として参照します。
+	 * オフセットの指定により初期状態のポジションが 0 でない可能性があります。
 	 */
 	public ByteBuffer toByteBuffer(){
 		return ByteBuffer.wrap(payload, offset, length);
@@ -154,7 +171,7 @@ public final class Block extends Message {
 			}
 			buffer.append(String.format("%02X", payload[offset + i]));
 		}
-		return "Block(" + pipeId + ",[" + buffer + "]" + (lossy? ",lossy": "") + ")";
+		return "Block(" + pipeId + ",[" + buffer + "]," + loss + ")";
 	}
 
 	// ==============================================================================================
@@ -164,7 +181,7 @@ public final class Block extends Message {
 	 * 指定されたパイプ ID に対する EOF ブロックを構築します。
 	 */
 	public static Block eof(short pipeId){
-		return new Block(pipeId, false, Empty, 0, 0, true);
+		return new Block(pipeId, (byte)0, Empty, 0, 0, true);
 	}
 
 	// ==============================================================================================

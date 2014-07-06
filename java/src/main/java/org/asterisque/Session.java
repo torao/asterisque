@@ -7,7 +7,7 @@ package org.asterisque;
 
 import org.asterisque.msg.*;
 import org.asterisque.util.CircuitBreaker;
-import org.asterisque.util.LooseBarrier;
+import org.asterisque.util.Latch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,25 +31,49 @@ import java.util.stream.Stream;
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
  * ピアとの通信状態を表すクラスです。
- * {@code Wire} の再接続を行います。
+ *
+ * ピア間での幾つかの取り決めを実装する目的で、便宜的に通信開始側をクライアント (worker)、接続受付側をサーバ
+ * (master) と定めます。
+ *
+ * セッションはピアとのメッセージ送受信のための {@code Wire} を持ちます (Wire を持たない状態は物理的に接続して
+ * いない状態を表します)。セッションは Wire が切断されると新しい Wire の接続を試みます。
+ *
+ * セッション ID はサーバ側
+ * セッションが構築されると {@link org.asterisque.msg.SyncConfig 状態同期} のための
+ * {@link org.asterisque.msg.Control} メッセージがクライアントから送信されます。サーバはこのメッセージを受け
+ * ると新しいセッション ID を発行して状態同期の {@link org.asterisque.msg.Control} メッセージで応答し、双方の
+ * セッションが開始します。
  *
  * @author Takami Torao
  */
 public class Session {
 	private static final Logger logger = LoggerFactory.getLogger(Session.class);
 
+	/** セッション ID。ピアと状態同期が済んでいない場合は {@link org.asterisque.Asterisque#Zero} の値を取る。 */
 	public final UUID id(){ return _id; }
+	/** このセッションのノード */
 	public final Node node;
+	/** こちら側のセッションがサーバの場合 true */
 	public final boolean isServer;
+	/**
+	 * セッションのスコープで保持することの出来る属性値。{@link org.asterisque.cluster.Repository} に保管
+	 * 可能な値のみ使用可能。
+	 */
 	public final Attributes attributes = new Attributes();
 
+	/** セッション ID */
 	private UUID _id = Asterisque.Zero;
+	/** このセッションが使用している Wire から受信した状態同期メッセージ */
 	private Optional<SyncConfig> header = Optional.empty();
 
+	/** このセッションのローカル側の物理アドレスを参照します。ピアと接続していない場合は Optional.empty() を返します。 */
 	public Optional<SocketAddress> local(){ return wire.map(Wire::local); }
+	/** このセッションのリモート側の物理アドレスを参照します。ピアと接続していない場合は Optional.empty() を返します。 */
 	public Optional<SocketAddress> remote(){ return wire.map(Wire::remote); }
 
+	/** このセッションがクローズ中またはクローズ完了済み1を表すフラグ */
 	private final AtomicBoolean closing = new AtomicBoolean(false);
+	/** このセッションがクローズ完了済みを表すフラグ */
 	private final AtomicBoolean closed = new AtomicBoolean(false);
 
 	private final Supplier<Optional<CompletableFuture<Wire>>> wireFactory;
@@ -69,7 +93,7 @@ public class Session {
 	 * Block の同期出力 {@link org.asterisque.PipeOutputStream#write(byte[], int, int)} を一時停止させる
 	 * ためのバリア。
 	 */
-	final LooseBarrier writeBarrier;
+	final Latch writeBarrier;
 
 	/**
 	 * このセッションがクローズされたときに呼び出されるイベントハンドラです。
@@ -93,7 +117,7 @@ public class Session {
 		this.wireFactory = wireFactory;
 		this.onSync = onSync;
 
-		this.writeBarrier = new LooseBarrier();
+		this.writeBarrier = new Latch();
 
 		this.options = options;
 		int readSoftLimit = options.get(Options.KEY_READ_SOFT_LIMIT).get();
@@ -205,7 +229,7 @@ public class Session {
 			pipes.close(graceful);
 
 			if(graceful){
-				post(Wire.Priority.Normal, new Control(Control.Close));
+				post(Priority.Normal, new Control(Control.Close));
 			}
 
 			// 以降のメッセージ送信をすべて例外に変更して送信を終了
@@ -252,7 +276,7 @@ public class Session {
 			int ping = options.get(Options.KEY_PING_REQUEST).get();
 			int timeout = options.get(Options.KEY_SESSION_TIMEOUT_REQUEST).get();
 			SyncConfig header = new SyncConfig(node.id, Asterisque.Zero, System.currentTimeMillis(), ping, timeout);
-			post(Wire.Priority.Normal, header.toControl());
+			post(Priority.Normal, header.toControl());
 		}
 	}
 
@@ -270,7 +294,7 @@ public class Session {
 			w.close();
 		});
 		// TODO DepartureGate のクリア
-		// TODO PIpeSpace 内の全ての Pipe を失敗で終了
+		// TODO PipeSpace 内の全ての Pipe を失敗で終了
 	}
 
 	// ==============================================================================================
@@ -338,10 +362,10 @@ public class Session {
 			if(msg instanceof Close) {
 				logger.debug(logId() + ": both of sessions unknown pipe #" + msg.pipeId);
 			} else if(msg instanceof Open){
-				post(Wire.Priority.Normal, Close.unexpectedError(msg.pipeId, "duplicate pipe-id specified: " + msg.pipeId));
+				post(Priority.Normal, Close.unexpectedError(msg.pipeId, "duplicate pipe-id specified: " + msg.pipeId));
 			} else if(msg instanceof Block){
 				logger.debug(logId() + ": unknown pipe-id: " + msg);
-				post(Wire.Priority.Normal, Close.unexpectedError(msg.pipeId, "unknown pipe-id specified: " + msg.pipeId));
+				post(Priority.Normal, Close.unexpectedError(msg.pipeId, "unknown pipe-id specified: " + msg.pipeId));
 			}
 			return;
 		}
@@ -420,7 +444,7 @@ public class Session {
 				logger.trace(logId() + ": new session-id is issued: " + this._id);
 				SyncConfig ack = new SyncConfig(
 					Asterisque.Protocol.Version_0_1, node.id, _id, System.currentTimeMillis(), getPingInterval(), getTimeout());
-				post(Wire.Priority.Normal, ack.toControl());
+				post(Priority.Normal, ack.toControl());
 			} else {
 				Optional<Principal> principal = Optional.empty();
 				try {
@@ -434,10 +458,10 @@ public class Session {
 				if(service.isPresent()) {
 					SyncConfig ack = new SyncConfig(
 						Asterisque.Protocol.Version_0_1, node.id, _id, System.currentTimeMillis(), getPingInterval(), getTimeout());
-					post(Wire.Priority.Normal, ack.toControl());
+					post(Priority.Normal, ack.toControl());
 				} else {
 					// TODO retry after
-					post(Wire.Priority.Normal, new Control(Control.Close));
+					post(Priority.Normal, new Control(Control.Close));
 				}
 			}
 		} else {

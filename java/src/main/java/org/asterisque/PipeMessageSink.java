@@ -15,7 +15,8 @@ import java.nio.ByteBuffer;
 /**
  * Pipe からブロックデータを送信するためのインターフェースです。
  */
-public final class PipeMessageSink {
+public final class
+	PipeMessageSink {
 	private final Pipe pipe;
 	PipeMessageSink(Pipe pipe) { this.pipe = pipe; }
 

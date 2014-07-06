@@ -158,7 +158,7 @@ public final class Pipe {
 	 * @see org.asterisque.PipeMessageSink
 	 */
 	void block(byte[] buffer, int offset, int length) {
-		block(new Block(id, false, buffer, offset, length));
+		block(new Block(id, buffer, offset, length));
 	}
 
 	// ==============================================================================================
@@ -228,12 +228,12 @@ public final class Pipe {
 	void close(Close close) {
 		if(closed.compareAndSet(false, true)) {
 			onClosing.accept(false);
-			if(close.abort.isPresent()) {
-				logger.trace(this + ": close(" + close + "): aborted: " + close.abort.get());
-				future.completeExceptionally(close.abort.get());
+			if(close.abort != null) {
+				logger.trace(this + ": close(" + close + "): aborted: " + close.abort);
+				future.completeExceptionally(close.abort);
 			} else {
-				logger.trace(this + ": close(" + close + "): success: " + Debug.toString(close.result.get()));
-				future.complete(close.result.get());
+				logger.trace(this + ": close(" + close + "): success: " + Debug.toString(close.result));
+				future.complete(close.result);
 			}
 			session.destroy(id);
 			logger.trace(this + ": pipe is closed by peer: " + close);

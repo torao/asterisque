@@ -74,6 +74,7 @@ public final class SyncConfig {
 		this.nodeId = nodeId;
 		this.sessionId = sessionId;
 		this.utcTime = utcTime;
+		// TODO ping, sessionTimeout の入力値チェックとテストケース作成
 		this.ping = ping;
 		this.sessionTimeout = sessionTimeout;
 	}
@@ -82,15 +83,10 @@ public final class SyncConfig {
 	// コンストラクタ
 	// ============================================================================================
 	/**
-	 *
+	 * 現在のバージョンを使用して構築します。
 	 */
 	public SyncConfig(UUID nodeId, UUID sessionId, long utcTime, int ping, int sessionTimeout) {
-		this.version = CurrentVersion;
-		this.nodeId = nodeId;
-		this.sessionId = sessionId;
-		this.utcTime = utcTime;
-		this.ping = ping;
-		this.sessionTimeout = sessionTimeout;
+		this(CurrentVersion, nodeId, sessionId, utcTime, ping, sessionTimeout);
 	}
 
 	// ============================================================================================

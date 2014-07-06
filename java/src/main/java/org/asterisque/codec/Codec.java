@@ -62,17 +62,18 @@ public interface Codec {
 			Close close = (Close)msg;
 			m.writeTag(Msg.Close);
 			m.writeInt16(close.pipeId);
-			if(close.abort.isPresent()){
+			if(close.abort != null){
 				m.writeFalse();
-				m.writeInt32(close.abort.get().code);
-				m.writeString(close.abort.get().message);
+				m.writeInt32(close.abort.code);
+				m.writeString(close.abort.message);
 			} else {
 				m.writeTrue();
-				m.write(close.result.get());
+				m.write(close.result);
 			}
 		} else if(msg instanceof Block) {
 			Block block = (Block)msg;
-			byte status = (byte)((block.eof? 0: 1) | ((block.lossy? 0: 1) << 1));
+			byte status = (byte)(block.eof? (1 << 7): block.loss);
+			assert(block.loss != (1 << 7));
 			m.writeTag(Msg.Block);
 			m.writeInt16(block.pipeId);
 			m.writeInt8(status);
@@ -146,11 +147,11 @@ public interface Codec {
 				case Msg.Block:
 					short pipeId3 = u.readInt16();
 					byte status = u.readInt8();
-					boolean eof = (status & 1) != 0;
-					boolean lossy = (status & (1 << 1)) != 0;
+					boolean eof = status == (byte)(1 << 7);
+					byte loss = (byte)(eof? 0: status & 0x7F);
 					if(! eof){
 						byte[] payload = u.readBinary();
-						return Optional.of(new Block(pipeId3, lossy, payload, 0, payload.length));
+						return Optional.of(new Block(pipeId3, loss, payload, 0, payload.length));
 					} else {
 						return Optional.of(Block.eof(pipeId3));
 					}
@@ -271,6 +272,8 @@ public interface Codec {
 		 * ます。このメソッドは {@link org.asterisque.codec.Codec.Unmarshal#read()} の対になるメソッドです。
 		 */
 		public default void write(Object value){
+			value = TypeConversion.toTransfer(value);
+			assert(TypeConversion.isDefaultSafeValue(value));
 			if(value == null) {
 				writeTag(Tag.Null);
 			} else if(value instanceof Boolean){
@@ -281,7 +284,7 @@ public interface Codec {
 				}
 			} else if(value instanceof Byte){
 				writeTag(Tag.Int8);
-				writeInt8((Byte)value);
+				writeInt8((Byte) value);
 			} else if(value instanceof Short){
 				writeTag(Tag.Int16);
 				writeInt16((Short)value);
@@ -300,6 +303,9 @@ public interface Codec {
 			} else if(value instanceof byte[]){
 				writeTag(Tag.Binary);
 				writeBinary((byte[])value);
+			} else if(value instanceof Character){
+				writeTag(Tag.String);
+				writeString(value.toString());
 			} else if(value instanceof String){
 				writeTag(Tag.String);
 				writeString((String)value);
@@ -308,15 +314,15 @@ public interface Codec {
 				writeUUID((UUID)value);
 			} else if(value instanceof List<?>){
 				writeTag(Tag.List);
-				writeList((List<?>)value);
+				writeList((List<?>) value);
 			} else if(value instanceof Map<?,?>){
 				writeTag(Tag.Map);
 				writeMap((Map<?,?>)value);
 			} else if(value instanceof Struct){
 				writeTag(Tag.Struct);
-				writeStruct((Struct)value);
+				writeStruct((Struct) value);
 			} else {
-				throw new CodecException(String.format("marshal not supported for data type: %s", value.getClass().getName()));
+				throw new CodecException(String.format("marshal not supported for data type: %s: %s", value.getClass().getCanonicalName(), value));
 			}
 		}
 	}
@@ -417,11 +423,11 @@ public interface Codec {
 			byte tag = readTag();
 			switch(tag){
 				case Tag.Null:
-					return Optional.of(null);
+					return null;
 				case Tag.True:
-					return Optional.of(Boolean.TRUE);
+					return Boolean.TRUE;
 				case Tag.False:
-					return Optional.of(Boolean.FALSE);
+					return Boolean.FALSE;
 				case Tag.Int8:
 					return readInt8();
 				case Tag.Int16:

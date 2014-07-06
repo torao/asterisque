@@ -16,7 +16,8 @@ import java.util.Optional;
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
  * メッセージの伝達ラインを表すインターフェースです。TCP 接続における非同期 Socket に相当し、Wire のクローズは
- * TCP 接続のクローズを意味します。
+ * TCP 接続のクローズを意味します。{@link org.asterisque.Session} に対して再接続が行われる場合、新しい Wire
+ * のインスタンスが生成されます。
  *
  * メッセージのキュー/バッファリング、back pressure 等のフロー制御、再接続の処理は上位層で行われます。
  *
@@ -69,14 +70,14 @@ public interface Wire extends AutoCloseable {
 	// 出力可能設定
 	// ==============================================================================================
 	/**
-	 * スタブの {@link org.asterisque.Wire.Plug#produce()} が送信可能なメッセージを取り出し可能/不可の間で
-	 * 状態が変化した時に呼び出されます。サブクラスはこのメソッドをオーバーライドして下層の通信実装から
+	 * スタブの {@link org.asterisque.Wire.Plug#produce()} に送信可能なメッセージが到着した、またはなくなった
+	 * 間で状態が変化した時に呼び出されます。サブクラスはこのメソッドをオーバーライドして下層の通信実装から
 	 * {@link java.nio.channels.SelectionKey#OP_WRITE} のような出力可能の通知設定を制御することが出来ます。
 	 *
-	 * サブクラスはデフォルトで enable = false の状態を持ちます。
-	 * supplier が設定されていない状態で writable を true に設定することは出来ません。
+	 * サブクラスはデフォルトで writable = false の状態を持つ必要があります。
+	 * スタブが設定されていない状態で writable を true に設定することは出来ません。
 	 *
-	 * @param writable スタブに送信可能なメッセージが発生した場合
+	 * @param writable スタブに送信可能なメッセージが発生した場合 true
 	 */
 	public void setWritable(boolean writable);
 
@@ -84,10 +85,10 @@ public interface Wire extends AutoCloseable {
 	// 入力可能設定
 	// ==============================================================================================
 	/**
-	 * スタブの {@link org.asterisque.Wire.Plug#consume(org.asterisque.msg.Message)} が管理するキューの状態に対してメッセージを受け
-	 * 取れる/受け取れない状態が切り替わったときに呼び出されます。
+	 * スタブの {@link org.asterisque.Wire.Plug#consume(org.asterisque.msg.Message)} が管理するキューが
+	 * 新しいメッセージを受けられるようになった/ならないで状態が切り替わったときに呼び出されます。
 	 *
-	 * サブクラスはデフォルトで enable = false の状態を持ちます。
+	 * サブクラスはデフォルトで readable = false の状態を持つ必要があります。
 	 *
 	 * @param readable スタブがメッセージを受け取れるようになったとき true
 	 */
@@ -97,7 +98,8 @@ public interface Wire extends AutoCloseable {
 	// ピア証明書の参照
 	// ==============================================================================================
 	/**
-	 * この Wire の通信相手の証明書セッションを参照します。ピアが承認されていなければ Optional.empty() を返します。
+	 * この Wire の通信相手の証明書セッションを参照します。ピアとの通信に認証が使用されていなければ Optional.empty()
+	 * を返します。
 	 * @return この通信の SSL セッション
 	 */
 	public Optional<SSLSession> getSSLSession();
@@ -106,7 +108,7 @@ public interface Wire extends AutoCloseable {
 	// クローズ
 	// ==============================================================================================
 	/**
-	 * この Wire をクローズし使用していたリソースを解放します。
+	 * この Wire をクローズしリソースを解放します。
 	 */
 	public void close();
 
@@ -119,24 +121,31 @@ public interface Wire extends AutoCloseable {
 	 */
 	public String toString();
 
+	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	// Plug
+	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	/**
+	 * Wire が使用するスタブです。
+	 */
 	public interface Plug {
-		/** Wire が書き込み可能になった時に次のメッセージを参照するための処理。 */
+		/**
+		 * Wire が書き込み可能になった時に次の送信メッセージを参照するための処理。送信可能なメッセージが存在するか
+		 * は {@link #setWritable(boolean)} で制御されるため送信可能なメッセージが存在しない状態で呼び出される事は
+		 * ありません。
+		 */
 		public Message produce();
-		/** Wire が読み込んだメッセージを渡す処理。 */
+		/**
+		 * Wire が読み込んだメッセージを渡す処理。{@link #setReadable(boolean)} で抑止可能だが false に設定した
+		 * 時点で既にメッセージを読み込んでいた場合は呼び出される事がある。
+		 */
 		public void consume(Message msg);
-		/** Wire がクローズされたときに呼び出す処理。 */
+		/**
+		 * この Wire がクローズされたときに呼び出す処理。明示的に {@link #close()} を呼び出した場合と、下層の通信
+		 * 実装が切断された場合に呼び出されます。
+		 */
 		public void onClose(Wire wire);
-		/** ログ出力で識別するための文字列 */
+		/** ログ出力で識別するための文字列。 */
 		public String id();
-	}
-
-	public final class Priority {
-		public static final byte Max = Byte.MAX_VALUE;
-		public static final byte Min = Byte.MIN_VALUE;
-		public static final byte Normal = 0;
-		private Priority(){ }
-		public static byte upper(byte value){ return (byte)Math.min(value + 1, Max); }
-		public static byte lower(byte value){ return (byte)Math.max(value - 1, Min); }
 	}
 
 }

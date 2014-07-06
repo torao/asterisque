@@ -112,7 +112,7 @@ bi-directional heavy call between nodes. $e2
 			.set(Options.KEY_BRIDGE, bridge)
 			.set(Options.KEY_CODEC, MessagePackCodec.getInstance())){ session =>
 			val r = session.bind(classOf[Reverse])
-			val f = Future.sequence((0 until 10).map{ i => CompletableFuture2Future(r.reverse(i.toString)) })
+			val f = Future.sequence((0 until 10).par.map{ i => r.reverse(i.toString).toFuture }.toList)
 			p0.completeWith(f.map{ _.zipWithIndex.map{ case (s, i) => this.reverse(s) === i.toString }.reduce{ (a, b) => a and b } })
 		}
 		Await.ready(future, waitTime)
@@ -124,12 +124,12 @@ bi-directional heavy call between nodes. $e2
 			.set(Options.KEY_CODEC, MessagePackCodec.getInstance())
 		).map{ session =>
 			val e = session.bind(classOf[Echo])
-			val f = (0 until 10).map{ i =>
+			val f = (0 until 10).par.map{ i =>
 				logger.info(s"echo($i) calling")
 				val future = e.echo(i.toString)
 				future.onComplete{ _ => logger.info(s"echo($i) completed")}
 				future.toFuture
-			}
+			}.toList
 			val r = p1.completeWith(Future.sequence(f).map {
 				_.zipWithIndex.map { case (s, i) =>
 					this.reverse(s) === i.toString

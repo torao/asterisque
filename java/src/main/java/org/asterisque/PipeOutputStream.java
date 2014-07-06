@@ -6,7 +6,7 @@
 package org.asterisque;
 
 import org.asterisque.msg.Block;
-import org.asterisque.util.LooseBarrier;
+import org.asterisque.util.Latch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,15 +28,15 @@ class PipeOutputStream extends OutputStream {
 	private final Pipe pipe;
 	private ByteBuffer buffer;
 	private boolean closed = false;
-	private final LooseBarrier barrier;
+	private final Latch barrier;
 
-	public PipeOutputStream(Pipe pipe, LooseBarrier barrier, int bufferSize){
+	public PipeOutputStream(Pipe pipe, Latch barrier, int bufferSize){
 		this.pipe = pipe;
 		this.buffer = ByteBuffer.allocate(bufferSize);
 		this.barrier = barrier;
 	}
 
-	public PipeOutputStream(Pipe pipe, LooseBarrier barrier){
+	public PipeOutputStream(Pipe pipe, Latch barrier){
 		this(pipe, barrier, 4 * 1024);
 	}
 
@@ -65,7 +65,7 @@ class PipeOutputStream extends OutputStream {
 	}
 	private void write(Runnable exec) throws IOException {
 		try {
-			barrier.barrier(exec);
+			barrier.exec(exec);
 		} catch(InterruptedException ex){
 			throw new IOException("write operation interrupted", ex);
 		}

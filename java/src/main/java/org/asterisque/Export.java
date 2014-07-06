@@ -20,5 +20,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Export {
 	short value();
-	byte priority() default Wire.Priority.Normal;
+	byte priority() default Priority.Normal;
 }

@@ -11,15 +11,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 // CircuitBreaker
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
- * 負荷値の増減によって回復可能な高負荷、回復不可能な高負荷通知を行うクラスです。
+ * 負荷値の増減によって回復可能な高負荷、回復不可能な高負荷の通知を行うクラスです。
  * 負荷値 {@link #load()} が {@link #softLimit} に達したら場合、回復可能な高負荷通知 {@link #overload(boolean)
- * overload(true)} を行い、さらに {@link #hardLimit} に達したら回復不可能な高負荷通知 {@link #broken()} を
- * 行います。負荷値が {@link #softLimit} を下回った場合は {@link #overload(boolean) overload(false)}
- * 通知を行います。
+ * overload(true)} を行い、さらに負荷値が {@link #hardLimit} に達したら回復不可能な高負荷通知
+ * {@link #broken()} を行います。負荷値が {@link #softLimit} を下回った場合は {@link #overload(boolean)
+ * overload(false)} 通知を行います。
  *
  * @author Takami Torao
  */
 public abstract class CircuitBreaker {
+	// 将来的には時間統計で現在の負荷状態を算出してメトリクスに使用したい。
 
 	/**
 	 * このサーキットブレーカーの回復可能な通知閾値。カウントがこの数に達するとサブクラスの {@link #overload(boolean)
@@ -39,8 +40,8 @@ public abstract class CircuitBreaker {
 	private final AtomicInteger load = new AtomicInteger();
 
 	/**
-	 * マルチスレッド実行の影響で overload(true/false) の呼び出し順序が逆転する可能性があるためカウントアップにより
-	 * 結果的に正しい ON/OFF 状態を設定する。
+	 * マルチスレッド環境での実行順序の影響で overload(true/false) の呼び出し順序が逆転する可能性があるためカウント
+	 * アップにより結果的に正しい ON/OFF 状態を設定する。
 	 */
 	private final AtomicInteger overloadSwitch = new AtomicInteger(0);
 
@@ -58,6 +59,7 @@ public abstract class CircuitBreaker {
 	// コンストラクタ
 	// ==============================================================================================
 	/**
+	 * 指定された {@link #softLimit}、{@link #hardLimit} のサーキットブレーカーを構築します。
 	 *
 	 * @param softLimit ソフトリミット
 	 * @param hardLimit ハードリミット

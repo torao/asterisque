@@ -7,8 +7,6 @@ package org.asterisque.msg;
 
 import org.asterisque.Debug;
 
-import java.util.Optional;
-
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Close
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -25,16 +23,18 @@ public final class Close extends Message {
 	// ==============================================================================================
 	/**
 	 * 処理が正常に終了した場合の結果です。
+	 * Optional が null 値を保持できないため null 可能な Object 型の変数を使用しています。
 	 */
-	public final Optional<Object> result;
+	public final Object result;
 
 	// ==============================================================================================
 	// 中断
 	// ==============================================================================================
 	/**
 	 * 中断によって処理が終了したことを示す値です。
+	 * Optional は Serializable ではないため null 可能な Object 型の参照を使用しています。
 	 */
-	public final Optional<Abort> abort;
+	public final Abort abort;
 
 	// ==============================================================================================
 	// コンストラクタ
@@ -44,8 +44,8 @@ public final class Close extends Message {
 	 */
 	public Close(short pipeId, Object result){
 		super(pipeId);
-		this.result = Optional.of(result);
-		this.abort = Optional.empty();
+		this.result = result;
+		this.abort = null;
 	}
 
 	// ==============================================================================================
@@ -56,8 +56,8 @@ public final class Close extends Message {
 	 */
 	public Close(short pipeId, Abort abort){
 		super(pipeId);
-		this.result = Optional.empty();
-		this.abort = Optional.of(abort);
+		this.result = null;
+		this.abort = abort;
 		assert(abort != null);
 	}
 
@@ -69,10 +69,10 @@ public final class Close extends Message {
 	 */
 	@Override
 	public String toString(){
-		if(result.isPresent()){
-			return "Close(" + pipeId + "," + Debug.toString(result.get()) + ")";
+		if(abort == null){
+			return "Close(" + pipeId + "," + Debug.toString(result) + ")";
 		} else {
-			return "Close(" + pipeId + "," + abort.get() + ")";
+			return "Close(" + pipeId + "," + abort + ")";
 		}
 	}
 
