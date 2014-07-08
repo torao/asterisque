@@ -5,12 +5,14 @@
 */
 package org.asterisque.codec;
 
+import org.asterisque.Debug;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -34,7 +36,7 @@ public abstract class TypeConversion {
 	/**
 	 * 特定の値に対する転送可能型への変換処理です。
 	 */
-	private final List<Function<Object,Optional<Object>>> safeValue = new ArrayList<>();
+	private final List<Function<Object,Optional<Object>>> boxByValue = new ArrayList<>();
 
 	// ==============================================================================================
 	// 転送可能型変換
@@ -42,15 +44,23 @@ public abstract class TypeConversion {
 	/**
 	 * 特定の型に対する転送可能型への変換処理です。挿入順を維持するために LinkedHashMap を使用します。
 	 */
-	private Map<Class<?>, Function<?,?>> safe = new LinkedHashMap<>();
+	private final Map<Class<?>, Function<?,?>> boxByType = new LinkedHashMap<>();
 
 	// ==============================================================================================
 	// API 呼び出し型変換
 	// ==============================================================================================
 	/**
-	 * 転送可能型に対する API 呼び出し型への変換処理です。
+	 * 転送可能値に対する API 呼び出し値への変換処理です。
 	 */
-	private Map<Class<?>, Map<Class<?>, Function<?,?>>> unsafe = new HashMap<>();
+	private final List<BiFunction<Object,Class<?>,Optional<Object>>> unboxByValue = new ArrayList<>();
+
+	// ==============================================================================================
+	// API 呼び出し型変換
+	// ==============================================================================================
+	/**
+	 * 転送可能型に対する API 呼び出し型への変換処理です。挿入順を維持するために LinkedHashMap を使用します。
+	 */
+	private final Map<Class<?>, Map<Class<?>, Function<?,?>>> unboxByType = new LinkedHashMap<>();
 
 	// ==============================================================================================
 	// コンストラクタ
@@ -68,7 +78,7 @@ public abstract class TypeConversion {
 	 * サブクラスのコンストラクタによって呼び出されます。
 	 */
 	protected <FROM,TO> void setTransferConversion(Class<FROM> type, Function<FROM, TO> convert){
-		safe.put(type, convert);
+		boxByType.put(type, convert);
 	}
 
 	// ==============================================================================================
@@ -79,7 +89,7 @@ public abstract class TypeConversion {
 	 * サブクラスのコンストラクタによって呼び出されます。
 	 */
 	protected void setTransferConversion(Function<Object,Optional<Object>> convert){
-		safeValue.add(convert);
+		boxByValue.add(convert);
 	}
 
 	// ==============================================================================================
@@ -91,14 +101,25 @@ public abstract class TypeConversion {
 	 */
 	protected <FROM,TO> void setMethodCallConversion(Class<FROM> from, Class<TO> to, Function<FROM, TO> reverse){
 		if(! isDefaultSafeType(from)){
-			throw new IllegalArgumentException(String.format("%s is not a transfer safe type", to.getName()));
+			throw new IllegalArgumentException(String.format("%s is not a transfer safe type", from.getName()));
 		}
-		Map<Class<?>, Function<?,?>> f = unsafe.get(from);
+		Map<Class<?>, Function<?,?>> f = unboxByType.get(from);
 		if(f == null){
 			f = new HashMap<>();
-			unsafe.put(from, f);
+			unboxByType.put(from, f);
 		}
 		f.put(to, reverse);
+	}
+
+	// ==============================================================================================
+	// API 呼び出し型変換の定義
+	// ==============================================================================================
+	/**
+	 * 転送可能型から指定された API 呼び出し型へ変換する処理を定義します。
+	 * サブクラスのコンストラクタによって呼び出されます。
+	 */
+	protected void setMethodCallConversion(BiFunction<Object,Class<?>,Optional<Object>> reverse){
+		unboxByValue.add(reverse);
 	}
 
 	// ==============================================================================================
@@ -120,16 +141,20 @@ public abstract class TypeConversion {
 	 * このインスタンスの定義で指定された値を転送可能な型に変換します。
 	 */
 	private Optional<Object> _toTransfer(Object value){
-		Optional<Function<Object,Object>> convert = _find(value.getClass(), safe);
+		Optional<Function<Object,Object>> convert = _find(value.getClass(), boxByType);
 		if(convert.isPresent()){
 			try {
-				return Optional.of(convert.get().apply(value));
+				Object result = convert.get().apply(value);
+				if(result == null){
+					return Null;
+				}
+				return Optional.of(result);
 			} catch(RuntimeException ex){
-				logger.debug(String.format("safe-transfer conversion from %s failure: %s", value.getClass().getSimpleName(), ex));
+				logger.warn(String.format("safe-transfer conversion from %s failure: %s", value.getClass().getSimpleName(), ex));
 				return Optional.empty();
 			}
 		}
-		for(Function<Object,Optional<Object>> f: safeValue){
+		for(Function<Object,Optional<Object>> f: boxByValue){
 			Optional<Object> conv = f.apply(value);
 			if(conv.isPresent()){
 				return conv;
@@ -146,26 +171,30 @@ public abstract class TypeConversion {
 	/**
 	 * このインスタンスの定義で指定された転送可能型の値を API 呼び出し用の値に変換します。
 	 */
-	private <T> Optional<T> _toMethodCall(Object value, Class<T> type){
-		if(value == null || type.isAssignableFrom(value.getClass())){
-			return Optional.of(type.cast(value));
+	private Optional<?> _toMethodCall(Object value, Class<?> type){
+		Optional<Class<?>> c = getCompatibleType(value.getClass(), unboxByType.keySet());
+		if(c.isPresent()) {
+			Map<Class<?>, Function<?,?>> t = unboxByType.get(c.get());
+			assert(t != null);
+			@SuppressWarnings("unchecked")
+			Function<Object,Object> reverse = (Function<Object,Object>)t.get(type);
+			if(reverse != null){
+				try {
+					return Optional.of(reverse.apply(value));
+				} catch(RuntimeException ex){
+					logger.warn(String.format("method-call conversion from %s to %s failure: %s",
+						value.getClass().getSimpleName(), type.getSimpleName(), ex));
+					return Optional.empty();
+				}
+			}
 		}
-		Map<Class<?>, Function<?,?>> t = unsafe.get(value.getClass());
-		if(t == null){
-			return Optional.empty();
+		for(BiFunction<Object,Class<?>,Optional<Object>> f: unboxByValue){
+			Optional<Object> t = f.apply(value, type);
+			if(t.isPresent()){
+				return Optional.of(t.get());
+			}
 		}
-		@SuppressWarnings("unchecked")
-		Function<Object,Object> reverse = (Function<Object,Object>)t.get(type);
-		if(reverse == null){
-			return Optional.empty();
-		}
-		try {
-			return Optional.of(type.cast(reverse.apply(value)));
-		} catch(RuntimeException ex){
-			logger.debug(String.format("method-call conversion from %s to %s failure: %s",
-				value.getClass().getSimpleName(), type.getSimpleName(), ex));
-			return Optional.empty();
-		}
+		return Optional.empty();
 	}
 
 	// ==============================================================================================
@@ -198,7 +227,7 @@ public abstract class TypeConversion {
 		} else {
 			Set<Class<?>> set = _getClasses(clazz.getSuperclass());
 			set.add(clazz);
-			Stream.of(clazz.getInterfaces()).forEach( c -> set.add(c) );
+			Stream.of(clazz.getInterfaces()).forEach(set::add);
 			return set;
 		}
 	}
@@ -258,15 +287,45 @@ public abstract class TypeConversion {
 	 * 指定された転送可能型の値を API 呼び出し用の値に変換します。
 	 * @throws org.asterisque.codec.CodecException 変換できなかった場合
 	 */
+	@SuppressWarnings("unchecked")
 	public static <T> T toMethodCall(Object value, Class<T> type){
+		assert(isDefaultSafeValue(value));
+		if(type.isPrimitive()){
+			if(value == null){
+				// プリミティブ型に対する null は規定のゼロ値へ変換
+				T result = (T)PrimitiveDefault.get(type);
+				logger.debug("null for primitive type " + type.getSimpleName() +
+					" is recognized as zero value: " + Debug.toString(result));
+				return result;
+			} else {
+				// オブジェクト型として変換
+				return toMethodCall(value, (Class<T>)PrimitiveObjType.get(type));
+			}
+		}
+		// 特別の型変換が不要な場合
+		if(value == null){
+			return null;
+		} else if(type.isAssignableFrom(value.getClass())){
+			return type.cast(value);
+		}
 		for(TypeConversion tc: SystemConversions.get()){
-			Optional<T> t = tc._toMethodCall(value, type);
+			@SuppressWarnings("unchecked")
+			Optional<T> t = (Optional<T>)tc._toMethodCall(value, type);
 			if(t.isPresent()){
-				return t.get();
+				T result = null;
+				if(t != Null){
+					result = t.get();
+				}
+				if(logger.isDebugEnabled()){
+					logger.debug(Debug.toString(value) + " of class " + value.getClass().getSimpleName() +
+						" is transformed to " + Debug.toString(result) +
+						(result == null? "": (" of " + result.getClass().getSimpleName())));
+				}
+				return result;
 			}
 		}
 		throw new CodecException(String.format("unsupported type conversion for method-call: from %s to %s",
-			value == null? "null": value.getClass().getName(), type.getName()));
+			value.getClass().getName(), type.getName()));
 	}
 
 	// ==============================================================================================
@@ -277,10 +336,37 @@ public abstract class TypeConversion {
 	 */
 	private static final Set<Class<?>> SafeType;
 
+	private static final Map<Class<?>, Object> PrimitiveDefault = new HashMap<>();
+
+	private static final Map<Class<?>, Class<?>> PrimitiveObjType = new HashMap<>();
+
 	static {
+
+		// プリミティブ型に null が指定された場合のデフォルト値
+		PrimitiveDefault.put(Void.TYPE, null);
+		PrimitiveDefault.put(Boolean.TYPE, false);
+		PrimitiveDefault.put(Byte.TYPE, (byte)0);
+		PrimitiveDefault.put(Short.TYPE, (short)0);
+		PrimitiveDefault.put(Integer.TYPE, 0);
+		PrimitiveDefault.put(Long.TYPE, (long)0);
+		PrimitiveDefault.put(Float.TYPE, (float)0);
+		PrimitiveDefault.put(Double.TYPE, (double)0);
+		PrimitiveDefault.put(Character.TYPE, '\0');
+
+		// プリミティブ型のオブジェクト型
+		PrimitiveObjType.put(Void.TYPE, Void.class);
+		PrimitiveObjType.put(Boolean.TYPE, Boolean.class);
+		PrimitiveObjType.put(Byte.TYPE, Byte.class);
+		PrimitiveObjType.put(Short.TYPE, Short.class);
+		PrimitiveObjType.put(Integer.TYPE, Integer.class);
+		PrimitiveObjType.put(Long.TYPE, Long.class);
+		PrimitiveObjType.put(Float.TYPE, Float.class);
+		PrimitiveObjType.put(Double.TYPE, Double.class);
+		PrimitiveObjType.put(Character.TYPE, Character.class);
 
 		// 転送可能型を定義
 		Set<Class<?>> types = new HashSet<>();
+		types.add(Void.class);
 		types.add(Boolean.class);
 		types.add(Byte.class);
 		types.add(Short.class);
@@ -331,7 +417,7 @@ public abstract class TypeConversion {
 			return Optional.of(type);
 		}
 		for(Class<?> c: set){
-			if(c.isAssignableFrom(type)){
+			if((c == null && type == null) || (c != null && c.isAssignableFrom(type))){
 				return Optional.of(c);
 			}
 		}
@@ -437,14 +523,7 @@ class DefaultConversion extends TypeConversion {
 		}
 		return list;
 	}
-	private static boolean[] toBooleanArray(List<Boolean> list) {
-		boolean[] array = new boolean[list.size()];
-		int len = list.size();
-		for(int i=0; i<len; i++){
-			array[i] = list.get(i);
-		}
-		return array;
-	}
+	private static boolean[] toBooleanArray(List<Boolean> list) { return toArray(list, l -> new boolean[l]); }
 	private static short[] toShortArray(List<Short> list) { return toArray(list, l -> new short[l]); }
 	private static int[] toIntArray(List<Integer> list) { return toArray(list, l -> new int[l]); }
 	private static long[] toLongArray(List<Long> list) { return toArray(list, l -> new long[l]); }

@@ -100,6 +100,9 @@ public final class Debug {
 			}
 			return buffer.toString();
 		}
+		if(value instanceof char[]) {
+			return toString(new String((char[])value));
+		}
 		if(value instanceof Object[]) {
 			return toString(Arrays.asList((Object[]) value));
 		}
