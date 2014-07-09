@@ -7,6 +7,7 @@ package org.asterisque.codec
 
 import java.util.UUID
 
+import org.asterisque.Tuple
 import org.asterisque.msg._
 import org.specs2.Specification
 import org.specs2.matcher.MatchResult
@@ -132,7 +133,7 @@ encode and decode supported data-types. $supportedDataTypes
 		case (i1:Char, i2:String) => i1.toString === i2
 		case (i1:Array[Char], i2:String) => new String(i1) === i2
 		case ((), i2:java.util.List[_]) => i2.size() === 0
-		case (i1:Product, i2:Struct) =>
+		case (i1:Product, i2:Tuple) =>
 			(i1.productArity === i2.count()) and
 				(0 until i1.productArity).map{ i => equals(i1.productElement(i), i2.valueAt(i)) }.fold(True){ _ and _ }
 		case _ => expected === actual

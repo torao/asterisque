@@ -9,6 +9,7 @@ import java.lang.{Boolean=>JBoolean, Byte=>JByte, Short=>JShort, Integer=>JInt, 
 import java.util
 import java.util.{Collections, UUID}
 
+import org.asterisque.Tuple
 import org.specs2.Specification
 import org.specs2.matcher.MatchResult
 
@@ -34,7 +35,7 @@ convert parameter implicitly for different type. $e4
 transform null to zero-value for primitive types. $e5
 convert Java transferable values to call method type. $e6
 convert Scala transferable values to call method type. $e7
-convert struct values. $todo
+convert tuple values. $e8
 """
 	import TypeConversion._
 
@@ -56,7 +57,7 @@ convert struct values. $todo
 			classOf[java.util.UUID],
 			classOf[java.util.List[_]],
 			classOf[java.util.Map[_,_]],
-			classOf[Struct]
+			classOf[Tuple]
 		).map{ t => isDefaultSafeType(t) must beTrue }.reduce { _ and _ }
 	}
 
@@ -155,10 +156,10 @@ convert struct values. $todo
 			f(UUID.randomUUID(), classOf[UUID]) and
 			f(Collections.emptyList(), classOf[java.util.List[_]]) and
 			f(Collections.emptyMap(), classOf[java.util.Map[_,_]]) and
-			f(new Struct {override def count():Int = 0
+			f(new Tuple {override def count():Int = 0
 				override def schema():String = ""
 				override def valueAt(i:Int):AnyRef = ???
-			}, classOf[Struct])
+			}, classOf[Tuple])
 	}
 
 	def e2 = {
@@ -558,4 +559,94 @@ convert struct values. $todo
 		}
 	}
 
+	def e8 = Seq[MatchResult[_]](
+	{
+		// パラメータなしのタプルへの変換
+		val t = new Tuple {
+			override def count():Int = 0
+			override def schema():String = ""
+			override def valueAt(i:Int):AnyRef = ???
+		}
+		TypeConversion.toMethodCall(t, classOf[T0]).isInstanceOf[T0] must beTrue
+	}, {
+		// パラメータ数の一致しないタプルへの変換
+		val t = new Tuple {
+			override def count():Int = 1
+			override def schema():String = ""
+			override def valueAt(i:Int):AnyRef = Int.box(i)
+		}
+		TypeConversion.toMethodCall(t, classOf[T0]) must throwA[CodecException]
+	}, {
+		// 型の一致しないタプルへの変換
+		val t = new Tuple {
+			override def count():Int = 1
+			override def schema():String = ""
+			override def valueAt(i:Int):AnyRef = "this is string"
+		}
+		TypeConversion.toMethodCall(t, classOf[T1]) must throwA[CodecException]
+	}, {
+		// パラメータ数と型の一致するタプルへの変換 1
+		val t = new Tuple {
+			override def count():Int = 1
+			override def schema():String = ""
+			override def valueAt(i:Int):AnyRef = Int.box(i)
+		}
+		val t1 = TypeConversion.toMethodCall(t, classOf[T1])
+		(t1.isInstanceOf[T1] must beTrue) and (t1.field1 === t.valueAt(0))
+	}, {
+		// パラメータ数と型の一致するタプルへの変換 2
+		val f0 = random.nextInt()
+		val f1 = random.alphanumeric.take(10).mkString
+		val t = new Tuple {
+			override def count():Int = 2
+			override def schema():String = ""
+			override def valueAt(i:Int):AnyRef = if(i==0) Int.box(f0) else f1
+		}
+		val t2 = TypeConversion.toMethodCall(t, classOf[T2])
+		(t2.isInstanceOf[T2] must beTrue) and (t2.field1 === f0) and (t2.field2 === f1)
+	}, {
+		// スキームが有効なクラス名ではなく復元型が Tuple の場合は何もしない
+		val f0 = random.nextInt()
+		val f1 = random.alphanumeric.take(10).mkString
+		val t = new Tuple {
+			override def count():Int = 2
+			override def schema():String = ""
+			override def valueAt(i:Int):AnyRef = if(i==0) Int.box(f0) else f1
+		}
+		val t1 = TypeConversion.toMethodCall(t, classOf[Tuple])
+		t1 === t
+	}, {
+		// リモート指定のクラス (スキーム) がサブクラスの場合はそれで復元
+		val f0 = random.nextInt()
+		val f1 = random.alphanumeric.take(10).mkString
+		val t = new Tuple {
+			override def count():Int = 2
+			override def schema():String = classOf[T2].getName
+			override def valueAt(i:Int):AnyRef = if(i==0) Int.box(f0) else f1
+		}
+		val t1 = TypeConversion.toMethodCall(t, classOf[T1])
+		(t1.isInstanceOf[T2] must beTrue) and (t1.field1 === f0) and (t1.asInstanceOf[T2].field2 === f1)
+	}
+	).reduce{_ and _}
+
+	val random = new Random()
+
+}
+
+class T0 extends Tuple {
+	override def count():Int = 0
+	override def schema():String = ""
+	override def valueAt(i:Int):AnyRef = ???
+}
+
+class T1(val field1:Int) extends Tuple {
+	override def count():Int = 1
+	override def schema():String = ""
+	override def valueAt(i:Int):AnyRef = Int.box(field1)
+}
+
+class T2(field1:Int, val field2:String) extends T1(field1) {
+	override def count():Int = 2
+	override def schema():String = ""
+	override def valueAt(i:Int):AnyRef = if(i == 0) Int.box(field1) else field2
 }

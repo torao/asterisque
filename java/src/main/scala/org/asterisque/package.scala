@@ -9,7 +9,7 @@ import java.net.SocketAddress
 import java.util.Optional
 import java.util.concurrent.atomic.AtomicBoolean
 
-import org.asterisque.codec.{Struct, TypeConversion}
+import org.asterisque.codec.TypeConversion
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions
@@ -156,7 +156,7 @@ package object asterisque {
 			*/
 			// Product ⇄ Struct
 			// :: のように Seq と Product 両方を実装するクラスが標準であるので Product の優先順位を低くする
-			setTransferConversion(classOf[Product], { s:Product => new Struct {
+			setTransferConversion(classOf[Product], { s:Product => new Tuple {
 				def schema:String = s.getClass.getName
 				def count:Int = s.productArity
 				def valueAt(i:Int):AnyRef = TypeConversion.toTransfer(s.productElement(i))

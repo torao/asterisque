@@ -6,10 +6,14 @@
 package org.asterisque.codec;
 
 import org.asterisque.Debug;
+import org.asterisque.Tuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
@@ -36,7 +40,7 @@ public abstract class TypeConversion {
 	/**
 	 * 特定の値に対する転送可能型への変換処理です。
 	 */
-	private final List<Function<Object,Optional<Object>>> boxByValue = new ArrayList<>();
+	private final List<Function<Object,Optional<Object>>> boxByValue = new ArrayList<Function<Object,Optional<Object>>>();
 
 	// ==============================================================================================
 	// 転送可能型変換
@@ -44,7 +48,7 @@ public abstract class TypeConversion {
 	/**
 	 * 特定の型に対する転送可能型への変換処理です。挿入順を維持するために LinkedHashMap を使用します。
 	 */
-	private final Map<Class<?>, Function<?,?>> boxByType = new LinkedHashMap<>();
+	private final Map<Class<?>, Function<?,?>> boxByType = new LinkedHashMap<Class<?>, Function<?,?>>();
 
 	// ==============================================================================================
 	// API 呼び出し型変換
@@ -52,7 +56,7 @@ public abstract class TypeConversion {
 	/**
 	 * 転送可能値に対する API 呼び出し値への変換処理です。
 	 */
-	private final List<BiFunction<Object,Class<?>,Optional<Object>>> unboxByValue = new ArrayList<>();
+	private final List<BiFunction<Object,Class<?>,Optional<Object>>> unboxByValue = new ArrayList<BiFunction<Object,Class<?>,Optional<Object>>>();
 
 	// ==============================================================================================
 	// API 呼び出し型変換
@@ -60,7 +64,7 @@ public abstract class TypeConversion {
 	/**
 	 * 転送可能型に対する API 呼び出し型への変換処理です。挿入順を維持するために LinkedHashMap を使用します。
 	 */
-	private final Map<Class<?>, Map<Class<?>, Function<?,?>>> unboxByType = new LinkedHashMap<>();
+	private final Map<Class<?>, Map<Class<?>, Function<?,?>>> unboxByType = new LinkedHashMap<Class<?>, Map<Class<?>, Function<?,?>>>();
 
 	// ==============================================================================================
 	// コンストラクタ
@@ -223,7 +227,7 @@ public abstract class TypeConversion {
 	 */
 	private static Set<Class<?>> _getClasses(Class<?> clazz){
 		if(clazz == null){
-			return new HashSet<>();
+			return new HashSet<Class<?>>();
 		} else {
 			Set<Class<?>> set = _getClasses(clazz.getSuperclass());
 			set.add(clazz);
@@ -238,7 +242,7 @@ public abstract class TypeConversion {
 	/**
 	 * システム標準の変換処理です。後に定義された変換定義が先頭に格納されています。
 	 */
-	private static AtomicReference<List<TypeConversion>> SystemConversions = new AtomicReference<>(new ArrayList<>());
+	private static AtomicReference<List<TypeConversion>> SystemConversions = new AtomicReference<List<TypeConversion>>(new ArrayList<TypeConversion>());
 
 	// ==============================================================================================
 	// 変換定義の拡張
@@ -287,8 +291,24 @@ public abstract class TypeConversion {
 	 * 指定された転送可能型の値を API 呼び出し用の値に変換します。
 	 * @throws org.asterisque.codec.CodecException 変換できなかった場合
 	 */
+	public static Object[] toMethodCall(Object[] values, Class<?>[] types){
+		assert(values.length == types.length);
+		Object[] params = new Object[values.length];
+		for(int i=0; i<params.length; i++){
+			params[i] = toMethodCall(values[i], types[i]);
+		}
+		return params;
+	}
+
+	// ==============================================================================================
+	// API 呼び出し型変換
+	// ==============================================================================================
+	/**
+	 * 指定された転送可能型の値を API 呼び出し用の値に変換します。
+	 * @throws org.asterisque.codec.CodecException 変換できなかった場合
+	 */
 	@SuppressWarnings("unchecked")
-	public static <T> T toMethodCall(Object value, Class<T> type){
+	public static <T> T toMethodCall(Object value, Class<T> type) throws CodecException {
 		assert(isDefaultSafeValue(value));
 		if(type.isPrimitive()){
 			if(value == null){
@@ -336,9 +356,9 @@ public abstract class TypeConversion {
 	 */
 	private static final Set<Class<?>> SafeType;
 
-	private static final Map<Class<?>, Object> PrimitiveDefault = new HashMap<>();
+	private static final Map<Class<?>, Object> PrimitiveDefault = new HashMap<Class<?>, Object>();
 
-	private static final Map<Class<?>, Class<?>> PrimitiveObjType = new HashMap<>();
+	private static final Map<Class<?>, Class<?>> PrimitiveObjType = new HashMap<Class<?>, Class<?>>();
 
 	static {
 
@@ -365,7 +385,7 @@ public abstract class TypeConversion {
 		PrimitiveObjType.put(Character.TYPE, Character.class);
 
 		// 転送可能型を定義
-		Set<Class<?>> types = new HashSet<>();
+		Set<Class<?>> types = new HashSet<Class<?>>();
 		types.add(Void.class);
 		types.add(Boolean.class);
 		types.add(Byte.class);
@@ -379,7 +399,7 @@ public abstract class TypeConversion {
 		types.add(UUID.class);
 		types.add(List.class);
 		types.add(Map.class);
-		types.add(Struct.class);
+		types.add(Tuple.class);
 		SafeType = Collections.unmodifiableSet(types);
 
 		// デフォルトの変換定義を追加
@@ -435,6 +455,7 @@ public abstract class TypeConversion {
  * @author Takami Torao
  */
 class DefaultConversion extends TypeConversion {
+	private static final Logger logger = LoggerFactory.getLogger(DefaultConversion.class);
 	public DefaultConversion(){
 		setFromTo(Character.class, String.class, String::valueOf, s -> s.length()>0? s.charAt(0): '\0' );
 		setFromTo(char[].class, String.class, String::new, String::toCharArray);
@@ -513,6 +534,20 @@ class DefaultConversion extends TypeConversion {
 		setMethodCallConversion(String.class, UUID.class, UUID::fromString);
 
 		setMethodCallConversion(UUID.class, String.class, Object::toString);
+
+		setMethodCallConversion((Object value, Class<?> type) -> {
+			if(value instanceof Tuple) {
+				/*
+				if(type == Tuple.class){
+					return Optional.of(value);
+				}
+				*/
+				if(Tuple.class.isAssignableFrom(type)) {
+					return restore((Tuple) value, type);
+				}
+			}
+			return Optional.empty();
+		});
 	}
 	private static <T> List<T> toList(Object array){
 		assert(array.getClass().isArray());
@@ -537,6 +572,64 @@ class DefaultConversion extends TypeConversion {
 			Array.set(array, i, list.get(i));
 		}
 		return array;
+	}
+
+	private static <T> Optional<T> restore(Tuple tuple, Class<?> type){
+
+		// メソッドで宣言されている型のサブクラスの場合はサブクラスとしてインスタンス化する
+		Class<?> spec = toAppropriateType(tuple.schema(), type);
+
+		// 抽象クラスまたはインターフェースの場合は復元不能
+		if(Modifier.isAbstract(spec.getModifiers())) {
+			logger.debug("cannot restore tuple to abstract class: " + spec.getSimpleName());
+			return Optional.empty();
+		}
+
+		// 適切なコンストラクタを起動してインスタンスを収集
+		List<T> list = Stream.of(spec.getConstructors())
+			.filter( c -> c.getParameterCount() == tuple.count() )
+			.collect(ArrayList<T>::new, (ArrayList<T> l, Constructor c) -> {
+				try {
+					Class<?>[] types = c.getParameterTypes();
+					Object[] params = new Object[tuple.count()];
+					for(int i = 0; i < tuple.count(); i++) {
+						params[i] = toMethodCall(tuple.valueAt(i), types[i]);
+					}
+					l.add((T)c.newInstance(params));
+				} catch(InstantiationException | IllegalAccessException | CodecException ex){
+					logger.debug(ex.toString());
+				} catch(InvocationTargetException ex){
+					logger.error(ex.toString());
+				}
+			}, ArrayList::addAll);
+		if(list.isEmpty()) {
+			logger.debug("there is not appropriate constructor");
+			if(type == Tuple.class){
+				return Optional.of((T)tuple);
+			}
+			return Optional.empty();
+		} else if(list.size() == 1) {
+			return Optional.of(list.get(0));
+		} else {
+			logger.debug("there are some constructors to match");
+			return Optional.empty();
+		}
+	}
+
+	private static Class<?> toAppropriateType(String spec, Class<?> decl) {
+		// メソッドで宣言されている型のサブクラスの場合はサブクラスとしてインスタンス化する
+		if(!decl.getName().equals(spec)) {
+			try {
+				// 外部から意図しないクラスロードで static initializer が起動するとセキュリティ上の問題となる
+				Class<?> t = Class.forName(spec, false, Thread.currentThread().getContextClassLoader());
+				if(decl.isAssignableFrom(t)) {
+					return Class.forName(spec);
+				}
+			} catch(ClassNotFoundException ex) {
+				logger.trace("class " + spec + " is not found");
+			}
+		}
+		return decl;
 	}
 
 }

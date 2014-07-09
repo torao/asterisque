@@ -6,6 +6,7 @@
 package org.asterisque.codec;
 
 import org.asterisque.Asterisque;
+import org.asterisque.Tuple;
 import org.asterisque.msg.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -255,10 +256,10 @@ public interface Codec {
 				write(e.getValue());
 			}
 		}
-		public default void writeStruct(Struct b){
-			if(b.count() > Struct.MaxFields){
+		public default void writeStruct(Tuple b){
+			if(b.count() > Tuple.MaxFields){
 				throw new IllegalArgumentException(
-					"field count of " + b.getClass().getName() + " is too large: " + b.count() + " / " + Struct.MaxFields);
+					"field count of " + b.getClass().getName() + " is too large: " + b.count() + " / " + Tuple.MaxFields);
 			}
 			writeString(b.schema());
 			writeUInt8((short) (b.count() & 0xFF));
@@ -318,9 +319,9 @@ public interface Codec {
 			} else if(value instanceof Map<?,?>){
 				writeTag(Tag.Map);
 				writeMap((Map<?,?>)value);
-			} else if(value instanceof Struct){
+			} else if(value instanceof Tuple){
 				writeTag(Tag.Struct);
-				writeStruct((Struct) value);
+				writeStruct((Tuple) value);
 			} else {
 				throw new CodecException(String.format("marshal not supported for data type: %s: %s", value.getClass().getCanonicalName(), value));
 			}
@@ -400,14 +401,14 @@ public interface Codec {
 			}
 			return m;
 		}
-		public default Struct readStruct() throws Unsatisfied{
+		public default Tuple readStruct() throws Unsatisfied{
 			String schema = readString();
 			int length = readUInt8();
 			Object[] values = new Object[length];
 			for(int i=0; i<length; i++){
 				values[i] = read();
 			}
-			return new Struct() {
+			return new Tuple() {
 				@Override public String schema() { return schema; }
 				@Override public int count() { return length; }
 				@Override public Object valueAt(int i) { return values[i]; }

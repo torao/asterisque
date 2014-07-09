@@ -34,6 +34,8 @@ import java.util.function.Predicate;
 public abstract class Source<A> {
 	private static final Logger logger = LoggerFactory.getLogger(Source.class);
 
+	// Future を返すメソッドは終端操作
+
 	private final Collection<Consumer<Traverse<A>>> operations = new ArrayList<>();
 
 	private volatile long _count = 0;
