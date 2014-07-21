@@ -35,7 +35,7 @@ convert parameter implicitly for different type. $e4
 transform null to zero-value for primitive types. $e5
 convert Java transferable values to call method type. $e6
 convert Scala transferable values to call method type. $e7
-convert tuple values. $e8
+convert standard or Scala tuple and case class values. $e8
 """
 	import TypeConversion._
 
@@ -158,7 +158,7 @@ convert tuple values. $e8
 			f(Collections.emptyMap(), classOf[java.util.Map[_,_]]) and
 			f(new Tuple {override def count():Int = 0
 				override def schema():String = ""
-				override def valueAt(i:Int):AnyRef = ???
+				override def valueAt(i:Int):AnyRef = None
 			}, classOf[Tuple])
 	}
 
@@ -529,6 +529,17 @@ convert tuple values. $e8
 		reversible(List("A", 0, 10, "X")),
 		// Set
 		reversible(Set("A", 0, 10, "X")),
+		// Tuple
+		reversible(new T0()),
+		reversible(new T1(300)),
+		reversible(new T2(-999, "Z")),
+		// case class and scala tuple
+		reversible(CT0()),
+		reversible(CT1(943)),
+		reversible(CT2(953, "I/O")),
+		reversible(()),
+		reversible((999)),
+		reversible((433, "ZZZ")),
 		True
 	).reduce(_ and _)
 
@@ -557,6 +568,15 @@ convert tuple values. $e8
 			(a.keys.toSet.&~(b.keys.toSet).isEmpty must beTrue) and
 				a.keys.map{ k:Any => a(k) === b(k) }.fold(True){ _ and _ }
 		}
+	}
+	def reversible(value:Tuple):MatchResult[_] = {
+		reversible(value, value.getClass){ (a:Tuple, b:Tuple) =>
+			(a.count() === b.count()) and (a.schema() === b.schema()) and
+				(0 until a.count()).map{ i => a.valueAt(i) === b.valueAt(i) }.fold(True){_ and _}
+		}
+	}
+	def reversible(value:Product):MatchResult[_] = {
+		reversible(value, value.getClass){ (a:Product, b:Product) => a === b }
 	}
 
 	def e8 = Seq[MatchResult[_]](
@@ -636,7 +656,7 @@ convert tuple values. $e8
 class T0 extends Tuple {
 	override def count():Int = 0
 	override def schema():String = ""
-	override def valueAt(i:Int):AnyRef = ???
+	override def valueAt(i:Int):AnyRef = None
 }
 
 class T1(val field1:Int) extends Tuple {
@@ -650,3 +670,7 @@ class T2(field1:Int, val field2:String) extends T1(field1) {
 	override def schema():String = ""
 	override def valueAt(i:Int):AnyRef = if(i == 0) Int.box(field1) else field2
 }
+
+case class CT0()
+case class CT1(x:Int)
+case class CT2(x:Int, y:String)

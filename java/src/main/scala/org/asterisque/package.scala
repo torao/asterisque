@@ -162,6 +162,25 @@ package object asterisque {
 				def valueAt(i:Int):AnyRef = TypeConversion.toTransfer(s.productElement(i))
 			}
 			})
+
+			// Tuple ⇄ Tuple
+			def tupleConversion(value:AnyRef, clazz:Class[_]):Optional[AnyRef] = {
+				value match {
+					case tuple:Tuple if classOf[Product].isAssignableFrom(clazz) =>
+						if(classOf[Tuple1[_]].isAssignableFrom(clazz)) {
+							Optional.of(Tuple1(tuple.valueAt(0)))
+						} else if(classOf[Tuple2[_,_]].isAssignableFrom(clazz)) {
+							Optional.of(Tuple2(tuple.valueAt(0), tuple.valueAt(1)))
+						} else if(classOf[Tuple3[_,_,_]].isAssignableFrom(clazz)) {
+							Optional.of(Tuple3(tuple.valueAt(0), tuple.valueAt(1), tuple.valueAt(2)))
+						} else {
+							// TODO
+							Optional.empty()
+						}
+					case _ => Optional.empty()
+				}
+			}
+			setMethodCallConversion(Function2ToBiFunction(tupleConversion))
 		} catch {
 			case ex:Exception =>
 				ex.printStackTrace()
