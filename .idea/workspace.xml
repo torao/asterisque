@@ -8,8 +8,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7c6fb37c-439c-4cd0-b80b-0f520c672fdb" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Attributes.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Attributes.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Session.java" afterPath="$PROJECT_DIR$/java/src/main/java/org/asterisque/Session.java" />
     </list>
     <ignored path="asterisk.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -105,11 +104,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Session.java" pinned="false" current="false" current-in-tab="false">
+      <file leaf-file-name="Session.java" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Session.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="619" max-vertical-offset="8565">
-              <caret line="88" column="28" selection-start-line="88" selection-start-column="28" selection-end-line="88" selection-end-column="28" />
+            <state vertical-scroll-proportion="0.33239436" vertical-offset="1489" max-vertical-offset="8670">
+              <caret line="138" column="38" selection-start-line="138" selection-start-column="38" selection-end-line="138" selection-end-column="38" />
               <folding />
             </state>
           </provider>
@@ -125,10 +124,10 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="DepartureGate.java" pinned="false" current="true" current-in-tab="true">
+      <file leaf-file-name="DepartureGate.java" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/DepartureGate.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.31830987" vertical-offset="884" max-vertical-offset="2985">
+            <state vertical-scroll-proportion="0.0" vertical-offset="884" max-vertical-offset="2985">
               <caret line="85" column="14" selection-start-line="85" selection-start-column="14" selection-end-line="85" selection-end-column="14" />
               <folding />
             </state>
@@ -208,7 +207,6 @@
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Wire.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Export.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Priority.java" />
-        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Session.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/PipeMessageSink.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/util/CircuitBreaker.java" />
         <option value="$PROJECT_DIR$/java/src/test/scala/org/asterisque/util/LooseBarrier.scala" />
@@ -244,6 +242,7 @@
         <option value="$PROJECT_DIR$/java/src/test/scala/org/asterisque/AsterisqueSpec.scala" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Asterisque.java" />
         <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Attributes.java" />
+        <option value="$PROJECT_DIR$/java/src/main/java/org/asterisque/Session.java" />
       </list>
     </option>
   </component>
@@ -1314,18 +1313,18 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Session.java">
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/DepartureGate.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="619" max-vertical-offset="8565">
-          <caret line="88" column="28" selection-start-line="88" selection-start-column="28" selection-end-line="88" selection-end-column="28" />
+        <state vertical-scroll-proportion="0.0" vertical-offset="884" max-vertical-offset="2985">
+          <caret line="85" column="14" selection-start-line="85" selection-start-column="14" selection-end-line="85" selection-end-column="14" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/DepartureGate.java">
+    <entry file="file://$PROJECT_DIR$/java/src/main/java/org/asterisque/Session.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.31830987" vertical-offset="884" max-vertical-offset="2985">
-          <caret line="85" column="14" selection-start-line="85" selection-start-column="14" selection-end-line="85" selection-end-column="14" />
+        <state vertical-scroll-proportion="0.33239436" vertical-offset="1489" max-vertical-offset="8670">
+          <caret line="138" column="38" selection-start-line="138" selection-start-column="38" selection-end-line="138" selection-end-column="38" />
           <folding />
         </state>
       </provider>

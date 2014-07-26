@@ -100,6 +100,11 @@ public class Session {
 	 */
 	public final EventHandlers<Session> onClosed = new EventHandlers<>();
 
+	/**
+	 * このセッション上での出力保留メッセージ数が soft limit に達しバックプレッシャーがかかったときに呼び出されます。
+	 */
+	public final EventHandlers<Boolean> onBackPressure = new EventHandlers<>();
+
 	private final BiConsumer<Session,UUID> onSync;
 
 	// ==============================================================================================
@@ -130,6 +135,8 @@ public class Session {
 			protected void overload(boolean overload) {
 				// Wire 出力が過負荷になった場合は同期 Block 送信を一時停止
 				writeBarrier.lock(overload);
+				// ハンドラへの通知
+				onBackPressure.accept(overload);
 			}
 			@Override
 			protected void broken() {
