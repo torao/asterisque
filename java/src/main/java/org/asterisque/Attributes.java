@@ -5,26 +5,25 @@
 */
 package org.asterisque;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Attributes
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
- * サブクラスで任意の属性値の設定/参照を行うためのトレイトです。
+ * 任意の属性値の設定/参照を行います。
  * @author Takami Torao
  */
-public class Attributes {
-
-	public Attributes(){ }
+public final class Attributes {
 
 	/**
 	 * このインスタンスに関連づけられている属性値。
 	 */
-	private AtomicReference<Map<String, Object>> attribute = new AtomicReference<>();
+	private final ConcurrentMap<String,Object> attribute = new ConcurrentHashMap<>();
+
+	public Attributes(){ }
 
 	/**
 	 * このインスタンスに属性値を設定します。
@@ -34,12 +33,14 @@ public class Attributes {
 	 * @return 以前に設定されていた属性値
 	 */
 	public Optional<Object> setAttribute(String name, Object obj) {
-		Map<String, Object> map = attribute.getAndUpdate(oldMap -> {
-			Map<String, Object> newMap = new HashMap<String, Object>(oldMap);
-			newMap.put(name, obj);
-			return newMap;
-		});
-		return get(map, name);
+		if(obj == null){
+			throw new NullPointerException();
+		}
+		Object old = attribute.put(name, obj);
+		if(old == null){
+			return Optional.empty();
+		}
+		return Optional.of(old);
 	}
 
 	/**
@@ -49,15 +50,11 @@ public class Attributes {
 	 * @return 属性値
 	 */
 	public Optional<Object> getAttribute(String name) {
-		Map<String, Object> map = attribute.get();
-		return get(map, name);
-	}
-
-	private static Optional<Object> get(Map<String, Object> map, String name) {
-		if(map.containsKey(name)) {
-			return Optional.of(map.get(name));
-		} else {
+		Object obj = attribute.get(name);
+		if(obj == null){
 			return Optional.empty();
 		}
+		return Optional.of(obj);
 	}
+
 }
