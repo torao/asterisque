@@ -14,6 +14,7 @@ import scala.util.Failure
 import scala.concurrent.duration.Duration
 import scala.io.Source
 import scala.annotation.tailrec
+import org.asterisque.Export
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Sample4

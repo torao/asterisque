@@ -15,6 +15,7 @@ import java.security.cert.{CertificateException, X509Certificate}
 import java.security.KeyStore
 import scala.Some
 import java.util.concurrent.LinkedBlockingQueue
+import org.asterisque.codec.Codec
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Wire
@@ -155,7 +156,7 @@ object Wire {
 	// パイプの作成
 	// ==============================================================================================
 	/**
-	 * [[com.kazzla.asterisk.codec.Codec]] を伴わないでメッセージをやり取りするパイプ型 Wire を構築します。
+	 * [[Codec]] を伴わないでメッセージをやり取りするパイプ型 Wire を構築します。
 	 * @return パイプ Wire の双方のタプル
 	 */
 	def newPipe():(Wire, Wire) = {

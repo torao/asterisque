@@ -10,6 +10,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 import java.lang.reflect.Method
 import java.nio.ByteBuffer
+import org.asterisque.Export
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Service
@@ -18,7 +19,7 @@ import java.nio.ByteBuffer
  * サブクラスの実装により通信相手の [[com.kazzla.asterisk.Node]] に対して提供するサービスを定義します。
  *
  * サービスのインターフェースは非同期処理として実装されます。具体的にはアノテーション
- * @@[[com.kazzla.asterisk.Export]] に function 番号を指定し、`Future` 型を返値とするメソッドをサブクラスで
+ * @@[[Export]] に function 番号を指定し、`Future` 型を返値とするメソッドをサブクラスで
  * 実装することでリモート呼び出しを可能にします。
  * {{{
  *   // インターフェース定義

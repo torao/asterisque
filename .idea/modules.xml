@@ -3,6 +3,8 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/asterisk.iml" filepath="$PROJECT_DIR$/asterisk.iml" />
+      <module fileurl="file://$PROJECT_DIR$/java/java.iml" filepath="$PROJECT_DIR$/java/java.iml" />
+      <module fileurl="file://$PROJECT_DIR$/scala_2.11/scala_2.11.iml" filepath="$PROJECT_DIR$/scala_2.11/scala_2.11.iml" />
     </modules>
   </component>
 </project>
