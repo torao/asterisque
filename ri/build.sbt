@@ -1,13 +1,12 @@
 organization := "org.asterisque"
 
-name := "asterisque"
+name := "asterisque-ri"
 
 version := "1.0-SNAPSHOT"
 
 scalaVersion := "2.11.2"
 
 resolvers ++= Seq(
-	"Sonatype snapshots" at "http://oss.sonatype.org/content/repositories/snapshots/",	// MessagePack
 	"Scalaz Bintray Repo" at "http://dl.bintray.com/scalaz/releases"   // scalaz-stream_0.5a
 )
 
@@ -18,8 +17,7 @@ javacOptions ++= Seq("-encoding", "UTF-8", "-Xlint:unchecked")
 //scaladocOptions ++= Seq("-encoding", "UTF-8", "-doc-title", "Asterisk 0.1")
 
 libraryDependencies ++= Seq(
-  "io.netty"    % "netty-all"     % "4.0.23.Final",
-	"org.msgpack" % "msgpack"       % "0.6.11",
+  "org.asterisque" %% "asterisque" % "1.0-SNAPSHOT",
 	"org.slf4j"   % "slf4j-log4j12" % "1.7.7",
 	"org.specs2" % "specs2_2.11" % "2.4.7-scalaz-7.0.6" % "test"
 )

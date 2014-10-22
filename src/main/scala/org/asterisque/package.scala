@@ -118,7 +118,7 @@ package object asterisque {
 			setFromTo(classOf[Unit], classOf[Void],
 			{ i:Unit => null:Void }, { i:Void => () })
 			setFromTo(classOf[BoxedUnit], classOf[Tuple],
-			{ i:BoxedUnit => Tuple.Void }, { i:Tuple => if(i.count() == 0) BoxedUnit.UNIT else  })
+			{ i:BoxedUnit => Tuple.Void }, { i:Tuple => if(i.count()==0) BoxedUnit.UNIT else throw new IllegalArgumentException(s"cannot convert sized Tuple to Unit: $i")} )
 			setFromTo(classOf[Boolean], classOf[JBoolean],
 			{ i:Boolean => Boolean.box(i) }, { i:JBoolean => if (i) true else false })
 			setFromTo(classOf[Byte], classOf[JByte],
@@ -190,6 +190,33 @@ package object asterisque {
 	def init():Unit = if(_init.compareAndSet(false, true)){
 		TypeConversion.addExtension(ScalaConversion)
 	}
+	private[this] val jtuple2stuple = { i:Tuple => i.count() match {
+		case 0 => BoxedUnit.UNIT
+		case 1 => scala.Tuple1(i.valueAt(0))
+		case 2 => (i.valueAt(0), i.valueAt(1))
+		case 3 => (i.valueAt(0), i.valueAt(1), i.valueAt(2))
+		case 4 => (i.valueAt(0), i.valueAt(1), i.valueAt(2), i.valueAt(3))
+		case 5 => (i.valueAt(0), i.valueAt(1), i.valueAt(2), i.valueAt(3), i.valueAt(4))
+		case 6 => (i.valueAt(0), i.valueAt(1), i.valueAt(2), i.valueAt(3), i.valueAt(4), i.valueAt(5))
+		case 7 => (i.valueAt(0), i.valueAt(1), i.valueAt(2), i.valueAt(3), i.valueAt(4), i.valueAt(5), i.valueAt(6))
+		case 8 => (i.valueAt(0), i.valueAt(1), i.valueAt(2), i.valueAt(3), i.valueAt(4), i.valueAt(5), i.valueAt(6), i.valueAt(7))
+		case 9 => (i.valueAt(0), i.valueAt(1), i.valueAt(2), i.valueAt(3), i.valueAt(4), i.valueAt(5), i.valueAt(6), i.valueAt(7), i.valueAt(8))
+		case 10 => (i.valueAt(0), i.valueAt(1), i.valueAt(2), i.valueAt(3), i.valueAt(4), i.valueAt(5), i.valueAt(6), i.valueAt(7), i.valueAt(8), i.valueAt(9))
+		case 11 => (i.valueAt(0), i.valueAt(1), i.valueAt(2), i.valueAt(3), i.valueAt(4), i.valueAt(5), i.valueAt(6), i.valueAt(7), i.valueAt(8), i.valueAt(9), i.valueAt(10))
+		case 12 => (i.valueAt(0), i.valueAt(1), i.valueAt(2), i.valueAt(3), i.valueAt(4), i.valueAt(5), i.valueAt(6), i.valueAt(7), i.valueAt(8), i.valueAt(9), i.valueAt(10), i.valueAt(11))
+		case 13 => (i.valueAt(0), i.valueAt(1), i.valueAt(2), i.valueAt(3), i.valueAt(4), i.valueAt(5), i.valueAt(6), i.valueAt(7), i.valueAt(8), i.valueAt(9), i.valueAt(10), i.valueAt(11), i.valueAt(12))
+		case 14 => (i.valueAt(0), i.valueAt(1), i.valueAt(2), i.valueAt(3), i.valueAt(4), i.valueAt(5), i.valueAt(6), i.valueAt(7), i.valueAt(8), i.valueAt(9), i.valueAt(10), i.valueAt(11), i.valueAt(12), i.valueAt(13))
+		case 15 => (i.valueAt(0), i.valueAt(1), i.valueAt(2), i.valueAt(3), i.valueAt(4), i.valueAt(5), i.valueAt(6), i.valueAt(7), i.valueAt(8), i.valueAt(9), i.valueAt(10), i.valueAt(11), i.valueAt(12), i.valueAt(13), i.valueAt(14))
+		case 16 => (i.valueAt(0), i.valueAt(1), i.valueAt(2), i.valueAt(3), i.valueAt(4), i.valueAt(5), i.valueAt(6), i.valueAt(7), i.valueAt(8), i.valueAt(9), i.valueAt(10), i.valueAt(11), i.valueAt(12), i.valueAt(13), i.valueAt(14), i.valueAt(15))
+		case 17 => (i.valueAt(0), i.valueAt(1), i.valueAt(2), i.valueAt(3), i.valueAt(4), i.valueAt(5), i.valueAt(6), i.valueAt(7), i.valueAt(8), i.valueAt(9), i.valueAt(10), i.valueAt(11), i.valueAt(12), i.valueAt(13), i.valueAt(14), i.valueAt(15), i.valueAt(16))
+		case 18 => (i.valueAt(0), i.valueAt(1), i.valueAt(2), i.valueAt(3), i.valueAt(4), i.valueAt(5), i.valueAt(6), i.valueAt(7), i.valueAt(8), i.valueAt(9), i.valueAt(10), i.valueAt(11), i.valueAt(12), i.valueAt(13), i.valueAt(14), i.valueAt(15), i.valueAt(16), i.valueAt(17))
+		case 19 => (i.valueAt(0), i.valueAt(1), i.valueAt(2), i.valueAt(3), i.valueAt(4), i.valueAt(5), i.valueAt(6), i.valueAt(7), i.valueAt(8), i.valueAt(9), i.valueAt(10), i.valueAt(11), i.valueAt(12), i.valueAt(13), i.valueAt(14), i.valueAt(15), i.valueAt(16), i.valueAt(17), i.valueAt(18))
+		case 20 => (i.valueAt(0), i.valueAt(1), i.valueAt(2), i.valueAt(3), i.valueAt(4), i.valueAt(5), i.valueAt(6), i.valueAt(7), i.valueAt(8), i.valueAt(9), i.valueAt(10), i.valueAt(11), i.valueAt(12), i.valueAt(13), i.valueAt(14), i.valueAt(15), i.valueAt(16), i.valueAt(17), i.valueAt(18), i.valueAt(19))
+		case 21 => (i.valueAt(0), i.valueAt(1), i.valueAt(2), i.valueAt(3), i.valueAt(4), i.valueAt(5), i.valueAt(6), i.valueAt(7), i.valueAt(8), i.valueAt(9), i.valueAt(10), i.valueAt(11), i.valueAt(12), i.valueAt(13), i.valueAt(14), i.valueAt(15), i.valueAt(16), i.valueAt(17), i.valueAt(18), i.valueAt(19), i.valueAt(20))
+		case 22 => (i.valueAt(0), i.valueAt(1), i.valueAt(2), i.valueAt(3), i.valueAt(4), i.valueAt(5), i.valueAt(6), i.valueAt(7), i.valueAt(8), i.valueAt(9), i.valueAt(10), i.valueAt(11), i.valueAt(12), i.valueAt(13), i.valueAt(14), i.valueAt(15), i.valueAt(16), i.valueAt(17), i.valueAt(18), i.valueAt(19), i.valueAt(20), i.valueAt(21))
+	}
+	}
+
 	init()
 
 }

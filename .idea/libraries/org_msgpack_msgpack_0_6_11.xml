@@ -1,0 +1,16 @@
+<component name="libraryTable">
+  <library name="org.msgpack:msgpack:0.6.11" type="repository">
+    <properties maven-id="org.msgpack:msgpack:0.6.11" />
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/msgpack/msgpack/0.6.11/msgpack-0.6.11.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/com/googlecode/json-simple/json-simple/1.1.1/json-simple-1.1.1.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/javassist/javassist/3.18.1-GA/javassist-3.18.1-GA.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/org/msgpack/msgpack/0.6.11/msgpack-0.6.11-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/msgpack/msgpack/0.6.11/msgpack-0.6.11-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

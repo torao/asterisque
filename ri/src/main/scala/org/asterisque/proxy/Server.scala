@@ -33,7 +33,7 @@ class Server(
 	def start():Unit = {
 		val proxy = new Node(id, name, exec, Service, Repository.OnMemory)
 		proxy.listen(address, new Options()){ session =>
-			session.
+			None // session.
 		}
 	}
 }
