@@ -77,6 +77,7 @@ encode and decode supported data-types. $supportedDataTypes
 	}
 
 	def supportedDataTypes = {
+		codec.decode(codec.encode(new Close(1.toShort, ())))
 		val types:Seq[AnyRef] = Seq(
 			null.asInstanceOf[AnyRef],
 			().asInstanceOf[AnyRef],

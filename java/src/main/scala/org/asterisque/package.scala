@@ -117,8 +117,8 @@ package object asterisque {
 			logger.debug("installing scala type-conversion")
 			setFromTo(classOf[Unit], classOf[Void],
 			{ i:Unit => null:Void }, { i:Void => () })
-			setFromTo(classOf[BoxedUnit], classOf[Void],
-			{ i:BoxedUnit => null:Void }, { i:Void => BoxedUnit.UNIT })
+			setFromTo(classOf[BoxedUnit], classOf[Tuple],
+			{ i:BoxedUnit => Tuple.Void }, { i:Tuple => if(i.count() == 0) BoxedUnit.UNIT else  })
 			setFromTo(classOf[Boolean], classOf[JBoolean],
 			{ i:Boolean => Boolean.box(i) }, { i:JBoolean => if (i) true else false })
 			setFromTo(classOf[Byte], classOf[JByte],
