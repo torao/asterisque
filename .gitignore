@@ -17,3 +17,5 @@ lib/
 
 # IntelliJ IDEA specific
 out/
+.idea/
+
