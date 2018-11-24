@@ -1,6 +1,7 @@
-package io.asterisque.msg;
+package io.asterisque.core.msg;
 
-import io.asterisque.Debug;
+import io.asterisque.core.Debug;
+import io.asterisque.core.codec.VariableCodec;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -35,6 +36,7 @@ public final class Close extends Message {
    */
   public Close(short pipeId, @Nullable Object result) {
     super(pipeId);
+    assert VariableCodec.isTransferable(result) : Debug.toString(result);
     this.result = result;
     this.abort = null;
   }
@@ -56,12 +58,27 @@ public final class Close extends Message {
    * このインスタンスを文字列化します。
    */
   @Override
+  @Nonnull
   public String toString() {
     if (abort == null) {
-      return "Close(" + pipeId + "," + Debug.toString(result) + ")";
+      return String.format("Close(%d,%s)", pipeId, Debug.toString(result));
     } else {
-      return "Close(" + pipeId + "," + abort + ")";
+      return String.format("Close(%d,err=%s)", pipeId, abort);
     }
+  }
+
+  @Override
+  public int hashCode() {
+    return (super.hashCode() & 0xFFFF) << 16 | (Objects.hash(result, abort) & 0xFFFF);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (super.equals(obj) && obj instanceof Close) {
+      Close other = (Close) obj;
+      return Objects.equals(this.result, other.result) && Objects.equals(this.abort, other.abort);
+    }
+    return false;
   }
 
   /**

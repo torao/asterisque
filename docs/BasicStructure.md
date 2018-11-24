@@ -13,7 +13,6 @@ asterisque で使用するメッセージは `Open`, `Close`, `Block`, `Control`
 | field name | type    | size  | description |
 |------------|---------|-------|-------------|
 | pipeId     | UINT16  |     2 | |
-| serviceId  | UTF8    | 0~255 | |
 | functionId | UINT16  |     2 | |
 | params     | OBJECT* |     * | |
 | priority   | INT8    |     1 | default 0 |
@@ -23,6 +22,8 @@ Open メッセージはリモートノードに実装されている function (�
 Open メッセージが受け入れられ function の処理が開始するとパイプが発生して通信端点の双方にキューが生成される。その呼び出しに関連するメッセージは全てそのキューに宛てられる。
 
 同一のセッション内で複数のパイプが発生する。優先度を指定することでパイプ間でやりとりされるメッセージを調整することができる。
+
+セッション上でピアに公開しているサービスの function は状況によって変化するため、functionId が利用可能かは動的に変化する。
 
 ### Close メッセージ
 
@@ -41,19 +42,28 @@ Close メッセージの送受信によりセッション上のパイプは消�
 | field name | type   | size | description |
 |------------|--------|------|-------------|
 | pipeId     | UINT16 |    2 | |
+| bit fields | UINT8  |    1 | |
 | payload    | UINT8* |    * | |
-| loss       | UINT7  |    1 | default 0 |
-| eof        | BIT1   |    1 |default 0 |
 
 Block メッセージはセッション上に構築したパイプ上でのメッセージングや Blob 転送に使用される。
 
-loss と eof はパックされ UINT8 に納めることができる。
+bit fields は以下のように定義される。
+
+| field name | bit size | description |
+|------------|----------|-------------|
+| eof        |        1 | default 0   |
+| loss       |        7 | default 0   |
+
+eof が 1 の場合、そのブロックがストリームの終端を表し、そうでないブロックは続くブロックが存在していることを表している。
+
+loss はこのブロックメッセージが欠落してもよい可能性を 0-127 の範囲で定義している。loss が 0 のブロックメッセージに対する中継処理による欠落は明確に禁止されている。しかし、それ以外の loss を持つブロックは意図的に欠落する可能性がある。
+
+eof ビットが立っていても loss を 0 以外の値に設定することができる。このとき loss を認識してブロックの欠落を行う中継処理は eof ビットを前方の非欠落ブロックメッセージに移動させなければならない。
 
 ### Control
 
 | field name | type   | description |
 |------------|--------|-------------|
-| pipeId     | UINT16 | |
 | code       | INT32  | |
 | data       | UINT8* | |
 

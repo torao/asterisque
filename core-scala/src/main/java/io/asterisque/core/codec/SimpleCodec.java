@@ -1,33 +1,23 @@
-package io.asterisque.codec;
+package io.asterisque.core.codec;
 
 import javax.annotation.Nonnull;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 /**
- * {@link java.nio.ByteBuffer} を使用した非圧縮形式のメッセージシリアライゼイションを行います。
- * バイト順序は {@link java.nio.ByteOrder#BIG_ENDIAN ビッグエンディアン} となります。
+ * {@link java.nio.ByteBuffer} を使用した非圧縮形式のメッセージコーデックです。バイト順序は
+ * {@link java.nio.ByteOrder#BIG_ENDIAN ビッグエンディアン} を使用します。
+ * インスタンスはスレッドセーフであり {@link MessageCodec#SimpleCodec} で使用することができます。
  *
  * @author Takami Torao
  */
-public class SimpleCodec extends StandardCodec {
+public class SimpleCodec extends MessageFieldCodec {
 
   /**
-   * SimpleCodec は Singleton で使用します。
+   * インスタンスは MessageCodec 上の Singleton として構築されます。
    */
-  private static final SimpleCodec Instance = new SimpleCodec();
-
-  /**
-   * SimpleCodec は Singleton で使用します。
-   */
-  public static SimpleCodec getInstance(){
-    return Instance;
+  SimpleCodec() {
   }
-
-  /**
-   * コンストラクタは何も行いません。
-   */
-  private SimpleCodec() { }
 
   /**
    * 直列化処理を参照します。
@@ -53,6 +43,7 @@ public class SimpleCodec extends StandardCodec {
     private SimpleMarshal(){
       buffer.order(ByteOrder.BIG_ENDIAN);
     }
+    @Nonnull
     public ByteBuffer toByteBuffer() {
       buffer.flip();
       return buffer;
@@ -81,7 +72,7 @@ public class SimpleCodec extends StandardCodec {
       ensureCapacity(Double.BYTES);
       buffer.putDouble(i);
     }
-    public void writeBinary(byte[] b, int offset, int length){
+    public void writeBinary(@Nonnull byte[] b, int offset, int length){
       if(length < 0 || length > 0xFFFF){
         throw new CodecException(String.format("too large binary: %d", length));
       }
@@ -150,6 +141,7 @@ public class SimpleCodec extends StandardCodec {
       }
       return buffer.getDouble();
     }
+    @Nonnull
     public byte[] readBinary() throws Unsatisfied {
       int length = readUInt16();
       if(buffer.remaining() < length){

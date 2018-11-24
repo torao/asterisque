@@ -19,12 +19,12 @@ import io.netty.handler.codec.MessageToByteEncoder;
  * @author Takami Torao
  */
 class MessageEncoder extends MessageToByteEncoder<Message> {
-	public final Codec codec;
-	public MessageEncoder(Codec codec){
-		this.codec = codec;
-	}
-	public void encode(ChannelHandlerContext ctx, Message msg, ByteBuf b) throws CodecException {
-		b.writeBytes(codec.encode(msg));
-	}
+  public final Codec codec;
+  public MessageEncoder(Codec codec){
+    this.codec = codec;
+  }
+  public void encode(ChannelHandlerContext ctx, Message msg, ByteBuf b) throws CodecException {
+    b.writeBytes(codec.encode(msg));
+  }
 }
 

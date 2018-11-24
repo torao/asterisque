@@ -3,7 +3,7 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package org.asterisque;
+package io.asterisque;
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // ProtocolViolationException
@@ -13,10 +13,10 @@ package org.asterisque;
  * @author Takami Torao
  */
 public class ProtocolViolationException extends RuntimeException {
-	/**
-	 * @param msg 例外メッセージ
-	 * @param ex 下層の例外
-	 */
-	public ProtocolViolationException(String msg, Throwable ex){ super(msg, ex); }
-	public ProtocolViolationException(String msg){ super(msg); }
+  /**
+   * @param msg 例外メッセージ
+   * @param ex 下層の例外
+   */
+  public ProtocolViolationException(String msg, Throwable ex){ super(msg, ex); }
+  public ProtocolViolationException(String msg){ super(msg); }
 }

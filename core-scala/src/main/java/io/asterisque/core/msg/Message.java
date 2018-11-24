@@ -1,5 +1,6 @@
-package io.asterisque.msg;
+package io.asterisque.core.msg;
 
+import javax.annotation.Nullable;
 import java.io.Serializable;
 
 /**
@@ -20,9 +21,19 @@ public abstract class Message implements Serializable {
    * @param pipeId メッセージの宛先となるパイプ ID
    */
   Message(short pipeId) {
-    if (pipeId == 0 && !(this instanceof Control)) {
-      throw new IllegalArgumentException("pipe-id should be zero if only Control message: " + pipeId);
-    }
     this.pipeId = pipeId;
+  }
+
+  @Override
+  public int hashCode() {
+    return pipeId & 0xFFFF;
+  }
+
+  @Override
+  public boolean equals(@Nullable Object obj) {
+    if (obj instanceof Message) {
+      return ((Message) obj).pipeId == this.pipeId;
+    }
+    return false;
   }
 }

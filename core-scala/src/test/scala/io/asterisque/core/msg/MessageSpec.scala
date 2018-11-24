@@ -1,9 +1,4 @@
-/*
- * Copyright (c) 2014 koiroha.org.
- * All sources and related resources are available under Apache License 2.0.
- * http://www.apache.org/licenses/LICENSE-2.0.html
-*/
-package io.asterisque.msg
+package io.asterisque.core.msg
 
 import java.lang.reflect.Modifier
 
@@ -11,12 +6,6 @@ import org.specs2.Specification
 
 import scala.util.Random
 
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// MessageSpec
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-/**
- * @author Takami Torao
- */
 class MessageSpec extends Specification { def is = s2"""
 Message should:
 declare as abstract class. $e0
@@ -36,6 +25,6 @@ throw exception for zero pipe-id expect Control. $e2
   }
 
   def e2 = {
-    (new Message(0) {} must throwA[IllegalArgumentException]) and (new Control(0, Array[Byte]()).pipeId === 0)
+    new Control(0, Array[Byte]()).pipeId === 0
   }
 }

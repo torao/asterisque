@@ -7,14 +7,16 @@ package sample
 
 import com.kazzla.asterisk._
 import java.net.InetSocketAddress
-import scala.concurrent.{Future, Promise, Await}
+
+import io.asterisque.Export
+
+import scala.concurrent.{Await, Future, Promise}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Success
 import scala.util.Failure
 import scala.concurrent.duration.Duration
 import scala.io.Source
 import scala.annotation.tailrec
-import org.asterisque.Export
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Sample5
@@ -25,20 +27,20 @@ import org.asterisque.Export
  */
 object Sample5 {
 
-	def ping(sec:Int)(pipe:Pipe):Future[Any] = {
-		pipe.src.foreach{ b => println(b.getString) }
-		scala.concurrent.future {
-			(0 to sec).foreach{ s =>
-				pipe.sink.send(s.toString.getBytes)
-				Thread.sleep(1000)
-			}
-			sec
-		}
-	}
+  def ping(sec:Int)(pipe:Pipe):Future[Any] = {
+    pipe.src.foreach{ b => println(b.getString) }
+    scala.concurrent.future {
+      (0 to sec).foreach{ s =>
+        pipe.sink.send(s.toString.getBytes)
+        Thread.sleep(1000)
+      }
+      sec
+    }
+  }
 
   class PingService extends Service(global) {
-	  @Export(10)
-	  def p(sec:Int) = withPipe(ping(sec))
+    @Export(10)
+    def p(sec:Int) = withPipe(ping(sec))
   }
 
   def main(args:Array[String]):Unit = {
@@ -47,12 +49,12 @@ object Sample5 {
     val server = Node("server").serve(new PingService()).build()
     server.listen(new InetSocketAddress("localhost", 5335), None)
 
-	  // Client node connect to server.
+    // Client node connect to server.
     val client = Node("client").build()
     client.connect(new InetSocketAddress("localhost", 5335), None).onComplete{
       case Success(session) =>
-	      val future = session.open(10, 10)(ping(10))
-	      System.out.println(Await.result(future, Duration.Inf))
+        val future = session.open(10, 10)(ping(10))
+        System.out.println(Await.result(future, Duration.Inf))
         server.shutdown()
         client.shutdown()
       case Failure(ex) => ex.printStackTrace()

@@ -1,9 +1,4 @@
-/*
- * Copyright (c) 2014 koiroha.org.
- * All sources and related resources are available under Apache License 2.0.
- * http://www.apache.org/licenses/LICENSE-2.0.html
-*/
-package io.asterisque.msg
+package io.asterisque.core.msg
 
 import java.lang.reflect.Modifier
 import java.util.UUID
@@ -13,18 +8,16 @@ import org.specs2.Specification
 
 import scala.util.Random
 
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// SyncConfigSpec
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-/**
- * @author Takami Torao
- */
-class SyncConfigSpec extends Specification { def is = s2"""
+class SyncConfigSpec extends Specification {
+  def is =
+    s2"""
 SyncConfig should:
 be declared as final class. ${Modifier.isFinal(classOf[SyncConfig].getModifiers)}
 restore all properties from control data. $e0
 throw exception if signature is not sync-config. $e1
 throw exception if data too short. $e2
+SyncConfig constracts instance without exception. $allConstructorsTest
+Data size must be constant value. $verifyDataSize
 """
 
   def e0 = {
@@ -47,5 +40,16 @@ throw exception if data too short. $e2
 
   def e2 = {
     SyncConfig.parse(new Control(Control.SyncConfig, new Array[Byte](10))) must throwA[ProtocolViolationException]
+  }
+
+  private[this] def allConstructorsTest = {
+    new SyncConfig(0, UUID.randomUUID(), UUID.randomUUID(), 0, 0, 0)
+    new SyncConfig(UUID.randomUUID(), UUID.randomUUID(), 0, 0, 0)
+    success
+  }
+
+  private[this] def verifyDataSize = {
+    val control = new SyncConfig(UUID.randomUUID(), UUID.randomUUID(), 0, 0, 0).toControl
+    control.data.length === SyncConfig.DataLength
   }
 }

@@ -1,4 +1,4 @@
-package io.asterisque.codec;
+package io.asterisque.core.codec;
 
 import io.asterisque.ProtocolViolationException;
 

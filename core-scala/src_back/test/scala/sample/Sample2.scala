@@ -47,10 +47,10 @@ object Sample2 {
         // Bind known service interface from session, and call greeting service
         // asynchronously.
         session.open(20, "asterisque").onSuccess{
-	        case result =>
-		        System.out.println(result.toString)
-		        server.shutdown()
-		        client.shutdown()
+          case result =>
+            System.out.println(result.toString)
+            server.shutdown()
+            client.shutdown()
         }
       case Failure(ex) => ex.printStackTrace()
     }

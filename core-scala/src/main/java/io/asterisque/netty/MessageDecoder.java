@@ -3,11 +3,11 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package org.asterisque.netty;
+package io.asterisque.netty;
 
-import io.asterisque.msg.Message;
-import org.asterisque.codec.Codec;
-import org.asterisque.codec.CodecException;
+import io.asterisque.core.codec.CodecException;
+import io.asterisque.core.codec.MessageCodec;
+import io.asterisque.core.msg.Message;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -25,16 +25,16 @@ import java.util.Optional;
  * @author Takami Torao
  */
 class MessageDecoder extends ByteToMessageDecoder {
-	public final Codec codec;
-	public MessageDecoder(Codec codec){
-		this.codec = codec;
-	}
-	public void decode(ChannelHandlerContext ctx, ByteBuf b, List<Object> out) throws CodecException {
-		ByteBuffer buffer = b.nioBuffer();
-		Optional<Message> msg = codec.decode(buffer);
-		if(msg.isPresent()){
-			b.skipBytes(buffer.position());
-			out.add(msg.get());
-		}
-	}
+  public final MessageCodec codec;
+  public MessageDecoder(MessageCodec codec){
+    this.codec = codec;
+  }
+  public void decode(ChannelHandlerContext ctx, ByteBuf b, List<Object> out) throws CodecException {
+    ByteBuffer buffer = b.nioBuffer();
+    Optional<Message> msg = codec.decode(buffer);
+    if(msg.isPresent()){
+      b.skipBytes(buffer.position());
+      out.add(msg.get());
+    }
+  }
 }

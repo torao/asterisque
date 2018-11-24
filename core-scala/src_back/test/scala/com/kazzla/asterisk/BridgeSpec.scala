@@ -24,38 +24,38 @@ abstract class BridgeSpec extends Specification { def is = s2"""
 Bridge should:
 """
 
-	def bridge:Bridge
+  def bridge:Bridge
 }
 
 abstract class BridgeWireSpec(client:Option[SSLContext], server:Option[SSLContext]) extends WireSpec {
-	def bridge:Bridge
+  def bridge:Bridge
 
-	private[this] val waitLimit = Duration.apply(10, SECONDS)
+  private[this] val waitLimit = Duration.apply(10, SECONDS)
 
-	def wires(fx:(Wire,Wire)=>Result) = synchronized {
-		try {
-			val b = bridge
-			val p2 = Promise[Wire]()
-			val s = b.listen(MsgPackCodec, new InetSocketAddress("localhost", 39888), server, new AcceptListener {
-				override def apply(wire:Wire):Unit = p2.success(wire)
-			})
-			using(Await.result(s, waitLimit)){ _ =>
-				val f = b.connect(MsgPackCodec, new InetSocketAddress("localhost", 39888), client)
-				using(Await.result(f, waitLimit)){ w1 =>
-					using(Await.result(p2.future, waitLimit)){ w2 =>
-						fx(w1, w2)
-					}
-				}
-			}
-		} catch {
-			case ex:Throwable =>
-				ex.printStackTrace()
-				failure
-		}
-	}
+  def wires(fx:(Wire,Wire)=>Result) = synchronized {
+    try {
+      val b = bridge
+      val p2 = Promise[Wire]()
+      val s = b.listen(MsgPackCodec, new InetSocketAddress("localhost", 39888), server, new AcceptListener {
+        override def apply(wire:Wire):Unit = p2.success(wire)
+      })
+      using(Await.result(s, waitLimit)){ _ =>
+        val f = b.connect(MsgPackCodec, new InetSocketAddress("localhost", 39888), client)
+        using(Await.result(f, waitLimit)){ w1 =>
+          using(Await.result(p2.future, waitLimit)){ w2 =>
+            fx(w1, w2)
+          }
+        }
+      }
+    } catch {
+      case ex:Throwable =>
+        ex.printStackTrace()
+        failure
+    }
+  }
 
-	override def secureWire(fx:(Wire)=>Result) = synchronized {
-		wires{ (w1, w2) => fx(w1) and fx(w2) }
-	}
+  override def secureWire(fx:(Wire)=>Result) = synchronized {
+    wires{ (w1, w2) => fx(w1) and fx(w2) }
+  }
 
 }

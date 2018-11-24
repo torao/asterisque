@@ -16,15 +16,15 @@ import scala.Some;
  * @author Takami Torao
  */
 public final class S {
-	public static <T> Option<T> Some(T value){
-		@SuppressWarnings("unchecked")
-		Option<T> some = Option.class.cast(new Some(value));
-		return some;
-	}
-	public static <T> Option<T> None(){
-		@SuppressWarnings("unchecked")
-		Option<T> none = (Option<T>)NONE;
-		return none;
-	}
-	private static final Option<?> NONE = Option.class.cast(None$.MODULE$);
+  public static <T> Option<T> Some(T value){
+    @SuppressWarnings("unchecked")
+    Option<T> some = Option.class.cast(new Some(value));
+    return some;
+  }
+  public static <T> Option<T> None(){
+    @SuppressWarnings("unchecked")
+    Option<T> none = (Option<T>)NONE;
+    return none;
+  }
+  private static final Option<?> NONE = Option.class.cast(None$.MODULE$);
 }

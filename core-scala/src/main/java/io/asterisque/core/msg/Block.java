@@ -1,4 +1,4 @@
-package io.asterisque.msg;
+package io.asterisque.core.msg;
 
 import io.asterisque.Asterisque;
 import io.asterisque.Pipe;
@@ -9,8 +9,7 @@ import java.nio.charset.Charset;
 import java.util.Objects;
 
 /**
- * {@link Pipe} を経由して双方向で交換可能なメッセージです。パイプ間での双方向ストリーミングのために使用
- * されます。
+ * {@link Pipe} を経由して双方向で交換可能なメッセージです。パイプ間での双方向ストリーミングのために使用されます。
  *
  * @author Takami Torao
  */
@@ -23,8 +22,7 @@ public final class Block extends Message {
 
   /**
    * 損失率はこのブロックが過負荷などによって消失しても良い確率を表す 0〜127 までの値です。0 はこのブロックが消失しないことを
-   * 表し、127 は 100% の消失が発生しても良い事を示します。EOF を示す場合は必ず 0 になります。消失判定を行い生き残った
-   * ブロックは 0 に変更されます。
+   * 表し、127 は 100% の消失が発生しても良い事を示します。EOF を示す場合でも 0 以外の値をとることことができます。
    */
   public final byte loss;
 
@@ -60,7 +58,7 @@ public final class Block extends Message {
    * @param eof     このブロックがストリームの終端を表す場合 true
    * @throws IllegalArgumentException パラメータの一つが不正な場合
    */
-  private Block(short pipeId, byte loss, @Nonnull byte[] payload, int offset, int length, boolean eof) {
+  public Block(short pipeId, byte loss, @Nonnull byte[] payload, int offset, int length, boolean eof) {
     super(pipeId);
     Objects.requireNonNull(payload, "payload shouldn't be null");
     if (offset + length > payload.length) {
@@ -145,10 +143,8 @@ public final class Block extends Message {
    * このインスタンスを文字列化します。
    */
   @Override
+  @Nonnull
   public String toString() {
-    if (eof) {
-      return String.format("Block(%d,EOF)", pipeId);
-    }
     StringBuilder buffer = new StringBuilder(length * 3);
     for (int i = 0; i < length; i++) {
       if (i != 0) {
@@ -156,17 +152,47 @@ public final class Block extends Message {
       }
       buffer.append(String.format("%02X", payload[offset + i]));
     }
-    return String.format("Block(%d,[%s],%d)", pipeId, buffer, loss);
+    return String.format("Block(%d,[%s],%d%s)", pipeId, buffer, loss, eof ? ",EOF" : "");
+  }
+
+  @Override
+  public int hashCode() {
+    int hash = 0;
+    for(int i=0; i<Integer.BYTES; i++){
+      hash <<= 8;
+      if(i < length){
+        hash |= payload[offset + i] & 0xFF;
+      }
+    }
+    return hash ^ length;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (super.equals(obj) && obj instanceof Block) {
+      Block other = (Block) obj;
+      if (this.length != other.length || this.eof != other.eof || this.loss != other.loss) {
+        return false;
+      }
+      for (int i = 0; i < this.length; i++) {
+        if (this.payload[this.offset + i] != other.payload[other.offset + i]) {
+          return false;
+        }
+      }
+      return true;
+    }
+    return false;
   }
 
   /**
    * 指定されたパイプ ID に対する EOF ブロックを構築します。
+   *
    * @param pipeId 宛先のパイプ ID
    * @return EOF ブロック
    */
   @Nonnull
   public static Block eof(short pipeId) {
-    return new Block(pipeId, (byte) 0, Asterisque.EmptyBytes, 0, 0, true);
+    return new Block(pipeId, (byte) 0, Asterisque.Empty.Bytes, 0, 0, true);
   }
 
 }

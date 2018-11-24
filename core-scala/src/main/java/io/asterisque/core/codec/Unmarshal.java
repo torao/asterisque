@@ -1,80 +1,85 @@
-package io.asterisque.codec;
+package io.asterisque.core.codec;
 
 
 import io.asterisque.Asterisque;
-import io.asterisque.Tuple;
+import io.asterisque.core.Tuple;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.*;
 
 /**
- * Asterisque がサポートするデータ型をデコードします。
+ * asterisque がサポートするデータ型をデコードします。
  * <p>
  * 各メソッドはデータの完全セットが到着したかどうかに関わらずデータを受信するたびに復元が試行されます。このため、
- * 実装クラスは対象データを復元できるだけのバイナリを受信していない場合に {@link StandardCodec.Unsatisfied}
+ * 実装クラスは対象データを復元できるだけのバイナリを受信していない場合に {@link Unsatisfied}
  * を throw する必要があります。
  * <p>
  * 正常にデータを復元できた場合にバイナリのどこまでが読み込み済みなのかを知らせるため、実装クラスは
- * {@link StandardCodec#newUnmarshal(java.nio.ByteBuffer)} に渡された {@link java.nio.ByteBuffer} のバッファ位置を
+ * {@link MessageFieldCodec#newUnmarshal(java.nio.ByteBuffer)} に渡された {@link java.nio.ByteBuffer} のバッファ位置を
  * 次の読み込み位置まで正確に移動させる必要があります。データを復元できるだけのバイナリを受信しておらず
- * {@link StandardCodec.Unsatisfied} が throw される場合は呼び出し側で位置のリセットが行われ
+ * {@link Unsatisfied} が throw される場合は呼び出し側で位置のリセットが行われ
  * るため、サブクラス側でバッファ位置を復元する必要はありません。
  * <p>
- * 各メソッド Unsatisfied の他にメッセージのデコードに失敗した場合は {@link CodecException}
- * が発生します。
+ * 各メソッド Unsatisfied の他にメッセージのデコードに失敗した場合は {@link CodecException} が発生します。
  *
- * @see StandardCodec#newUnmarshal(java.nio.ByteBuffer)
+ * @see MessageFieldCodec#newUnmarshal(java.nio.ByteBuffer)
  */
 public interface Unmarshal {
-  default byte readTag() throws StandardCodec.Unsatisfied {
+
+  default byte readTag() throws Unsatisfied {
     return readInt8();
   }
 
-  default boolean readBoolean() throws StandardCodec.Unsatisfied {
+  default boolean readBoolean() throws Unsatisfied {
     byte tag = readTag();
     switch (tag) {
-      case StandardCodec.Tag.True:
+      case MessageFieldCodec.Tag.True:
         return true;
-      case StandardCodec.Tag.False:
+      case MessageFieldCodec.Tag.False:
         return false;
       default:
         throw new CodecException(String.format("unexpected boolean value: 0x%02X", tag & 0xFF));
     }
   }
 
-  byte readInt8() throws StandardCodec.Unsatisfied;
+  byte readInt8() throws Unsatisfied;
 
-  default short readUInt8() throws StandardCodec.Unsatisfied {
+  default short readUInt8() throws Unsatisfied {
     return (short) (readInt8() & 0xFF);
   }
 
-  short readInt16() throws StandardCodec.Unsatisfied;
+  short readInt16() throws Unsatisfied;
 
-  default int readUInt16() throws StandardCodec.Unsatisfied {
+  default int readUInt16() throws Unsatisfied {
     return readInt16() & 0xFFFF;
   }
 
-  int readInt32() throws StandardCodec.Unsatisfied;
+  int readInt32() throws Unsatisfied;
 
-  long readInt64() throws StandardCodec.Unsatisfied;
+  long readInt64() throws Unsatisfied;
 
-  float readFloat32() throws StandardCodec.Unsatisfied;
+  float readFloat32() throws Unsatisfied;
 
-  double readFloat64() throws StandardCodec.Unsatisfied;
+  double readFloat64() throws Unsatisfied;
 
-  byte[] readBinary() throws StandardCodec.Unsatisfied;
+  @Nonnull
+  byte[] readBinary() throws Unsatisfied;
 
-  default String readString() throws StandardCodec.Unsatisfied {
+  @Nonnull
+  default String readString() throws Unsatisfied {
     return new String(readBinary(), Asterisque.UTF8);
   }
 
-  default UUID readUUID() throws StandardCodec.Unsatisfied {
+  @Nonnull
+  default UUID readUUID() throws Unsatisfied {
     long m = readInt64();
     long l = readInt64();
     return new UUID(m, l);
   }
 
-  default List<?> readList() throws StandardCodec.Unsatisfied {
+  @Nonnull
+  default List<?> readList() throws Unsatisfied {
     int length = readUInt16();
     List<Object> l = new ArrayList<>(length);
     for (int i = 0; i < length; i++) {
@@ -83,7 +88,8 @@ public interface Unmarshal {
     return l;
   }
 
-  default Map<?, ?> readMap() throws StandardCodec.Unsatisfied {
+  @Nonnull
+  default Map<?, ?> readMap() throws Unsatisfied {
     int length = readUInt16();
     Map<Object, Object> m = new HashMap<>(length);
     for (int i = 0; i < length; i++) {
@@ -94,69 +100,54 @@ public interface Unmarshal {
     return m;
   }
 
-  default Tuple readStruct() throws StandardCodec.Unsatisfied {
-    String schema = readString();
+  @Nonnull
+  default Tuple readTuple() throws Unsatisfied {
     int length = readUInt8();
     Object[] values = new Object[length];
     for (int i = 0; i < length; i++) {
       values[i] = read();
     }
-    return new Tuple() {
-      @Override
-      @Nonnull
-      public String schema() {
-        return schema;
-      }
-
-      @Override
-      public int count() {
-        return length;
-      }
-
-      @Override
-      public Object valueAt(int i) {
-        return values[i];
-      }
-    };
+    return Tuple.of(values);
   }
 
   /**
-   * 先行する {@link StandardCodec.Tag タグ} で識別される、Asterisque がサポートする任意の
+   * 先行する {@link MessageFieldCodec.Tag タグ} で識別される、Asterisque がサポートする任意の
    * データを読み込みます。このメソッドは {@link Marshal#write(Object)} の対になるメソッドです。
    */
-  default Object read() throws StandardCodec.Unsatisfied {
+  @Nullable
+  default Object read() throws Unsatisfied {
     byte tag = readTag();
     switch (tag) {
-      case StandardCodec.Tag.Null:
+      case MessageFieldCodec.Tag.Null:
         return null;
-      case StandardCodec.Tag.True:
+      case MessageFieldCodec.Tag.True:
         return Boolean.TRUE;
-      case StandardCodec.Tag.False:
+      case MessageFieldCodec.Tag.False:
         return Boolean.FALSE;
-      case StandardCodec.Tag.Int8:
+      case MessageFieldCodec.Tag.Int8:
         return readInt8();
-      case StandardCodec.Tag.Int16:
+      case MessageFieldCodec.Tag.Int16:
         return readInt16();
-      case StandardCodec.Tag.Int32:
+      case MessageFieldCodec.Tag.Int32:
         return readInt32();
-      case StandardCodec.Tag.Int64:
+      case MessageFieldCodec.Tag.Int64:
         return readInt64();
-      case StandardCodec.Tag.Float32:
+      case MessageFieldCodec.Tag.Float32:
         return readFloat32();
-      case StandardCodec.Tag.Float64:
+      case MessageFieldCodec.Tag.Float64:
         return readFloat64();
-      case StandardCodec.Tag.Binary:
+      case MessageFieldCodec.Tag.Binary:
         return readBinary();
-      case StandardCodec.Tag.String:
+      case MessageFieldCodec.Tag.String:
         return readString();
-      case StandardCodec.Tag.UUID:
+      case MessageFieldCodec.Tag.UUID:
         return readUUID();
-      case StandardCodec.Tag.List:
+      case MessageFieldCodec.Tag.List:
         return readList();
-      case StandardCodec.Tag.Map:
+      case MessageFieldCodec.Tag.Map:
         return readMap();
-      case StandardCodec.Tag.Struct:
-        return readStruct();
+      case MessageFieldCodec.Tag.Tuple:
+        return readTuple();
       default:
         throw new CodecException(String.format("unexpected value tag: %02X", tag & 0xFF));
     }

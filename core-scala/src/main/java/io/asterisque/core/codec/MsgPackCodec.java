@@ -1,4 +1,4 @@
-package io.asterisque.codec;
+package io.asterisque.core.codec;
 
 import org.msgpack.MessagePack;
 import org.msgpack.packer.BufferPacker;
@@ -11,19 +11,16 @@ import java.nio.ByteBuffer;
 
 /**
  * メッセージフィールドを MessagePack でエンコードするコーデックです。
+ * インスタンスはスレッドセーフであり {@link MessageCodec#MessagePackCodec} で使用することができます。
  *
  * @author Takami Torao
  */
-public class MsgPackCodec extends StandardCodec {
+public class MsgPackCodec extends MessageFieldCodec {
 
-  private static final MsgPackCodec Instance = new MsgPackCodec();
-
-  @Nonnull
-  public static MsgPackCodec getInstance() {
-    return Instance;
-  }
-
-  private MsgPackCodec() {
+  /**
+   * インスタンスは MessageCodec 上の Singleton として構築されます。
+   */
+  MsgPackCodec() {
   }
 
   /**
@@ -49,6 +46,7 @@ public class MsgPackCodec extends StandardCodec {
     private MsgPackMarshal() {
     }
 
+    @Nonnull
     public ByteBuffer toByteBuffer() {
       return ByteBuffer.wrap(packer.toByteArray());
     }
@@ -101,7 +99,7 @@ public class MsgPackCodec extends StandardCodec {
       }
     }
 
-    public void writeBinary(byte[] b, int offset, int length) {
+    public void writeBinary(@Nonnull byte[] b, int offset, int length) {
       try {
         packer.write(b, offset, length);
       } catch (IOException ex) {
@@ -113,7 +111,7 @@ public class MsgPackCodec extends StandardCodec {
   private static class MsgPackUnmarshal implements Unmarshal {
     private final BufferUnpacker unpacker;
 
-    private MsgPackUnmarshal(ByteBuffer buffer) {
+    private MsgPackUnmarshal(@Nonnull ByteBuffer buffer) {
       this.unpacker = new MessagePack().createBufferUnpacker(buffer);
     }
 
@@ -177,6 +175,7 @@ public class MsgPackCodec extends StandardCodec {
       }
     }
 
+    @Nonnull
     public byte[] readBinary() throws Unsatisfied {
       try {
         return unpacker.readByteArray();

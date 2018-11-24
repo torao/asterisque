@@ -9,10 +9,11 @@ import java.net.SocketAddress
 import java.security.cert.X509Certificate
 import java.util.UUID
 import java.util.concurrent.Executors
-import javax.net.ssl.SSLContext
 
+import io.asterisque.{Node, Options, Service}
+import io.asterisque.cluster.Repository
+import javax.net.ssl.SSLContext
 import org.asterisque._
-import org.asterisque.cluster.Repository
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Server
@@ -21,25 +22,25 @@ import org.asterisque.cluster.Repository
  * @author Takami Torao
  */
 class Server(
-	val options:Options,
-	val cert:X509Certificate, name:String, address:SocketAddress
+  val options:Options,
+  val cert:X509Certificate, name:String, address:SocketAddress
 ) {
-	val sslContext = options.get(Options.KEY_SSL_CONTEXT)
+  val sslContext = options.get(Options.KEY_SSL_CONTEXT)
 
-	val id = UUID.fromString(cert.getSubjectX500Principal.getName)
+  val id = UUID.fromString(cert.getSubjectX500Principal.getName)
 
-	private[this] val exec = Executors.newCachedThreadPool()
+  private[this] val exec = Executors.newCachedThreadPool()
 
-	def start():Unit = {
-		val proxy = new Node(id, name, exec, Service, Repository.OnMemory)
-		proxy.listen(address, new Options()){ session =>
-			None // session.
-		}
-	}
+  def start():Unit = {
+    val proxy = new Node(id, name, exec, Service, Repository.OnMemory)
+    proxy.listen(address, new Options()){ session =>
+      None // session.
+    }
+  }
 }
 
 object Server {
-	def main(args:Array[String]):Unit = {
+  def main(args:Array[String]):Unit = {
 
-	}
+  }
 }

@@ -24,16 +24,16 @@ import java.util.List;
  * @author Takami Torao
  */
 class MessageDecoder extends ByteToMessageDecoder {
-	public final Codec codec;
-	public MessageDecoder(Codec codec){
-		this.codec = codec;
-	}
-	public void decode(ChannelHandlerContext ctx, ByteBuf b, List<Object> out) throws CodecException {
-		ByteBuffer buffer = b.nioBuffer();
-		Option<Message> msg = codec.decode(buffer);
-		if(msg instanceof Some){
-			b.skipBytes(buffer.position());
-			out.add(msg);
-		}
-	}
+  public final Codec codec;
+  public MessageDecoder(Codec codec){
+    this.codec = codec;
+  }
+  public void decode(ChannelHandlerContext ctx, ByteBuf b, List<Object> out) throws CodecException {
+    ByteBuffer buffer = b.nioBuffer();
+    Option<Message> msg = codec.decode(buffer);
+    if(msg instanceof Some){
+      b.skipBytes(buffer.position());
+      out.add(msg);
+    }
+  }
 }

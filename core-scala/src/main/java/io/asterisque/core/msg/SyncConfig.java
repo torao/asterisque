@@ -1,9 +1,9 @@
-package io.asterisque.msg;
+package io.asterisque.core.msg;
 
 import io.asterisque.Asterisque;
-import io.asterisque.Debug;
+import io.asterisque.core.Debug;
 import io.asterisque.ProtocolViolationException;
-import io.asterisque.codec.Codec;
+import io.asterisque.core.codec.MessageFieldCodec;
 
 import javax.annotation.Nonnull;
 import java.nio.ByteBuffer;
@@ -44,7 +44,7 @@ public final class SyncConfig {
   public final UUID sessionId;
 
   /**
-   * UTC ミリ秒で表現した現在時刻。
+   * UTC ミリ秒で表現した現在時刻。システム時刻確認の目的で使用される。
    */
   public final long utcTime;
 
@@ -85,7 +85,7 @@ public final class SyncConfig {
    */
   @Nonnull
   public Control toControl() {
-    // SyncConfig は Codec 実装に依存しない
+    // SyncConfig は MessageCodec 実装に依存せず BIGENDIAN でエンコードする
     ByteBuffer buffer = ByteBuffer.allocate(DataLength);
     buffer.order(ByteOrder.BIG_ENDIAN)
         .putShort(version)
@@ -109,7 +109,7 @@ public final class SyncConfig {
   public static SyncConfig parse(@Nonnull Control control) throws ProtocolViolationException {
     if (control.code != Control.SyncConfig) {
       throw new ProtocolViolationException(
-          String.format("invalid asterisque protocol: 0x%02X%02X", Codec.Msg.Control & 0xFF, control.code & 0xFF));
+          String.format("invalid asterisque protocol: 0x%02X%02X", MessageFieldCodec.Msg.Control & 0xFF, control.code & 0xFF));
     }
     if (control.data.length < DataLength) {
       throw new ProtocolViolationException(

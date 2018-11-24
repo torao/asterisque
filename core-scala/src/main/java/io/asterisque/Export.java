@@ -3,7 +3,7 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package org.asterisque;
+package io.asterisque;
 
 import io.asterisque.Priority;
 
@@ -21,6 +21,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Export {
-	short value();
-	byte priority() default Priority.Normal;
+  short value();
+  byte priority() default Priority.Normal;
 }

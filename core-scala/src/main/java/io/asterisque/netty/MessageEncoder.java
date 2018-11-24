@@ -3,11 +3,11 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package org.asterisque.netty;
+package io.asterisque.netty;
 
-import io.asterisque.msg.Message;
-import org.asterisque.codec.Codec;
-import org.asterisque.codec.CodecException;
+import io.asterisque.core.codec.CodecException;
+import io.asterisque.core.codec.MessageCodec;
+import io.asterisque.core.msg.Message;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -19,12 +19,12 @@ import io.netty.handler.codec.MessageToByteEncoder;
  * @author Takami Torao
  */
 class MessageEncoder extends MessageToByteEncoder<Message> {
-	public final Codec codec;
-	public MessageEncoder(Codec codec){
-		this.codec = codec;
-	}
-	public void encode(ChannelHandlerContext ctx, Message msg, ByteBuf b) throws CodecException {
-		b.writeBytes(codec.encode(msg));
-	}
+  public final MessageCodec codec;
+  public MessageEncoder(MessageCodec codec){
+    this.codec = codec;
+  }
+  public void encode(ChannelHandlerContext ctx, Message msg, ByteBuf b) throws CodecException {
+    b.writeBytes(codec.encode(msg));
+  }
 }
 

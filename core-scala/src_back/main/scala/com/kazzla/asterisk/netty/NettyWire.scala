@@ -24,49 +24,49 @@ import io.netty.util.concurrent.{Future => NFuture}
  * @author Takami Torao
  */
 private[netty] case class NettyWire(address:SocketAddress, override val isServer:Boolean, override val tls:Future[Option[SSLSession]], context:ChannelHandlerContext) extends Wire {
-	import NettyWire.logger
+  import NettyWire.logger
 
-	private[this] lazy val sym = if(isServer) "S" else "C"
+  private[this] lazy val sym = if(isServer) "S" else "C"
 
-	override val peerName = address match {
-		case i:InetSocketAddress =>
-			s"${i.getAddress.getHostAddress}:${i.getPort}"
-		case s => s.toString
-	}
+  override val peerName = address match {
+    case i:InetSocketAddress =>
+      s"${i.getAddress.getHostAddress}:${i.getPort}"
+    case s => s.toString
+  }
 
-	def send(m:Message):Unit = {
-		if(isClosed){
-			throw new IOException(s"$sym: cannot send on closed channel: $m")
-		}
-		if(logger.isTraceEnabled){
-			logger.trace(s"$sym: send($m)")
-		}
-		val ch = context.channel()
-		val future = ch.write(m)
-		ch.flush()
-		future.addListener(new GenericFutureListener[NFuture[Any]] {
-			def operationComplete(future:NFuture[Any]): Unit = {
-				if(! future.isSuccess){
-					logger.debug(s"fail to send message: $m", future.cause())
-				}
-			}
-		})
-	}
+  def send(m:Message):Unit = {
+    if(isClosed){
+      throw new IOException(s"$sym: cannot send on closed channel: $m")
+    }
+    if(logger.isTraceEnabled){
+      logger.trace(s"$sym: send($m)")
+    }
+    val ch = context.channel()
+    val future = ch.write(m)
+    ch.flush()
+    future.addListener(new GenericFutureListener[NFuture[Any]] {
+      def operationComplete(future:NFuture[Any]): Unit = {
+        if(! future.isSuccess){
+          logger.debug(s"fail to send message: $m", future.cause())
+        }
+      }
+    })
+  }
 
-	override def close():Unit = if(! isClosed){
-		logger.trace(s"$sym: close()")
-		context.channel().close()
-		super.close()
-	}
+  override def close():Unit = if(! isClosed){
+    logger.trace(s"$sym: close()")
+    context.channel().close()
+    super.close()
+  }
 
-	private[netty] def _receive(msg:Message):Unit = {
-		logger.trace(s"$sym: _receive($msg)")
-		receive(msg)
-	}
+  private[netty] def _receive(msg:Message):Unit = {
+    logger.trace(s"$sym: _receive($msg)")
+    receive(msg)
+  }
 
 }
 
 private[netty] object NettyWire {
-	val logger = LoggerFactory.getLogger(classOf[NettyWire])
+  val logger = LoggerFactory.getLogger(classOf[NettyWire])
 }
 

@@ -3,19 +3,22 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package org.asterisque.netty;
+package io.asterisque.netty;
 
+import io.asterisque.Plug;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
-import org.asterisque.Asterisque;
-import io.asterisque.Debug;
-import org.asterisque.Node;
-import io.asterisque.msg.Message;
-import org.asterisque.Wire;
+import io.asterisque.Asterisque;
+import io.asterisque.core.Debug;
+import io.asterisque.Node;
+import io.asterisque.core.msg.Message;
+import io.asterisque.Wire;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 import java.net.SocketAddress;
 import java.util.Optional;
@@ -32,210 +35,219 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @author Takami Torao
  */
 class NettyWire implements Wire {
-	private static final Logger logger = LoggerFactory.getLogger(NettyWire.class);
+  private static final Logger logger = LoggerFactory.getLogger(NettyWire.class);
 
-	private final Node node;
-	private final SocketAddress local;
-	private final SocketAddress remote;
-	private final boolean server;
-	private final CompletableFuture<Optional<SSLSession>> tls;
-	private final ChannelHandlerContext context;
-	private final String sym;
-	private final AtomicBoolean closing = new AtomicBoolean(false);
-	private boolean writable = false;
+  private final Node node;
+  private final SocketAddress local;
+  private final SocketAddress remote;
+  private final boolean server;
+  private final CompletableFuture<Optional<SSLSession>> tls;
+  private final ChannelHandlerContext context;
+  private final String sym;
+  private final AtomicBoolean closing = new AtomicBoolean(false);
+  private boolean writable = false;
 
-	private Optional<Plug> plug = Optional.empty();
-	/**
-	 * メッセージの送信が完了した時に次のメッセージを取り出して送信する Future リスナです。送信に失敗した場合は Wire
-	 * をクローズします。
-	 */
-	private final GenericFutureListener<Future<Void>> writeComplete = future -> {
-		if(future.isSuccess()){
-			if(logger.isTraceEnabled()){
-				logger.trace(id() + ": post and flush success, polling next message");
-			}
-			writeNext();
-		} else {
-			logger.error(id() + ": message write failure, closing wire: " + this, future.cause());
-			close();
-		}
-	};
+  private Optional<Plug> plug = Optional.empty();
+  /**
+   * メッセージの送信が完了した時に次のメッセージを取り出して送信する Future リスナです。送信に失敗した場合は Wire
+   * をクローズします。
+   */
+  private final GenericFutureListener<Future<Void>> writeComplete = future -> {
+    if(future.isSuccess()){
+      if(logger.isTraceEnabled()){
+        logger.trace(id() + ": post and flush success, polling next message");
+      }
+      writeNext();
+    } else {
+      logger.error(id() + ": message write failure, closing wire: " + this, future.cause());
+      close();
+    }
+  };
 
-	// ==============================================================================================
-	// コンストラクタ
-	// ==============================================================================================
-	/**
-	 * Netty を使用した Wire を構築します。
-	 *
-	 * @param tls SSL セッションの Future
-	 * @param server この Wire 端点がサーバ側の場合 true
-	 * @param context チャネルコンテキスト
-	 */
-	public NettyWire(Node node, SocketAddress local, SocketAddress remote,
-									 boolean server, CompletableFuture<Optional<SSLSession>> tls,
-									 ChannelHandlerContext context){
-		this.node = node;
-		this.local = local;
-		this.remote = remote;
-		this.server = server;
-		this.tls = tls;
-		this.context = context;
-		this.sym = server? "S": "C";
+  // ==============================================================================================
+  // コンストラクタ
+  // ==============================================================================================
+  /**
+   * Netty を使用した Wire を構築します。
+   *
+   * @param tls SSL セッションの Future
+   * @param server この Wire 端点がサーバ側の場合 true
+   * @param context チャネルコンテキスト
+   */
+  public NettyWire(Node node, SocketAddress local, SocketAddress remote,
+                   boolean server, CompletableFuture<Optional<SSLSession>> tls,
+                   ChannelHandlerContext context){
+    this.node = node;
+    this.local = local;
+    this.remote = remote;
+    this.server = server;
+    this.tls = tls;
+    this.context = context;
+    this.sym = server? "S": "C";
 
-		// Channel のクローズと連動してこの Wire もクローズするように設定
-		context.channel().closeFuture().addListener(future -> close());
-	}
+    // Channel のクローズと連動してこの Wire もクローズするように設定
+    context.channel().closeFuture().addListener(future -> close());
+  }
 
-	// ==============================================================================================
-	// ローカルノードの参照
-	// ==============================================================================================
-	/**
-	 * {@inheritDoc}
-	 */
-	public Node node(){ return node; }
+  // ==============================================================================================
+  // ローカルノードの参照
+  // ==============================================================================================
+  /**
+   * {@inheritDoc}
+   */
+  @Nonnull
+  public Node node(){ return node; }
 
-	// ==============================================================================================
-	// ローカルノードの参照
-	// ==============================================================================================
-	/**
-	 * {@inheritDoc}
-	 */
-	public SocketAddress local(){ return local; }
+  // ==============================================================================================
+  // ローカルノードの参照
+  // ==============================================================================================
+  /**
+   * {@inheritDoc}
+   */
+  @Nonnull
+  public SocketAddress local(){ return local; }
 
-	// ==============================================================================================
-	// リモートノードの参照
-	// ==============================================================================================
-	/**
-	 * {@inheritDoc}
-	 */
-	public SocketAddress remote(){ return remote; }
+  // ==============================================================================================
+  // リモートノードの参照
+  // ==============================================================================================
+  /**
+   * {@inheritDoc}
+   */
+  public SocketAddress remote(){ return remote; }
 
-	// ==============================================================================================
-	// サーバ側判定
-	// ==============================================================================================
-	/**
-	 * {@inheritDoc}
-	 */
-	public boolean isServer(){ return server; }
+  // ==============================================================================================
+  // サーバ側判定
+  // ==============================================================================================
+  /**
+   * {@inheritDoc}
+   */
+  public boolean isServer(){ return server; }
 
-	// ==============================================================================================
-	// イベントハンドラの設定
-	// ==============================================================================================
-	/**
-	 * {@inheritDoc}
-	 */
-	public void setPlug(Optional<Plug> plug) {
-		logger.trace(id() + ": setPlug(" + Debug.toString(plug) + ")");
-		this.plug = plug;
-		if(plug.isPresent()){
-			writeNext();
-		}
-	}
+  @Override
+  public void setPlug(@Nullable Plug plug) {
+    // FIXME
+  }
 
-	// ==============================================================================================
-	// メッセージ送信可能設定
-	// ==============================================================================================
-	/**
-	 * {@inheritDoc}
-	 */
-	public void setWritable(boolean writable){
-		logger.trace(id() + ": setWritable(" + writable + ")");
-		this.writable = writable;
-		writeNext();
-	}
+  // ==============================================================================================
+  // イベントハンドラの設定
+  // ==============================================================================================
+  /**
+   * {@inheritDoc}
+   */
+  public void setPlug(@Nonnull Optional<Plug> plug) {
+    logger.trace(id() + ": setPlug(" + Debug.toString(plug) + ")");
+    this.plug = plug;
+    if(plug.isPresent()){
+      writeNext();
+    }
+  }
 
-	// ==============================================================================================
-	// メッセージ受信可能設定
-	// ==============================================================================================
-	/**
-	 * {@inheritDoc}
-	 */
-	public void setReadable(boolean readable){
-		logger.trace(id() + ": setReadable(" + readable + ")");
-		context.channel().config().setAutoRead(readable);
-	}
+  // ==============================================================================================
+  // メッセージ送信可能設定
+  // ==============================================================================================
+  /**
+   * {@inheritDoc}
+   */
+  public void setWritable(boolean writable){
+    logger.trace(id() + ": setWritable(" + writable + ")");
+    this.writable = writable;
+    writeNext();
+  }
 
-	// ==============================================================================================
-	// SSL セッションの参照
-	// ==============================================================================================
-	/**
-	 * {@inheritDoc}
-	 */
-	public Optional<SSLSession> getSSLSession() {
-		try {
-			if(! tls.isDone()) {
-				throw new IllegalStateException("SSL handshake is not complete");
-			}
-			return tls.get();
-		} catch(InterruptedException ex){
-			// wait は発生しないので割り込み例外も発生しないはず
-			throw new IllegalStateException("unexpected wait", ex);
-		} catch(ExecutionException ex){
-			throw new IllegalStateException("SSL handshake failure", ex);
-		}
-	}
+  // ==============================================================================================
+  // メッセージ受信可能設定
+  // ==============================================================================================
+  /**
+   * {@inheritDoc}
+   */
+  public void setReadable(boolean readable){
+    logger.trace(id() + ": setReadable(" + readable + ")");
+    context.channel().config().setAutoRead(readable);
+  }
 
-	// ==============================================================================================
-	// Wire のクローズ
-	// ==============================================================================================
-	/**
-	 * Netty の channel をクローズしスタブに伝達します。再帰呼び出しや 2 度目以降の呼び出しでは何も行いません。
-	 */
-	public void close() {
-		if(closing.compareAndSet(false, true)){
-			if(logger.isTraceEnabled()){
-				logger.trace(id() + ": close()");
-			}
-			context.channel().close();
-			plug.ifPresent(p -> p.onClose(this) );
-		}
-	}
+  // ==============================================================================================
+  // SSL セッションの参照
+  // ==============================================================================================
+  /**
+   * {@inheritDoc}
+   */
+  @Nonnull
+  public Optional<SSLSession> getSSLSession() {
+    try {
+      if(! tls.isDone()) {
+        throw new IllegalStateException("SSL handshake is not complete");
+      }
+      return tls.get();
+    } catch(InterruptedException ex){
+      // wait は発生しないので割り込み例外も発生しないはず
+      throw new IllegalStateException("unexpected wait", ex);
+    } catch(ExecutionException ex){
+      throw new IllegalStateException("SSL handshake failure", ex);
+    }
+  }
 
-	// ==============================================================================================
-	// インスタンスの文字列化
-	// ==============================================================================================
-	/**
-	 * {@inheritDoc}
-	 */
-	public String toString(){
-		return sym + ":" + Debug.toString(context.channel().remoteAddress());
-	}
+  // ==============================================================================================
+  // Wire のクローズ
+  // ==============================================================================================
+  /**
+   * Netty の channel をクローズしスタブに伝達します。再帰呼び出しや 2 度目以降の呼び出しでは何も行いません。
+   */
+  public void close() {
+    if(closing.compareAndSet(false, true)){
+      if(logger.isTraceEnabled()){
+        logger.trace(id() + ": close()");
+      }
+      context.channel().close();
+      plug.ifPresent(p -> p.onClose(this) );
+    }
+  }
 
-	// ==============================================================================================
-	// メッセージの送信
-	// ==============================================================================================
-	/**
-	 * 次のメッセージを取り出して下層の channel に出力します。
-	 */
-	private void writeNext(){
-		if(writable && ! closing.get()){
-			plug.ifPresent(p -> {
-				Message msg = p.produce();
-				if(logger.isTraceEnabled()) {
-					logger.trace(id() + ": send(" + msg + ")");
-				}
-				// 出力完了の通知を受けたら次のメッセージを送信する処理を実行
-				context.channel().writeAndFlush(msg).addListener(writeComplete);
-			});
-		}
-	}
+  // ==============================================================================================
+  // インスタンスの文字列化
+  // ==============================================================================================
+  /**
+   * {@inheritDoc}
+   */
+  @Nonnull
+  public String toString(){
+    return sym + ":" + Debug.toString(context.channel().remoteAddress());
+  }
 
-	// ==============================================================================================
-	// メッセージの送信
-	// ==============================================================================================
-	/**
-	 * 送信キューに格納されているメッセージを全て送信します。
-	 */
-	void receive(Message msg) {
-		if(logger.isTraceEnabled()){
-			logger.trace(id() + ": receive(" + msg + ")");
-		}
-		plug.ifPresent(p -> p.consume(msg));
-	}
+  // ==============================================================================================
+  // メッセージの送信
+  // ==============================================================================================
+  /**
+   * 次のメッセージを取り出して下層の channel に出力します。
+   */
+  private void writeNext(){
+    if(writable && ! closing.get()){
+      plug.ifPresent(p -> {
+        Message msg = p.produce();
+        if(logger.isTraceEnabled()) {
+          logger.trace(id() + ": send(" + msg + ")");
+        }
+        // 出力完了の通知を受けたら次のメッセージを送信する処理を実行
+        context.channel().writeAndFlush(msg).addListener(writeComplete);
+      });
+    }
+  }
 
-	public String id() {
-		return plug.map(Plug::id).orElse(Asterisque.logPrefix(server));
-	}
+  // ==============================================================================================
+  // メッセージの送信
+  // ==============================================================================================
+  /**
+   * 送信キューに格納されているメッセージを全て送信します。
+   */
+  void receive(Message msg) {
+    if(logger.isTraceEnabled()){
+      logger.trace(id() + ": receive(" + msg + ")");
+    }
+    plug.ifPresent(p -> p.consume(msg));
+  }
+
+  public String id() {
+    return plug.map(Plug::id).orElse(Asterisque.logPrefix(server));
+  }
 
 }
 

@@ -1,14 +1,14 @@
-Asterisque\*
+asterisque
 ========
 
-Asterisque\* is lightweight bidirectional RPC with asynchronous messaging framework, protocol and implementation for P2P distributed system.
+asterisque is lightweight bidirectional RPC with asynchronous messaging framework, protocol and implementation for P2P distributed system.
 
 Documents
 =========
 
 * [Motive](http://prezi.com/ia6rjvjrhe6d/asterisk-motivation/)
 * [Brain Storming](http://prezi.com/ktjdnfshx8dv/asterisk-brain-storming/)
-* [Introduction](docs/introduction.md)
+* [Document](docs/TableOfContents.md)
 * [Developer Guide](docs/developerguide.md)
 
 Getting Started

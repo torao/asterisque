@@ -1,8 +1,9 @@
-package io.asterisque.msg;
+package io.asterisque.core.msg;
 
-import io.asterisque.Debug;
+import io.asterisque.core.Debug;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -50,8 +51,23 @@ public final class Abort extends Exception {
    * このインスタンスを文字列化します。
    */
   @Override
+  @Nonnull
   public String toString() {
-    return "Abort(" + code + "," + Debug.toString(message) + ")";
+    return String.format("Abort(%s,%s)", code, Debug.toString(message));
+  }
+
+  @Override
+  public int hashCode() {
+    return code + Objects.hashCode(message);
+  }
+
+  @Override
+  public boolean equals(@Nullable Object obj) {
+    if (obj instanceof Abort){
+      Abort other = (Abort) obj;
+      return this.code == other.code && Objects.equals(this.message, other.message);
+    }
+    return false;
   }
 
 }

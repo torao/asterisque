@@ -18,9 +18,9 @@ class NettySpec {
 }
 
 class NettyWireSpec extends BridgeWireSpec(
-//	None, None
-	Some(Wire.loadSSLContext(new File("ca/client.jks"), "kazzla", "kazzla", new File("ca/cacert.jks"), "kazzla")),
-	Some(Wire.loadSSLContext(new File("ca/server.jks"), "kazzla", "kazzla", new File("ca/cacert.jks"), "kazzla"))
+//  None, None
+  Some(Wire.loadSSLContext(new File("ca/client.jks"), "kazzla", "kazzla", new File("ca/cacert.jks"), "kazzla")),
+  Some(Wire.loadSSLContext(new File("ca/server.jks"), "kazzla", "kazzla", new File("ca/cacert.jks"), "kazzla"))
 ) {
-	def bridge = Netty
+  def bridge = Netty
 }

@@ -24,31 +24,31 @@ messagng asynchronously. $e2
 streaming synchronously. $e3
 """
 
-	val logger = LoggerFactory.getLogger(classOf[SampleSpec])
+  val logger = LoggerFactory.getLogger(classOf[SampleSpec])
 
-	def e0 = SampleSpec.synchronized {
-		logger.info("e0 -------------------------------------------------------------")
-		Sample1.main(Array())
-		success
-	}
+  def e0 = SampleSpec.synchronized {
+    logger.info("e0 -------------------------------------------------------------")
+    Sample1.main(Array())
+    success
+  }
 
-	def e1 = SampleSpec.synchronized {
-		logger.info("e1 -------------------------------------------------------------")
-		Sample2.main(Array())
-		success
-	}
+  def e1 = SampleSpec.synchronized {
+    logger.info("e1 -------------------------------------------------------------")
+    Sample2.main(Array())
+    success
+  }
 
-	def e2 = SampleSpec.synchronized {
-		logger.info("e2 -------------------------------------------------------------")
-		Sample3.main(Array())
-		success
-	}
+  def e2 = SampleSpec.synchronized {
+    logger.info("e2 -------------------------------------------------------------")
+    Sample3.main(Array())
+    success
+  }
 
-	def e3 = SampleSpec.synchronized {
-		logger.info("e3 -------------------------------------------------------------")
-		Sample4.main(Array())
-		success
-	}
+  def e3 = SampleSpec.synchronized {
+    logger.info("e3 -------------------------------------------------------------")
+    Sample4.main(Array())
+    success
+  }
 
 }
 
