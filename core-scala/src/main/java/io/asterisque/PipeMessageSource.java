@@ -6,7 +6,7 @@
 package io.asterisque;
 
 import io.asterisque.core.msg.Block;
-import io.asterisque.util.Source;
+import io.asterisque.core.util.Source;
 
 import java.util.function.Consumer;
 

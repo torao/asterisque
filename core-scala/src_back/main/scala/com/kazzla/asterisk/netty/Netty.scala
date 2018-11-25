@@ -107,7 +107,7 @@ object Netty extends Bridge {
           logger.debug("operationComplete(success)")
           promise.success(new Bridge.Server(address) {
             override def close() {
-              logger.debug("closing netty server bootstrap")
+              logger.debug("wsClosed netty server bootstrap")
               masterGroup.shutdownGracefully()
               workerGroup.shutdownGracefully()
             }
@@ -122,12 +122,12 @@ object Netty extends Bridge {
   }
 
   private[this] def shutdown(bootstrap:Bootstrap):Unit = {
-    logger.debug("closing netty client bootstrap")
+    logger.debug("wsClosed netty client bootstrap")
     bootstrap.group().shutdownGracefully()
   }
 
   private[this] def shutdown(bootstrap:ServerBootstrap):Unit = {
-    logger.debug("closing netty server bootstrap")
+    logger.debug("wsClosed netty server bootstrap")
     bootstrap.group().shutdownGracefully()
     bootstrap.childGroup().shutdownGracefully()
   }

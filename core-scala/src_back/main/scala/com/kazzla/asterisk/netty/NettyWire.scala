@@ -36,7 +36,7 @@ private[netty] case class NettyWire(address:SocketAddress, override val isServer
 
   def send(m:Message):Unit = {
     if(isClosed){
-      throw new IOException(s"$sym: cannot send on closed channel: $m")
+      throw new IOException(s"$sym: cannot send on wsClosed channel: $m")
     }
     if(logger.isTraceEnabled){
       logger.trace(s"$sym: send($m)")

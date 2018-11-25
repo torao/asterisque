@@ -144,9 +144,9 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
     session.post(Close(id, Right(result)))
     promise.success(result)
     session.destroy(id)
-    Pipe.logger.trace(s"$signature: pipe is closed with success: $result")
+    Pipe.logger.trace(s"$signature: pipe is wsClosed with success: $result")
   } else {
-    Pipe.logger.debug(s"$signature: pipe already closed: $result")
+    Pipe.logger.debug(s"$signature: pipe already wsClosed: $result")
   }
 
   // ==============================================================================================
@@ -162,9 +162,9 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
     session.post(Close.unexpectedError(id, ex))
     promise.failure(ex)
     session.destroy(id)
-    Pipe.logger.trace(s"$signature: pipe is closed with failure: $ex")
+    Pipe.logger.trace(s"$signature: pipe is wsClosed with failure: $ex")
   } else {
-    Pipe.logger.debug(s"$signature: pipe already closed: $ex")
+    Pipe.logger.debug(s"$signature: pipe already wsClosed: $ex")
   }
 
   // ==============================================================================================
@@ -181,9 +181,9 @@ class Pipe private[asterisk](val id:Short, val function:Short, val session:Sessi
       promise.success(close.result.right.get)
     }
     session.destroy(id)
-    Pipe.logger.trace(s"$signature: pipe is closed by peer: $close")
+    Pipe.logger.trace(s"$signature: pipe is wsClosed by peer: $close")
   } else {
-    Pipe.logger.debug(s"$signature: pipe already closed: $close")
+    Pipe.logger.debug(s"$signature: pipe already wsClosed: $close")
   }
 
   /**
@@ -506,7 +506,7 @@ private class PipeInputStream private[asterisk](signature:String) extends InputS
       val block = receiveQueue.take()
       if(block.isEOF){
         if(logger.isTraceEnabled){
-          logger.trace(s"$signature: eof detected, closing stream")
+          logger.trace(s"$signature: eof detected, wsClosed stream")
         }
         eof = true   // EOF 検出
         None
@@ -520,7 +520,7 @@ private class PipeInputStream private[asterisk](signature:String) extends InputS
     }
   }
   private[this] def ensureOpen():Unit = if(closed){
-    throw new IOException("stream closed")
+    throw new IOException("stream wsClosed")
   }
 }
 private object PipeInputStream {
@@ -564,7 +564,7 @@ private class PipeOutputStream private[asterisk](pipe:Pipe, bufferSize:Int) exte
   }
   private[this] def ensureWrite(len:Int):Unit = {
     if(osClosed){
-      throw new IOException(s"${pipe.signature}: unable to write to closed pipe or stream: ${pipe.id}")
+      throw new IOException(s"${pipe.signature}: unable to write to wsClosed pipe or stream: ${pipe.id}")
     }
     // TODO バッファサイズより大きなデータが書き込めない?
     if(buffer.position() + len > buffer.capacity()){
@@ -594,7 +594,7 @@ private class PipeOutputStream private[asterisk](pipe:Pipe, bufferSize:Int) exte
   }
   def emergencyClose():Unit = {
     osClosed = true
-    PipeOutputStream.logger.trace(s"${pipe.signature}: output stream closed by peer")
+    PipeOutputStream.logger.trace(s"${pipe.signature}: output stream wsClosed by peer")
   }
 }
 

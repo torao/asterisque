@@ -29,8 +29,8 @@ callback on receive. $e25
 transfer messages duplex. $e3
 append and remove onReceive handlers. $e4
 buffers all received messages before bind. $e5
-results IOException from future of send() if wire closed. $e6
-not dispatch any message from receive() if wire closed. $e7
+results IOException from future of send() if wire wsClosed. $e6
+not dispatch any message from receive() if wire wsClosed. $e7
 be able to refer TLS/SSL session. $e8
 have correct peer name. $e9
 """
@@ -200,7 +200,7 @@ class PipeWireSpec2 extends PipeWireSpec1 {
 class LoadKeyStoreSpec extends Specification{ def is = s2"""
 loadKeyStore() should:
 load key-store with correct passwords. $e1
-throw exception if incorrect passowrds. $e2
+throw wsCaughtException if incorrect passowrds. $e2
 """
 
   def e1 = {

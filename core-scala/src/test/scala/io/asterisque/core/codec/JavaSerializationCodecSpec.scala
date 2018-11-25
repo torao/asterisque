@@ -12,7 +12,7 @@ class JavaSerializationCodecSpec extends MessageCodecSpec {
   override def is:SpecStructure = {
     super.is.append(s2"""
   construct with ClassLoader. $constructWithClassLoader
-  returns empty if full-message doesn't read $returnsEmptyIfFullyMessageDoesntRead
+  returns empty if full-message doesn't wsFrameReceived $returnsEmptyIfFullyMessageDoesntRead
   throws CodecException if contains unserializable object. $unserializeObject
   throws CodecException if message binary too large. $messageBinaryTooLong
   throws CodecException if binary is not serialized message $binaryIsNotSerializedMessage

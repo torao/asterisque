@@ -152,7 +152,7 @@ public class Node {
   public void shutdown() {
     if (closing.compareAndSet(false, true)) {
       logger.debug("shutting-down node \"" + name + "\";" +
-          " all available " + sessions.size() + " sessions, " + servers.size() + " servers will be closed");
+          " all available " + sessions.size() + " sessions, " + servers.size() + " servers will be wsClosed");
       executor.shutdown();
       servers.forEach(Server::close);
       servers.clear();

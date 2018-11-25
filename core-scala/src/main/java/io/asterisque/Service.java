@@ -166,7 +166,7 @@ public abstract class Service {
         if (ex == null) {
           pipe.close(result);
         } else {
-          logger.error(id + ": unexpected exception: " + ex, ex);
+          logger.error(id + ": unexpected wsCaughtException: " + ex, ex);
           pipe.close(ex, "unexpected error");
         }
       });

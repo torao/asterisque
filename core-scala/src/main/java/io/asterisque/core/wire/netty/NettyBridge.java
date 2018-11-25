@@ -7,6 +7,8 @@ import io.asterisque.core.wire.Server;
 import io.asterisque.core.wire.UnsupportedProtocolException;
 import io.asterisque.core.wire.Wire;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import org.slf4j.Logger;
@@ -14,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -23,7 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
-public class NettyBridge<NODE> implements Bridge<NODE> {
+public class NettyBridge implements Bridge {
   private static final Logger logger = LoggerFactory.getLogger(NettyBridge.class);
 
   /**
@@ -42,7 +45,6 @@ public class NettyBridge<NODE> implements Bridge<NODE> {
   }
 
   /**
-   * @param local       ローカル側のノード
    * @param uri         接続先の URI
    * @param subprotocol asterisque 上で実装しているサブプロトコル
    * @param sslContext  Secure ソケットを示す URI スキーマが指定された場合 (例えば {@code wss://}) に使用する SSL コンテキスト
@@ -50,12 +52,19 @@ public class NettyBridge<NODE> implements Bridge<NODE> {
    */
   @Override
   @Nonnull
-  public CompletableFuture<Wire<NODE>> newWire(@Nonnull NODE local, @Nonnull URI uri, @Nonnull String subprotocol,
-                                               @Nullable SslContext sslContext) {
+  public CompletableFuture<Wire> newWire(@Nonnull URI uri, @Nonnull String subprotocol,
+                                         int inboundQueueSize, int outboundQueueSize,
+                                         @Nullable SSLContext sslContext) {
     return getScheme(uri).thenCompose(scheme -> {
       if (scheme.equals("ws") || scheme.equals("wss")) {
-        WebSocketWire<NODE> wire = new WebSocketWire<>(local, MessageCodec.MessagePackCodec, false);
-        SslContext ssl = scheme.equals("wss") ? Optional.ofNullable(sslContext).orElse(getDefaultClientSSL()) : null;
+        WebSocketWire wire = new WebSocketWire(
+            MessageCodec.MessagePackCodec, false, inboundQueueSize, outboundQueueSize);
+        SslContext ssl = null;
+        if (scheme.equals("wss")) {
+          ssl = Optional.ofNullable(sslContext)
+              .map(ctx -> (SslContext) new JdkSslContext(ctx, true, ClientAuth.NONE))
+              .orElse(getDefaultClientSSL());
+        }
         WebSocket.Client driver = new WebSocket.Client(worker(), subprotocol, wire.servant, ssl);
         driver.connect(uri);
         return wire.future;
@@ -66,7 +75,6 @@ public class NettyBridge<NODE> implements Bridge<NODE> {
   }
 
   /**
-   * @param local       ローカル側のノード
    * @param uri         接続先の URI
    * @param subprotocol asterisque 上で実装しているサブプロトコル
    * @param sslContext  Secure ソケットを示す URI スキーマが指定された場合 (例えば {@code wss://}) に使用する SSL コンテキスト
@@ -75,19 +83,27 @@ public class NettyBridge<NODE> implements Bridge<NODE> {
    */
   @Override
   @Nonnull
-  public CompletableFuture<Server<NODE>> newServer(@Nonnull NODE local, @Nonnull URI uri, @Nonnull String subprotocol,
-                                                   @Nullable SslContext sslContext,
-                                                   @Nonnull Consumer<CompletableFuture<Wire<NODE>>> onAccept) {
+  public CompletableFuture<Server> newServer(@Nonnull URI uri, @Nonnull String subprotocol,
+                                             int inboundQueueSize, int outboundQueueSize,
+                                             @Nullable SSLContext sslContext,
+                                             @Nonnull Consumer<CompletableFuture<Wire>> onAccept) {
     return getScheme(uri).thenCompose(scheme -> {
       if (scheme.equals("ws") || scheme.equals("wss")) {
-        WebSocketServer<NODE> server = new WebSocketServer<>(local);
-        SslContext ssl = scheme.equals("wss") ? Optional.ofNullable(sslContext).orElseThrow(() -> new NullPointerException("ssl context isn't specified")) : null;
+        WebSocketServer server = new WebSocketServer();
+        SslContext ssl = null;
+        if (scheme.equals("wss")) {
+          ssl = Optional.ofNullable(sslContext)
+              .map(ctx -> (SslContext) new JdkSslContext(ctx, false, ClientAuth.NONE))
+              .orElseThrow(() -> new NullPointerException("ssl context isn't specified"));
+        }
         String path = Optional.ofNullable(uri.getPath())
             .filter(p -> p.length() != 0)
             .orElse("/");
-        WebSocket.Server driver = new WebSocket.Server(worker(), subprotocol, path, server.wsListener, ssl);
+        WebSocket.Server driver = new WebSocket.Server(worker(), subprotocol, path, server, ssl);
+
         return driver.bind(uriToSocketAddress(uri), channel -> {
-          WebSocketWire<NODE> wire = new WebSocketWire<>(local, MessageCodec.MessagePackCodec, true);
+          WebSocketWire wire = new WebSocketWire(
+              MessageCodec.MessagePackCodec, true, inboundQueueSize, outboundQueueSize);
           onAccept.accept(wire.future);
           return wire.servant;
         }).thenApply(ch -> server);
@@ -108,7 +124,7 @@ public class NettyBridge<NODE> implements Bridge<NODE> {
   @Nonnull
   private CompletableFuture<String> getScheme(@Nonnull URI uri) {
     if (closing.get()) {
-      return Asterisque.Future.fail(new IOException("bridge has been closed"));
+      return Asterisque.Future.fail(new IOException("bridge has been wsClosed"));
     }
     String scheme = uri.getScheme();
     if (scheme == null) {
@@ -129,7 +145,7 @@ public class NettyBridge<NODE> implements Bridge<NODE> {
   @Nonnull
   private NioEventLoopGroup worker() {
     if (closing.get()) {
-      throw new IllegalStateException("netty bridge has been closed");
+      throw new IllegalStateException("netty bridge has been wsClosed");
     }
     return worker;
   }

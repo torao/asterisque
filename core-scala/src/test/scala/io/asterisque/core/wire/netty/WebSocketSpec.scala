@@ -29,13 +29,13 @@ import scala.concurrent.{Await, Future, Promise}
 class WebSocketSpec extends Specification {
   def is =
     s2"""
-WebSocket should:
-echo server $echoServer
+WebSocket echoing server and client. $echoServer
 callback error when connection failure. $clientConnectionFailure
 callback error when WebSocket handshake failed. $webSocketHandshakeFail
 WebSocket.Server responds 401 Forbidden when client requests a path other than WebSocket. $forbiddenIfHttpRequestOtherThanWS
-callback exception when listener raise exception. $callbackWhenListenerRaiseException
-callback exception when server fail to bind. $serverFailToBind
+callback wsCaughtException when listener raise wsCaughtException. $callbackWhenListenerRaiseException
+callback wsCaughtException when server fail to bind. $serverFailToBind
+The path of Server must begin with slash. $serverURIShouldStartsWithSlash
 """
 
   private[this] val logger = LoggerFactory.getLogger(getClass)
@@ -43,7 +43,7 @@ callback exception when server fail to bind. $serverFailToBind
   private[this] def echoServer = {
     val serverListener:WebSocket.Server.Listener = WebSocket.Server.EmptyListener
     val serverAcceptListener:Servant = new Adapter() {
-      override def read(@Nonnull ctx:ChannelHandlerContext, msg:WebSocketFrame):Unit = msg match {
+      override def wsFrameReceived(@Nonnull ctx:ChannelHandlerContext, msg:WebSocketFrame):Unit = msg match {
         case t:TextWebSocketFrame =>
           logger.info("SERVER<< {}", t.text())
           ctx.channel.writeAndFlush(msg.retain)
@@ -71,13 +71,13 @@ callback exception when server fail to bind. $serverFailToBind
         private[this] var expected = randomString
         private[this] var remaining = 10
 
-        override def ready(@Nonnull ctx:ChannelHandlerContext):Unit = {
+        override def wsReady(@Nonnull ctx:ChannelHandlerContext):Unit = {
           logger.info("CLIENT[{}]>> {}", i, expected)
           ctx.channel.writeAndFlush(new TextWebSocketFrame(expected))
           remaining -= 1
         }
 
-        override def read(@Nonnull ctx:ChannelHandlerContext, @Nonnull msg:WebSocketFrame):Unit = msg match {
+        override def wsFrameReceived(@Nonnull ctx:ChannelHandlerContext, @Nonnull msg:WebSocketFrame):Unit = msg match {
           case t:TextWebSocketFrame =>
             logger.info("CLIENT[{}]<< {}", i, t.text())
             results.append(expected === t.text())
@@ -91,7 +91,7 @@ callback exception when server fail to bind. $serverFailToBind
             }
         }
 
-        override def closing(@Nonnull ctx:ChannelHandlerContext):Unit = {
+        override def wsClosed(@Nonnull ctx:ChannelHandlerContext):Unit = {
           logger.info("CLIENT[{}]: CLOSING", i)
         }
       }
@@ -129,7 +129,7 @@ callback exception when server fail to bind. $serverFailToBind
       logger.debug("connection accepted")
       val in = socket.getInputStream
       val ch = in.read()
-      logger.debug(f"read 1 byte: 0x$ch%02X")
+      logger.debug(f"wsFrameReceived 1 byte: 0x$ch%02X")
       socket.close()
     }
     val port = Await.result(portFuture.future, Duration.Inf)
@@ -138,12 +138,12 @@ callback exception when server fail to bind. $serverFailToBind
     val _exception = new AtomicReference[Throwable]()
     val pool = new NioEventLoopGroup()
     val client = new WebSocket.Client(pool, "disconnect", new Adapter() {
-      override def ready(ctx:ChannelHandlerContext):Unit = {
+      override def wsReady(ctx:ChannelHandlerContext):Unit = {
         ctx.channel().writeAndFlush(new BinaryWebSocketFrame(Unpooled.buffer(10)))
       }
 
-      override def exception(ctx:ChannelHandlerContext, ex:Throwable):Unit = {
-        logger.debug(s"exception($ctx, $ex)")
+      override def wsCaughtException(ctx:ChannelHandlerContext, ex:Throwable):Unit = {
+        logger.debug(s"wsCaughtException($ctx, $ex)")
         _exception.set(ex)
       }
     }, null)
@@ -156,13 +156,13 @@ callback exception when server fail to bind. $serverFailToBind
   private[this] def forbiddenIfHttpRequestOtherThanWS = {
     val listener = WebSocket.Server.EmptyListener
     val servant = new Servant {
-      override def ready(ctx:ChannelHandlerContext):Unit = ()
+      override def wsReady(ctx:ChannelHandlerContext):Unit = ()
 
-      override def read(ctx:ChannelHandlerContext, msg:WebSocketFrame):Unit = ()
+      override def wsFrameReceived(ctx:ChannelHandlerContext, msg:WebSocketFrame):Unit = ()
 
-      override def closing(ctx:ChannelHandlerContext):Unit = ()
+      override def wsClosed(ctx:ChannelHandlerContext):Unit = ()
 
-      override def exception(ctx:ChannelHandlerContext, ex:Throwable):Unit = ()
+      override def wsCaughtException(ctx:ChannelHandlerContext, ex:Throwable):Unit = ()
     }
     val eventLoop = new NioEventLoopGroup()
     val server = new WebSocket.Server(eventLoop, "http", "/ws", listener, null)
@@ -196,49 +196,49 @@ callback exception when server fail to bind. $serverFailToBind
   private[this] def callbackWhenListenerRaiseException = {
     class TestException extends Exception
     val servant1 = new Servant {
-      override def ready(ctx:ChannelHandlerContext):Unit = {
-        logger.info("SERVER: ready callback")
+      override def wsReady(ctx:ChannelHandlerContext):Unit = {
+        logger.info("SERVER: wsReady callback")
         val frame = Unpooled.wrappedBuffer((0 to 0xFF).map(_.toByte).toArray)
         ctx.channel().writeAndFlush(new BinaryWebSocketFrame(frame))
       }
 
-      override def read(ctx:ChannelHandlerContext, msg:WebSocketFrame):Unit = {
-        logger.info("SERVER: read callback")
+      override def wsFrameReceived(ctx:ChannelHandlerContext, msg:WebSocketFrame):Unit = {
+        logger.info("SERVER: wsFrameReceived callback")
       }
 
-      override def closing(ctx:ChannelHandlerContext):Unit = {
-        logger.info("SERVER: closing callback")
+      override def wsClosed(ctx:ChannelHandlerContext):Unit = {
+        logger.info("SERVER: wsClosed callback")
       }
 
-      override def exception(ctx:ChannelHandlerContext, ex:Throwable):Unit = {
-        logger.info(s"SERVER: exception callback: $ex")
+      override def wsCaughtException(ctx:ChannelHandlerContext, ex:Throwable):Unit = {
+        logger.info(s"SERVER: wsCaughtException callback: $ex")
       }
     }
     val promise = Promise[Throwable]()
     val servant2 = new Servant {
-      override def ready(ctx:ChannelHandlerContext):Unit = {
-        logger.info("CLIENT: ready callback")
+      override def wsReady(ctx:ChannelHandlerContext):Unit = {
+        logger.info("CLIENT: wsReady callback")
       }
 
-      override def read(ctx:ChannelHandlerContext, msg:WebSocketFrame):Unit = {
-        logger.info("CLIENT: read callback")
+      override def wsFrameReceived(ctx:ChannelHandlerContext, msg:WebSocketFrame):Unit = {
+        logger.info("CLIENT: wsFrameReceived callback")
         throw new TestException
       }
 
-      override def closing(ctx:ChannelHandlerContext):Unit = {
-        logger.info("CLIENT: closing callback")
+      override def wsClosed(ctx:ChannelHandlerContext):Unit = {
+        logger.info("CLIENT: wsClosed callback")
       }
 
-      override def exception(ctx:ChannelHandlerContext, ex:Throwable):Unit = {
-        logger.info(s"CLIENT: exception callback: $ex")
+      override def wsCaughtException(ctx:ChannelHandlerContext, ex:Throwable):Unit = {
+        logger.info(s"CLIENT: wsCaughtException callback: $ex")
         promise.success(ex)
       }
     }
     val eventLoop = new NioEventLoopGroup()
-    val server = new WebSocket.Server(eventLoop, "exception", "/ws")
+    val server = new WebSocket.Server(eventLoop, "wsCaughtException", "/ws")
     val future = server.bind(new InetSocketAddress(0), _ => servant1).asScala.flatMap { ch =>
       val port = ch.localAddress().asInstanceOf[InetSocketAddress].getPort
-      val client = new WebSocket.Client(eventLoop, "exception", servant2, null)
+      val client = new WebSocket.Client(eventLoop, "wsCaughtException", servant2, null)
       client.connect(new URI(s"ws://localhost:$port/ws")).asScala.map(_ => client)
     }
     val exception = Await.result(promise.future, Duration.Inf)
@@ -263,6 +263,15 @@ callback exception when server fail to bind. $serverFailToBind
     }
   }
 
+  private[this] def serverURIShouldStartsWithSlash = {
+    val group = new NioEventLoopGroup()
+    try {
+      new WebSocket.Server(group, "", "") must throwA[IllegalArgumentException]
+    } finally {
+      group.shutdownGracefully()
+    }
+  }
+
   private[this] def rootCause(@Nonnull ex:Throwable):Throwable = if(ex.getCause != null) rootCause(ex.getCause) else ex
 
   private[this] val random = new Random()
@@ -273,20 +282,21 @@ callback exception when server fail to bind. $serverFailToBind
   }
 
   class Adapter extends Servant with WebSocket.Server.Listener {
-    override def ready(@Nonnull ctx:ChannelHandlerContext):Unit = {
+    override def wsReady(@Nonnull ctx:ChannelHandlerContext):Unit = {
     }
 
-    override def read(@Nonnull ctx:ChannelHandlerContext, msg:WebSocketFrame):Unit = {
+    override def wsFrameReceived(@Nonnull ctx:ChannelHandlerContext, msg:WebSocketFrame):Unit = {
     }
 
-    override def closing(@Nonnull ctx:ChannelHandlerContext):Unit = {
+    override def wsClosed(@Nonnull ctx:ChannelHandlerContext):Unit = {
     }
 
-    override def exception(@Nonnull ctx:ChannelHandlerContext, @Nonnull ex:Throwable):Unit = {
+    override def wsCaughtException(@Nonnull ctx:ChannelHandlerContext, @Nonnull ex:Throwable):Unit = {
     }
 
-    override def ready(@Nonnull ch:Channel):Unit = {
-    }
+    override def wsServerReady(@Nonnull ch:Channel):Unit = {}
+
+    override def wsServerCaughtException(ctx:ChannelHandlerContext, ex:Throwable):Unit = {}
   }
 
 }

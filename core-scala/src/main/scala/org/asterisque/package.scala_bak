@@ -72,7 +72,7 @@ package object asterisque {
     val promise = Promise[T]()
     val f = Function2ToBiConsumer({ (t:T, ex:Throwable) =>
       if (promise.isCompleted) {
-        logger.warn(s"CompletableFuture reader two or more call: result=${Debug.toString(t) }, exception=$ex")
+        logger.warn(s"CompletableFuture reader two or more call: result=${Debug.toString(t) }, wsCaughtException=$ex")
       } else {
         if (ex == null) {
           promise.success(t)

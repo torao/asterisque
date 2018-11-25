@@ -134,7 +134,7 @@ class PipeSpace {
       if (graceful) {
         // 残っているすべてのパイプに Close メッセージを送信
         pipes.values().forEach(pipe -> {
-          Abort abort = new Abort(Abort.SessionClosing, "session " + session.id() + " closing");
+          Abort abort = new Abort(Abort.SessionClosing, "session " + session.id() + " wsClosed");
           pipe.close(new Close(pipe.id, abort));
         });
       }

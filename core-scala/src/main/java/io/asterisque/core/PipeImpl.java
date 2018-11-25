@@ -1,32 +1,23 @@
-/*
- * Copyright (c) 2013 koiroha.org.
- * All sources and related resources are available under Apache License 2.0.
- * http://www.apache.org/licenses/LICENSE-2.0.html
- */
-package io.asterisque;
+package io.asterisque.core;
 
-import io.asterisque.core.Debug;
+import io.asterisque.EventHandlers;
 import io.asterisque.core.msg.Abort;
 import io.asterisque.core.msg.Block;
 import io.asterisque.core.msg.Close;
 import io.asterisque.core.msg.Open;
+import io.asterisque.core.util.PipeMessageSource;
 import io.asterisque.core.util.Source;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
-import java.util.function.Supplier;
-
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// Pipe
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+import java.util.stream.Stream;
 
 /**
  * function に対する呼び出し状態を表すクラスです。function の呼び出し開始から終了までのスコープを持ち、その呼び
@@ -37,52 +28,81 @@ import java.util.function.Supplier;
  * ビス側) が 1 を持ちます。このルールは通信の双方で相手側との合意手続きなしに重複しないユニークなパイプ ID を
  * 発行することを目的としています。このため一つのセッションで同時に行う事が出来る呼び出しは最大で 32,768、パイプを
  * 共有しているピアの双方で 65,536 個までとなります。
- *
- * @author Takami Torao
  */
-public final class Pipe {
-  private static final Logger logger = LoggerFactory.getLogger(Pipe.class);
+final class PipeImpl extends Pipe {
+  private static final Logger logger = LoggerFactory.getLogger(PipeImpl.class);
 
-  /**
-   * {@link Session#isServer} が true の通信端点側で新しいパイプ ID を発行するときに立てるビットフラグです。
-   */
-  public static final short UniqueMask = (short) (1 << 15);
+  private final short id;
 
-  public final short id;
-  public final short function;
-  public final byte priority;
+  @Override
+  public short id() {
+    return id;
+  }
+
+  private final short function;
+
+  @Override
+  public short function() {
+    return function;
+  }
+
+  private final byte priority;
+
+  @Override
+  public byte priority() {
+    return priority;
+  }
+
+  @Nonnull
   public final Session session;
 
+  @Override
+  @Nonnull
+  public Session session(){
+    return session;
+  }
+
   /**
-   * このパイプがクローズされているかどうかを表すアトミックなフラグ。
+   * このパイプがクローズされているかどうかを表すフラグ。
    */
-  private AtomicBoolean closed = new AtomicBoolean(false);
+  private final AtomicBoolean closed = new AtomicBoolean(false);
 
   /**
    * このパイプにブロックが到着した時に呼び出すイベントハンドラ。
-   * アプリケーションはこのハンドラではなく [[src]] を使用する。
+   * アプリケーションはこのハンドラではなく {@link #src} を使用する。
    */
   private EventHandlers<Block> onBlock = new EventHandlers<>();
 
   /**
    * このパイプがクローズされたときに呼び出すイベントハンドラ。
-   * アプリケーションはこのハンドラではなく [[future]] を使用する。
+   * アプリケーションはこのハンドラではなく {@link #future} を使用する。
    */
   private EventHandlers<Boolean> onClosing = new EventHandlers<>();
 
   /**
-   * このパイプがクローズされて確定した結果を通知するための `Promise`。
-   * このパイプによる双方の処理で確定した結果 (成功/失敗にかかわらず) を参照するための `Future` です。
+   * このパイプによる双方の処理で確定した結果 (成功/失敗にかかわらず) を参照するための Future です。
    * パイプの結果が確定した時点でパイプはクローズされています。
    */
-  public final CompletableFuture<Object> future = new CompletableFuture<>();
+  private final CompletableFuture<Object> future = new CompletableFuture<>();
+
+  @Override
+  @Nonnull
+  public CompletableFuture<Object> future(){
+    return future;
+  }
 
   /**
-   * 非同期メッセージングの Block メッセージ受信を行うメッセージソース。
-   * このパイプによる非同期メッセージングの受信処理を設定する非同期コレクションです。
-   * この非同期コレクションは処理の呼び出しスレッド内でしか受信処理を設定することが出来ません。
+   * 非同期メッセージングやストリーミングのための {@link Block} メッセージ受信を行うメッセージソース。このパイプによる
+   * 非同期メッセージングの受信処理を設定する非同期コレクションです。の非同期コレクションは処理の呼び出しスレッド内で
+   * しか受信処理を設定することができません。
    */
-  public final Source<Block> src = new PipeMessageSource(this);
+  @Override
+  @Nonnull
+  public Stream<Block> stream(){
+
+  }
+
+  private final AtomicReference<Stream<Block>> stream = new AtomicReference<>();
 
   /**
    * このパイプに対する非同期メッセージングの送信を行うメッセージシンクです。
@@ -103,7 +123,7 @@ public final class Pipe {
    * @param function このパイプの呼び出し先 function 番号
    * @param session  このパイプのセッション
    */
-  Pipe(short id, byte priority, short function, Session session) {
+  PipeImpl(short id, byte priority, short function, @Nonnull Session session) {
     this.id = id;
     this.function = function;
     this.priority = priority;
@@ -257,7 +277,7 @@ public final class Pipe {
   // ==============================================================================================
 
   /**
-   * 指定された {@link java.io.OutputStream} を使用してストリーム形式のブロック出力を行います。
+   * 指定された {@link OutputStream} を使用してストリーム形式のブロック出力を行います。
    * 出力データが内部的なバッファの上限に達するか {@code flush()} が実行されるとバッファの内容が {@link Block}
    * として非同期で送信されます。
    * ストリームはマルチスレッドの出力に対応していません。
@@ -312,71 +332,9 @@ public final class Pipe {
    * @return このインスタンスの文字列
    */
   @Override
+  @Nonnull
   public String toString() {
     return session.logId() + "#" + (id & 0xFFFF);
-  }
-
-  /**
-   * スレッドに結びつけられたパイプを参照するためのスレッドローカル。
-   */
-  private static final ThreadLocal<Pipe> pipes = new ThreadLocal<>();
-
-  // ==============================================================================================
-
-  /**
-   * 呼び出し元のスレッドに関連づけられている Pipe を使用してラムダ {@code exec} を実行します。
-   * スレッドが Pipe と関連づけられていない場合は exec の呼び出しは行われず def の実行結果が返されます。
-   *
-   * @param def  デフォルト値
-   * @param exec パイプを使用する処理
-   * @return 処理結果
-   */
-  public static <T> T orElse(Supplier<T> def, Function<Pipe, T> exec) {
-    Optional<Pipe> p = currentPipe();
-    if (p.isPresent()) {
-      return exec.apply(p.get());
-    } else {
-      return def.get();
-    }
-  }
-
-  /**
-   * 現在のスレッドに結び付けられているパイプを参照します。
-   */
-  private static Optional<Pipe> currentPipe() {
-    if (pipes.get() == null) {
-      return Optional.empty();
-    } else {
-      return Optional.of(pipes.get());
-    }
-  }
-
-  /**
-   * 現在のスレッドにパイプが関連づけられていない場合に指定されたメッセージ付きの例外を発生します。
-   *
-   * @param msg 例外メッセージ
-   */
-  static void assertInCall(String msg) {
-    if (pipes.get() == null) {
-      throw new IllegalStateException(msg);
-    }
-  }
-
-  static void using(Pipe pipe, Runnable exec) {
-    using(pipe, () -> {
-      exec.run();
-      return 0;
-    });
-  }
-
-  static <T> T using(Pipe pipe, Supplier<T> exec) {
-    Pipe old = pipes.get();
-    pipes.set(pipe);
-    try {
-      return exec.get();
-    } finally {
-      pipes.set(old);
-    }
   }
 
 }

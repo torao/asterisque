@@ -9,7 +9,7 @@ class MessagePackCodecSpec extends MessageCodecSpec {
 
   override def is:SpecStructure = {
     super.is.append(s2"""
-  return empty if message is not fully read. $returnsEmptyIfMessageIsNotSatisfied
+  return empty if message is not fully wsFrameReceived. $returnsEmptyIfMessageIsNotSatisfied
 """)
   }
 

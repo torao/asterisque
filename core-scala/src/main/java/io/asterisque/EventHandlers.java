@@ -85,7 +85,7 @@ public final class EventHandlers<T> implements Consumer<T> {
           logger.trace(String.format("callback %s(%s)", l.getClass().getSimpleName(), s));
         }
       } catch(Throwable ex){
-        logger.error(String.format("unexpected exception on calling %s(%s)", l.getClass().getSimpleName(), s));
+        logger.error(String.format("unexpected wsCaughtException on calling %s(%s)", l.getClass().getSimpleName(), s));
       }
     });
   }

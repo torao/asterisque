@@ -1,4 +1,4 @@
-package io.asterisque.core.wire;
+package io.asterisque.core;
 
 import javax.annotation.Nonnull;
 

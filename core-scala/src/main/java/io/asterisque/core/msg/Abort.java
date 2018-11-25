@@ -24,6 +24,16 @@ public final class Abort extends Exception {
   public static final int SessionClosing = -2;
 
   /**
+   * サービスに function id が定義されていないことを示すコード。
+   */
+  public static final int FunctionUndefined = 100;
+
+  /**
+   * function の実行に失敗したことを示すコード。
+   */
+  public static final int FunctionAborted = 101;
+
+  /**
    * この中断理由を受信側で識別するためのコード値です。
    */
   public final int code;

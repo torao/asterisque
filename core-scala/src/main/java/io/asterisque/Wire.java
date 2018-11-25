@@ -52,7 +52,7 @@ public interface Wire extends AutoCloseable {
   void setPlug(@Nullable Plug plug);
 
   /**
-   * Plug から {@link Plug#produce()} で取り出し可能な送信メッセージが発生したときに true を設定し、送信するメッセージ
+   * MessageQueue から {@link Plug#produce()} で取り出し可能な送信メッセージが発生したときに true を設定し、送信するメッセージ
    * が一時的になくなったときに false を設定します。サブクラスはこのメソッドをオーバーライドして下層の通信実装から
    * {@link java.nio.channels.SelectionKey#OP_WRITE} のような出力可能の通知設定を制御することができます。
    * <p>
@@ -64,13 +64,13 @@ public interface Wire extends AutoCloseable {
   void setWritable(boolean writable);
 
   /**
-   * Plug が新しいメッセージを受信できるようになり {@link Plug#consume(Message)} を呼び出し可能になったときに
+   * MessageQueue が新しいメッセージを受信できるようになり {@link Plug#consume(Message)} を呼び出し可能になったときに
    * true を設定し、これ以上メッセージを受信できなくなったときに false を設定します。true を指定することにより Wire は
-   * ネットワークから新しいメッセージを読み込んで Plug に通知を行います。
+   * ネットワークから新しいメッセージを読み込んで MessageQueue に通知を行います。
    * <p>
    * サブクラスはデフォルトで readable = false の状態を持つ必要があります。
    *
-   * @param readable Plug からメッセージを取り出し可能になったとき true
+   * @param readable MessageQueue からメッセージを取り出し可能になったとき true
    */
   void setReadable(boolean readable);
 
@@ -83,7 +83,7 @@ public interface Wire extends AutoCloseable {
   Optional<SSLSession> getSSLSession();
 
   /**
-   * この Wire をクローズしリソースを解放します。Wire に設定されている Plug に対して onClose() が通知されます。
+   * この Wire をクローズしリソースを解放します。Wire に設定されている MessageQueue に対して onClose() が通知されます。
    */
   void close();
 

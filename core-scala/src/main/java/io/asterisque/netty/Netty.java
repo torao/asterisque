@@ -60,7 +60,7 @@ public class Netty implements Bridge {
    */
   private NioEventLoopGroup worker(){
     if(closing.get()){
-      throw new IllegalStateException("netty bridge already closed");
+      throw new IllegalStateException("netty bridge already wsClosed");
     }
     if(worker.get() == null){
       NioEventLoopGroup w = new NioEventLoopGroup();

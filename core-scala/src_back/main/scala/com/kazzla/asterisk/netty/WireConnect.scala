@@ -145,7 +145,7 @@ private[netty] class WireConnect(sslHandler:Option[SslHandler], isServer:Boolean
    * @param cause 発生した例外
    */
   override def exceptionCaught(ctx:ChannelHandlerContext, cause:Throwable):Unit = {
-    logger.debug(s"$sym[$id]: exception caught", cause)
+    logger.debug(s"$sym[$id]: wsCaughtException caught", cause)
     closeWire()
   }
 

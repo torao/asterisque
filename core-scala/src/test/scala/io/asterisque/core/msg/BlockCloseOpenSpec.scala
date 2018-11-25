@@ -12,7 +12,7 @@ class BlockCloseOpenSpec extends AbstractMessageSpec {
     s2"""
 Block should:
 declare as final. ${Modifier.isFinal(classOf[Block].getModifiers) must beTrue}
-throw exception for illegal arguments in constructor. $blockConstructor
+throw wsCaughtException for illegal arguments in constructor. $blockConstructor
 be eof of block of Block.eof(). ${(Block.eof(1).eof must beTrue) and (Block.eof(1).length == 0) and (Block.eof(1).loss === 0)}
 return byte-array as same as specified to constructor. $blockRetrievePayload
 return text as string. $blockGetTextString

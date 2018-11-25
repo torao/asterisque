@@ -14,9 +14,9 @@ class SyncConfigSpec extends Specification {
 SyncConfig should:
 be declared as final class. ${Modifier.isFinal(classOf[SyncConfig].getModifiers)}
 restore all properties from control data. $e0
-throw exception if signature is not sync-config. $e1
-throw exception if data too short. $e2
-SyncConfig constracts instance without exception. $allConstructorsTest
+throw wsCaughtException if signature is not sync-config. $e1
+throw wsCaughtException if data too short. $e2
+SyncConfig constracts instance without wsCaughtException. $allConstructorsTest
 Data size must be constant value. $verifyDataSize
 """
 

@@ -10,40 +10,36 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.SocketAddress;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class WebSocketServer<NODE> implements Server<NODE> {
+public class WebSocketServer implements Server, WebSocket.Server.Listener {
   private static final Logger logger = LoggerFactory.getLogger(WebSocketServer.class);
 
   private final AtomicReference<Channel> channel = new AtomicReference<>();
 
-  final WebSocket.Server.Listener wsListener = new WebSocket.Server.Listener() {
-    @Override
-    public void ready(@Nonnull Channel channel) {
-      logger.trace("Server.Listener.ready({})", channel);
-      WebSocketServer.this.channel.set(channel);
-    }
+  private final AtomicBoolean closed = new AtomicBoolean(false);
 
-    @Override
-    public void exception(@Nullable ChannelHandlerContext ctx, @Nonnull Throwable ex) {
-      logger.error("Server.Listener.exception({}, {})", ctx, ex);
-      if(ctx != null){
-        ctx.close();
-      }
-    }
-  };
-
-  private final NODE node;
-
-  WebSocketServer(@Nonnull NODE node) {
-    this.node = node;
+  WebSocketServer() {
   }
 
-  @Nonnull
   @Override
-  public NODE node() {
-    return node;
+  public void wsServerReady(@Nonnull Channel channel) {
+    logger.trace("WebSocketServer.wsServerReady({})", channel);
+    if (!closed.get()) {
+      this.channel.set(channel);
+    } else {
+      logger.debug("websocket server is ready but it has already been closed");
+      channel.close();
+    }
+  }
+
+  @Override
+  public void wsServerCaughtException(@Nullable ChannelHandlerContext ctx, @Nonnull Throwable ex) {
+    logger.error("WebSocketServer.wsServerCaughtException({}, {})", ctx, ex);
+    if (ctx != null) {
+      ctx.close();
+    }
   }
 
   @Nullable
@@ -56,6 +52,8 @@ public class WebSocketServer<NODE> implements Server<NODE> {
 
   @Override
   public void close() {
-    Optional.ofNullable(channel.get()).ifPresent(Channel::close);
+    if (closed.compareAndSet(false, true)) {
+      Optional.ofNullable(channel.get()).ifPresent(Channel::close);
+    }
   }
 }

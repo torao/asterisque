@@ -139,8 +139,8 @@ public class Options {
   // TODO 他に SocketOption など
 
   //
-  public static final IntKey KEY_READ_SOFT_LIMIT = new IntKey("io.asterisque.wire.read.softlimit", 1024);
-  public static final IntKey KEY_READ_HARD_LIMIT = new IntKey("io.asterisque.wire.read.hardlimit", Integer.MAX_VALUE);
+  public static final IntKey KEY_READ_SOFT_LIMIT = new IntKey("io.asterisque.wire.wsFrameReceived.softlimit", 1024);
+  public static final IntKey KEY_READ_HARD_LIMIT = new IntKey("io.asterisque.wire.wsFrameReceived.hardlimit", Integer.MAX_VALUE);
   public static final IntKey KEY_WRITE_SOFT_LIMIT = new IntKey("io.asterisque.wire.write.softlimit", 1024);
   public static final IntKey KEY_WRITE_HARD_LIMIT = new IntKey("io.asterisque.wire.write.hardlimit", Integer.MAX_VALUE);
 

@@ -59,7 +59,7 @@ class NettyWire implements Wire {
       }
       writeNext();
     } else {
-      logger.error(id() + ": message write failure, closing wire: " + this, future.cause());
+      logger.error(id() + ": message write failure, wsClosed wire: " + this, future.cause());
       close();
     }
   };

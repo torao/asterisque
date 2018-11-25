@@ -1,9 +1,4 @@
-/*
- * Copyright (c) 2014 koiroha.org.
- * All sources and related resources are available under Apache License 2.0.
- * http://www.apache.org/licenses/LICENSE-2.0.html
-*/
-package io.asterisque.util;
+package io.asterisque.core.util;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,12 +12,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// Source
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
- * 巨大なログファイルの集計や非同期受信データの集計など、非同期で到着する要素集合に対して利用できるコンビネータを
- * 定義するトレイトです。
+ * 大きなログファイルの集計や非同期受信データの集計など、非同期で到着する要素集合に対して利用できるコンビネータを定義するトレイトです。
  * 標準の collection はすでに存在する (あるいは算出可能な) 要素集合から必要に応じてデータを取り出す事の出来る
  * pull 型です。このトレイトは非同期で発生する push 型の要素集合に対する操作を効率的に定義します。
  *

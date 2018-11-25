@@ -1,10 +1,10 @@
 package io.asterisque.core.wire.netty;
 
 import io.asterisque.core.Debug;
+import io.asterisque.core.ProtocolException;
 import io.asterisque.core.codec.MessageCodec;
 import io.asterisque.core.msg.Message;
-import io.asterisque.core.wire.Plug;
-import io.asterisque.core.wire.ProtocolException;
+import io.asterisque.core.wire.MessageQueue;
 import io.asterisque.core.wire.Wire;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -28,108 +28,30 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-class WebSocketWire<NODE> implements Wire<NODE> {
+class WebSocketWire extends Wire {
   private static final Logger logger = LoggerFactory.getLogger(WebSocketWire.class);
 
-  final CompletableFuture<Wire<NODE>> future = new CompletableFuture<>();
+  final CompletableFuture<Wire> future = new CompletableFuture<>();
 
   private final MessageCodec codec;
 
-  private final AtomicReference<Plug<NODE>> plug = new AtomicReference<>();
-
   private final AtomicReference<ChannelHandlerContext> context = new AtomicReference<>();
 
-  private final AtomicBoolean messageProduceable = new AtomicBoolean();
+  private final AtomicBoolean messagePollable = new AtomicBoolean();
 
-  final WebSocket.Servant servant = new WebSocket.Servant() {
+  final WebSocket.Servant servant = new WSServant();
 
-    @Override
-    public void ready(@Nonnull ChannelHandlerContext ctx) {
-      context.set(ctx);
-      Channel channel = ctx.channel();
-      channel.config().setAutoRead(false);
-
-      // 準備が完了したら Future にインスタンスを設定する
-      future.complete(WebSocketWire.this);
-    }
-
-    @Override
-    public void read(@Nonnull ChannelHandlerContext ctx, @Nonnull WebSocketFrame frame) {
-      Plug<NODE> plug = WebSocketWire.this.plug.get();
-      if (plug == null) {
-        throw new IllegalStateException("receiving a websocket frame without plug");
-      }
-      if (frame instanceof BinaryWebSocketFrame) {
-        Optional<Message> msgOpt = frameToMessage((BinaryWebSocketFrame) frame);
-        if (msgOpt.isPresent()) {
-          Message msg = msgOpt.get();
-          logger.trace("read({})", msg);
-          plug.consume(msg);
-        } else {
-          byte[] binary = ByteBufUtil.getBytes(frame.content());
-          String msg = String.format(
-              "websocket frame doesn't contain enough binaries to restore the message: %s (%d bytes)",
-              Debug.toString(binary), binary.length);
-          logger.warn(msg);
-          plug.onException(WebSocketWire.this, new ProtocolException(msg));
-        }
-      } else {
-        String msg = String.format("unsupported websocket frame: %s", frame);
-        logger.warn(msg);
-        plug.onException(WebSocketWire.this, new ProtocolException(msg));
-      }
-    }
-
-    @Override
-    public void exception(@Nonnull ChannelHandlerContext ctx, @Nonnull Throwable ex) {
-      logger.error("exception callback: {}", ex);
-      if (plug.get() != null) {
-        plug.get().onException(WebSocketWire.this, ex);
-      }
-      ctx.channel().close();
-
-      // 失敗を設定
-      if (!future.isDone()) {
-        future.completeExceptionally(ex);
-      }
-    }
-
-    @Override
-    public void closing(@Nonnull ChannelHandlerContext ctx) {
-      if (!future.isDone()) {
-        future.completeExceptionally(new IOException("closed"));
-      }
-    }
-  };
-
-  private final Plug.Listener plugListener = new Plug.Listener() {
-    @Override
-    public void messageProduceable(@Nonnull Plug plug, boolean produceable) {
-      messageProduceable.set(produceable);
-      if (produceable) {
-        pumpUp();
-      }
-    }
-
-    @Override
-    public void messageConsumeable(@Nonnull Plug plug, boolean consumeable) {
-      Optional.ofNullable(context.get()).ifPresent(ctx -> ctx.channel().config().setAutoRead(consumeable));
-    }
-  };
-
-  private final NODE node;
   private final boolean primary;
 
-  WebSocketWire(@Nonnull NODE node, @Nonnull MessageCodec codec, boolean primary) {
-    this.node = node;
+  private final AtomicBoolean closed = new AtomicBoolean();
+
+  WebSocketWire(@Nonnull MessageCodec codec, boolean primary, int inboundQueueSize, int outboundQueueSize) {
+    super(inboundQueueSize, outboundQueueSize);
     this.codec = codec;
     this.primary = primary;
-  }
 
-  @Nonnull
-  @Override
-  public NODE node() {
-    return node;
+    super.inbound.addListener(new InboundListener());
+    super.outbound.addListener(new OutboundListener());
   }
 
   @Nullable
@@ -163,68 +85,43 @@ class WebSocketWire<NODE> implements Wire<NODE> {
 
   @Override
   public void close() {
-    ChannelHandlerContext ctx = context.get();
-    if (ctx != null) {
-      if (ctx.channel().isOpen()) {
-        ctx.channel().close();
-      }
-      Optional.ofNullable(plug.get()).ifPresent(p -> p.onClose(this));
-    }
-  }
-
-  @Override
-  @Nonnull
-  public String toString() {
-    // TODO
-    return "";
-  }
-
-  @Override
-  public void bound(@Nonnull Plug<NODE> plug) {
-    if (this.plug.compareAndSet(null, plug)) {
-      plug.addListener(plugListener);
-      prepare();
-    } else {
-      throw new IllegalStateException("plug has already been set");
-    }
-  }
-
-  @Override
-  public void unbound(@Nonnull Plug<NODE> plug) {
-    if (this.plug.compareAndSet(plug, null)) {
-      plug.removeListener(plugListener);
-    } else {
-      throw new IllegalStateException("specified plug is not bound");
-    }
-  }
-
-  private void prepare() {
-    if (plug.get() != null && context.get() != null) {
-      context.get().channel().config().setAutoRead(true);
-    }
-  }
-
-  private void pumpUp() {
-    logger.debug("pumpUp()");
-    while (true) {
-      Plug plug = this.plug.get();
-      Channel channel = Optional.ofNullable(this.context.get()).map(ChannelHandlerContext::channel).orElse(null);
-      if (plug != null && channel != null && messageProduceable.get() && channel.isWritable()) {
-        Message msg = plug.produce();
-        if (msg != null) {
-          logger.debug("pumpUp(): send {}", msg);
-          channel.writeAndFlush(messageToFrame(msg));
-        } else {
-          logger.debug("pumpUp(): end");
-          break;
+    if (closed.compareAndSet(false, true)) {
+      ChannelHandlerContext ctx = context.getAndSet(null);
+      if (ctx != null) {
+        if (ctx.channel().isOpen()) {
+          ctx.channel().close();
         }
+      }
+      if (!future.isDone()) {
+        future.completeExceptionally(new IOException("the wire closed before connection was established"));
+      }
+      fireWireEvent(listener -> listener.wireClosed(WebSocketWire.this));
+    }
+    super.close();
+  }
+
+  /**
+   * 下層のチャネルが書き込み可能なかぎり、送信キューのメッセージを下層のチャネルに引き渡します。
+   */
+  private void pumpUp() {
+    Channel channel = Optional.ofNullable(this.context.get()).map(ChannelHandlerContext::channel).orElse(null);
+    while (channel != null && channel.isOpen() && channel.isWritable() && messagePollable.get()) {
+      Message msg = super.outbound.poll();
+      if (msg != null) {
+        logger.trace("pumpUp(): send {}", msg);
+        channel.writeAndFlush(messageToFrame(msg));
       } else {
-        logger.debug("pumpUp(): end");
         break;
       }
     }
   }
 
+  /**
+   * メッセージを WebSocket フレームに変換する。
+   *
+   * @param msg メッセージ
+   * @return WebSocket フレーム
+   */
   @Nonnull
   private WebSocketFrame messageToFrame(@Nonnull Message msg) {
     ByteBuffer buffer = codec.encode(msg);
@@ -232,6 +129,12 @@ class WebSocketWire<NODE> implements Wire<NODE> {
     return new BinaryWebSocketFrame(buf);
   }
 
+  /**
+   * WebSocket フレームからメッセージを復元する。
+   *
+   * @param frame WebSocket フレーム
+   * @return メッセージ
+   */
   @Nonnull
   private Optional<Message> frameToMessage(@Nonnull BinaryWebSocketFrame frame) {
     ByteBuf buf = frame.content();
@@ -244,6 +147,91 @@ class WebSocketWire<NODE> implements Wire<NODE> {
       buffer = ByteBuffer.wrap(bytes);
     }
     return codec.decode(buffer);
+  }
+
+  /**
+   * Netty との WebSocket フレーム送受信を行うためのクラス。
+   */
+  private class WSServant implements WebSocket.Servant {
+
+    @Override
+    public void wsReady(@Nonnull ChannelHandlerContext ctx) {
+      if (closed.get()) {
+        ctx.close();
+      } else {
+        context.set(ctx);
+        Channel channel = ctx.channel();
+        channel.config().setAutoRead(true);
+
+        // 準備が完了したら Future にインスタンスを設定する
+        future.complete(WebSocketWire.this);
+      }
+    }
+
+    @Override
+    public void wsFrameReceived(@Nonnull ChannelHandlerContext ctx, @Nonnull WebSocketFrame frame) {
+      if (frame instanceof BinaryWebSocketFrame) {
+        Optional<Message> msgOpt = frameToMessage((BinaryWebSocketFrame) frame);
+        if (msgOpt.isPresent()) {
+          Message msg = msgOpt.get();
+          logger.trace("wsFrameReceived({})", msg);
+          inbound.offer(msg);
+        } else {
+          byte[] binary = ByteBufUtil.getBytes(frame.content());
+          String msg = String.format(
+              "websocket frame doesn't contain enough binaries to restore the message: %s (%d bytes)",
+              Debug.toString(binary), binary.length);
+          logger.warn(msg);
+          fireWireEvent(listener -> listener.wireError(WebSocketWire.this, new ProtocolException(msg)));
+        }
+      } else {
+        String msg = String.format("unsupported websocket frame: %s", frame);
+        logger.warn(msg);
+        fireWireEvent(listener -> listener.wireError(WebSocketWire.this, new ProtocolException(msg)));
+      }
+    }
+
+    @Override
+    public void wsCaughtException(@Nonnull ChannelHandlerContext ctx, @Nonnull Throwable ex) {
+      logger.error("wsCaughtException callback: {}", ex);
+      fireWireEvent(listener -> listener.wireError(WebSocketWire.this, ex));
+      ctx.channel().close();
+
+      // 失敗を設定
+      if (!future.isDone()) {
+        future.completeExceptionally(ex);
+      }
+    }
+
+    @Override
+    public void wsClosed(@Nonnull ChannelHandlerContext ctx) {
+      if (!future.isDone()) {
+        future.completeExceptionally(new IOException("wsClosed"));
+      }
+    }
+  }
+
+  /**
+   * 送信キューからメッセージの取得が可能になったときに下層のチャネルへメッセージの引き渡しを行うリスナ。
+   */
+  private class OutboundListener implements MessageQueue.Listener {
+    @Override
+    public void messagePollable(@Nonnull MessageQueue messageQueue, boolean pollable) {
+      messagePollable.set(pollable);
+      if (pollable) {
+        pumpUp();
+      }
+    }
+  }
+
+  /**
+   * 受信キューが受付可能になったかどうかで下層のチャネルからの自動読み出しを設定するリスナ。
+   */
+  private class InboundListener implements MessageQueue.Listener {
+    @Override
+    public void messageOfferable(@Nonnull MessageQueue messageQueue, boolean offerable) {
+      Optional.ofNullable(context.get()).ifPresent(ctx -> ctx.channel().config().setAutoRead(offerable));
+    }
   }
 
 }

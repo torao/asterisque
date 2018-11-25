@@ -112,7 +112,7 @@ trait Wire extends Closeable {
       logger.debug(s"message buffered on deactive wire: $msg")
     }
   } else {
-    logger.debug(s"message disposed on closed wire: $msg")
+    logger.debug(s"message disposed on wsClosed wire: $msg")
   }
 
   // ==============================================================================================
@@ -181,7 +181,7 @@ object Wire {
       val other = (i + 1) & 0x01
       val isServer = (i & 0x01) == 0
       def send(m:Message) = if(isClosed){
-        throw new IOException("pipe closed")
+        throw new IOException("pipe wsClosed")
       } else {
         queue.put({ () => wires(other).receive(m) })
       }

@@ -40,13 +40,13 @@ public class WebSocket {
 
     public static final Listener EmptyListener = new Listener() {
       @Override
-      public void ready(@Nonnull Channel ch) {
-        logger.debug("ready({})", ch);
+      public void wsServerReady(@Nonnull Channel ch) {
+        logger.trace("wsServerReady({})", ch);
       }
 
       @Override
-      public void exception(@Nullable ChannelHandlerContext ctx, @Nonnull Throwable ex) {
-        logger.debug("exception({},{})", ctx, ex);
+      public void wsServerCaughtException(@Nullable ChannelHandlerContext ctx, @Nonnull Throwable ex) {
+        logger.trace("wsServerCaughtException({},{})", ctx, ex);
       }
     };
 
@@ -70,8 +70,8 @@ public class WebSocket {
     public Server(@Nonnull EventLoopGroup group,
                   @Nonnull String subprotocol, @Nonnull String path, @Nonnull Server.Listener listener,
                   @Nullable SslContext sslContext) {
-      if(! path.startsWith("/")){
-        throw new IllegalArgumentException("server path must begin '/': '" + path + "'");
+      if (!path.startsWith("/")) {
+        throw new IllegalArgumentException("the server path must begin with '/': '" + path + "'");
       }
       this.group = group;
       this.subprotocol = subprotocol;
@@ -92,7 +92,7 @@ public class WebSocket {
     }
 
     /**
-     * 指定されたソケットアドレスにサーバソケットを bind します。bind に成功した場合 {@link Listener#ready(Channel)}
+     * 指定されたソケットアドレスにサーバソケットを bind します。bind に成功した場合 {@link Listener#wsServerReady(Channel)}
      * コールバックが発生します。
      * bind に失敗した場合は例外の Future を返します ({@link Listener} へのコールバックではありません)。
      *
@@ -110,12 +110,12 @@ public class WebSocket {
           .handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) {
-              listener.ready(ch);
+              listener.wsServerReady(ch);
             }
 
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-              listener.exception(ctx, cause);
+              listener.wsServerCaughtException(ctx, cause);
               super.exceptionCaught(ctx, cause);
             }
           })
@@ -124,9 +124,9 @@ public class WebSocket {
       return channelFutureToFuture(bootstrap.bind(address)).whenComplete((ch, ex) -> {
         if (ex == null) {
           channel = ch;
-          logger.debug("the server has completed binding: {}", channel);
+          logger.trace("the server has completed binding: {}", channel);
         } else {
-          listener.exception(null, ex);
+          listener.wsServerCaughtException(null, ex);
         }
       });
     }
@@ -139,9 +139,9 @@ public class WebSocket {
     }
 
     public interface Listener {
-      void ready(@Nonnull Channel ch);
+      void wsServerReady(@Nonnull Channel ch);
 
-      void exception(@Nullable ChannelHandlerContext ctx, @Nonnull Throwable ex);
+      void wsServerCaughtException(@Nullable ChannelHandlerContext ctx, @Nonnull Throwable ex);
     }
 
     /**
@@ -278,7 +278,7 @@ public class WebSocket {
      *
      * @param ctx WebSocket プロトコルの準備が完了したコンテキスト
      */
-    void ready(@Nonnull ChannelHandlerContext ctx);
+    void wsReady(@Nonnull ChannelHandlerContext ctx);
 
     /**
      * 相手側から WebSocket のフレームを受信したときに呼び出されます。
@@ -286,14 +286,14 @@ public class WebSocket {
      * @param ctx フレームを受信したコンテキスト
      * @param msg 受信したフレーム
      */
-    void read(@Nonnull ChannelHandlerContext ctx, @Nonnull WebSocketFrame msg);
+    void wsFrameReceived(@Nonnull ChannelHandlerContext ctx, @Nonnull WebSocketFrame msg);
 
     /**
      * 指定されたチャネルがクローズされているときに呼び出されます。
      *
      * @param ctx クローズされているチャネル
      */
-    void closing(@Nonnull ChannelHandlerContext ctx);
+    void wsClosed(@Nonnull ChannelHandlerContext ctx);
 
     /**
      * 指定されたコンテキスト上で例外が発生したときに呼び出されます。
@@ -301,7 +301,7 @@ public class WebSocket {
      * @param ctx 例外の発生したコンテキスト
      * @param ex  発生した例外
      */
-    void exception(@Nonnull ChannelHandlerContext ctx, @Nonnull Throwable ex);
+    void wsCaughtException(@Nonnull ChannelHandlerContext ctx, @Nonnull Throwable ex);
   }
 
   /**
@@ -329,16 +329,16 @@ public class WebSocket {
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
       logger.trace("channelInactive({})", ctx);
       if (handshakeState == WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_ISSUED) {
-        servant.exception(ctx, new HandshakeException("WebSocket handshake failure"));
+        servant.wsCaughtException(ctx, new HandshakeException("WebSocket handshake failure"));
       }
-      servant.closing(ctx);
+      servant.wsClosed(ctx);
       super.channelInactive(ctx);
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
       logger.trace("exceptionCaught({},{})", ctx, cause);
-      servant.exception(ctx, cause);
+      servant.wsCaughtException(ctx, cause);
       super.exceptionCaught(ctx, cause);
     }
 
@@ -346,16 +346,16 @@ public class WebSocket {
     public void userEventTriggered(@Nonnull ChannelHandlerContext ctx, @Nonnull Object evt) throws Exception {
       logger.trace("userEventTriggered({},{})", ctx, evt);
       if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
-        logger.debug("server handshake complete");
+        logger.trace("server handshake complete");
         handshakeState = WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE;
         ctx.pipeline().remove(HttpRequestHandler.class);
-        servant.ready(ctx);
+        servant.wsReady(ctx);
       } else if (evt == WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE) {
-        logger.debug("client handshake complete");
+        logger.trace("client handshake complete");
         handshakeState = WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE;
-        servant.ready(ctx);
+        servant.wsReady(ctx);
       } else if (evt == WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_ISSUED) {
-        logger.debug("client handshake uncompleted");
+        logger.trace("client handshake uncompleted");
         handshakeState = WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_ISSUED;
         // HANDSHAKE_ISSUED の後に HANDSHAKE_COMPLETE が来るためこの時点ではエラーではない
       } else {
@@ -375,7 +375,7 @@ public class WebSocket {
         }
       }
 
-      servant.read(ctx, msg);
+      servant.wsFrameReceived(ctx, msg);
     }
   }
 

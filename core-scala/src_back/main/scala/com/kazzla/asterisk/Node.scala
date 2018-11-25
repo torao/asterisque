@@ -144,7 +144,7 @@ class Node private[Node](name:String, initService:Service, bridge:Bridge, codec:
   def shutdown():Unit = {
     servers.get().foreach{ _.close() }
     _sessions.get().foreach{ _.close() }
-    logger.debug(s"shutting-down $name; all available ${_sessions.get().size} sessions, ${servers.get().size} servers are closed")
+    logger.debug(s"shutting-down $name; all available ${_sessions.get().size} sessions, ${servers.get().size} servers are wsClosed")
   }
 
 }

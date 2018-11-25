@@ -162,7 +162,7 @@ class WireConnect extends SimpleChannelInboundHandler<Message> {
    */
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause){
-    logger.debug(id() + ": exception caught", cause);
+    logger.debug(id() + ": wsCaughtException caught", cause);
     closeWire();
   }
 

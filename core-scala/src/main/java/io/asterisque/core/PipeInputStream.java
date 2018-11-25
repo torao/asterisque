@@ -3,7 +3,7 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package io.asterisque;
+package io.asterisque.core;
 
 import io.asterisque.core.msg.Block;
 import io.asterisque.core.util.CircuitBreaker;
@@ -21,6 +21,7 @@ import java.util.function.Consumer;
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // PipeInputStream
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 /**
  * パイプ上で受信した Block メッセージのバイナリデータをストリームとして参照するためのクラス。
  *

@@ -1,20 +1,26 @@
-package io.asterisque;
+package io.asterisque.core;
 
-import io.asterisque.cluster.Repository;
-import io.asterisque.core.Debug;
+import io.asterisque.Asterisque;
+import io.asterisque.Node;
+import io.asterisque.Service;
+import io.asterisque.core.codec.TypeConversion;
 import io.asterisque.core.codec.VariableCodec;
 import io.asterisque.core.msg.*;
+import io.asterisque.core.service.PipeSpace;
+import io.asterisque.core.wire.Wire;
 import io.asterisque.core.util.CircuitBreaker;
 import io.asterisque.core.util.Latch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.SocketAddress;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.security.Principal;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,8 +34,8 @@ import java.util.stream.Stream;
 /**
  * ピアとの通信状態を表すクラスです。
  * <p>
- * ピア間での幾つかの取り決めを実装する目的で、便宜的に通信開始側をクライアント (worker)、接続受付側をサーバ
- * (master) と定めます。
+ * ピア間の通信において役割の衝突を避ける目的で、便宜的に接続受付側をプライマリ (primary)、通信開始側をセカンダリ (secondary)
+ * と定めます。
  * <p>
  * セッションはピアとのメッセージ送受信のための {@code Wire} を持ちます (Wire を持たない状態は物理的に接続して
  * いない状態を表します)。セッションは Wire が切断されると新しい Wire の接続を試みます。
@@ -48,49 +54,49 @@ public class Session {
   /**
    * セッション ID。ピアと状態同期が済んでいない場合は {@link Asterisque#Zero} の値を取る。
    */
+  @Nonnull
   public final UUID id() {
-    return _id;
+    return id;
   }
 
   /**
-   * このセッションのノード
+   * このセッションを使用しているノード。
    */
+  @Nonnull
   public final Node node;
-  /**
-   * こちら側のセッションがサーバの場合 true
-   */
-  public final boolean isServer;
-  /**
-   * セッションのスコープで保持することの出来る属性値。{@link Repository} に保管
-   * 可能な値のみ使用可能。
-   */
-  public final Attributes attributes = new Attributes();
-  /**
-   * このセッション上で使用する RPC のパラメータや返値を返還する VariableCodec
-   */
-  private final VariableCodec codec;
 
   /**
-   * セッション ID
+   * peer 間においてこのセッションが primary の場合に true を示す。
    */
-  private UUID _id = Asterisque.Zero;
-  /**
-   * このセッションが使用している Wire から受信した状態同期メッセージ
-   */
-  private transient Optional<SyncConfig> header = Optional.empty();
+  public final boolean isPrimary;
 
   /**
-   * このセッションのローカル側の物理アドレスを参照します。ピアと接続していない場合は Optional.empty() を返します。
+   * このセッション上で使用する RPC のパラメータや返値を転送可能型に変換するコンバーター。
    */
-  public Optional<SocketAddress> local() {
-    return wire.map(Wire::local);
-  }
+  @Nonnull
+  private final TypeConversion conversion;
 
   /**
-   * このセッションのリモート側の物理アドレスを参照します。ピアと接続していない場合は Optional.empty() を返します。
+   * このセッションの ID。初期状態で Zero であり、セッションが確立したときに有効な値が設定される。
    */
-  public Optional<SocketAddress> remote() {
-    return wire.map(Wire::remote);
+  @Nonnull
+  private UUID id = Asterisque.Zero;
+
+  /**
+   * このセッションが使用している Wire から受信した状態同期メッセージ。初期状態で null でありセッションが確立したときに有効な
+   * 値が設定される。
+   */
+  @Nullable
+  private SyncConfig header;
+
+  /**
+   * このセッションの peer アドレスを参照します。ピアと接続していない場合は Optional.empty() を返します。
+   */
+  @Nonnull
+  public Optional<InetAddress> remote() {
+    return Optional.ofNullable(wire)
+        .flatMap(w -> Optional.ofNullable((InetSocketAddress) w.remote()))
+        .map(InetSocketAddress::getAddress);
   }
 
   /**
@@ -103,7 +109,7 @@ public class Session {
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
   private final Supplier<Optional<CompletableFuture<Wire>>> wireFactory;
-  private volatile Optional<Wire> wire = Optional.empty();
+  private Wire wire;
   private volatile Service service;
 
   private final Options options;
@@ -135,18 +141,11 @@ public class Session {
 
   private final BiConsumer<Session, UUID> onSync;
 
-  // ==============================================================================================
-  // コンストラクタ
-  // ==============================================================================================
-
-  /**
-   *
-   */
-  Session(Node node, boolean isServer, VariableCodec codec, Service defaultService, Options options,
+  Session(Node node, boolean isPrimary, VariableCodec codec, Service defaultService, Options options,
           Supplier<Optional<CompletableFuture<Wire>>> wireFactory, BiConsumer<Session, UUID> onSync) {
-    this._id = Asterisque.Zero;
+    this.id = Asterisque.Zero;
     this.node = node;
-    this.isServer = isServer;
+    this.isPrimary = isPrimary;
     this.codec = codec;
     this.service = defaultService;
     this.wireFactory = wireFactory;
@@ -328,7 +327,7 @@ public class Session {
     wire.setReadable(true);
 
     // クライアントであればヘッダの送信
-    if (!isServer) {
+    if (!isPrimary) {
       // ※サーバ側からセッションIDが割り当てられていない場合は Zero が送信される
       int ping = options.get(Options.KEY_PING_REQUEST).get();
       int timeout = options.get(Options.KEY_SESSION_TIMEOUT_REQUEST).get();
@@ -459,7 +458,7 @@ public class Session {
    */
   public int getPingInterval() {
     return header.map(h -> {
-      if (isServer) {
+      if (isPrimary) {
         int maxPing = options.get(Options.KEY_MAX_PING).get();
         int minPing = options.get(Options.KEY_MIN_PING).get();
         return Math.min(maxPing, Math.max(minPing, h.ping));
@@ -474,7 +473,7 @@ public class Session {
    */
   public int getTimeout() {
     return header.map(h -> {
-      if (isServer) {
+      if (isPrimary) {
         int maxSession = options.get(Options.KEY_MAX_SESSION_TIMEOUT).get();
         int minSession = options.get(Options.KEY_MIN_SESSION_TIMEOUT).get();
         return Math.min(maxSession, Math.max(minSession, h.sessionTimeout));
@@ -496,14 +495,14 @@ public class Session {
       throw new ProtocolViolationException("multiple sync message");
     }
     this.header = Optional.of(header);
-    if (isServer) {
+    if (isPrimary) {
       // サーバ側の場合は応答を返す
       if (header.sessionId.equals(Asterisque.Zero)) {
         // 新規セッションの開始
-        this._id = node.repository.nextUUID();
-        logger.trace(logId() + ": new session-id is issued: " + this._id);
+        this.id = node.repository.nextUUID();
+        logger.trace(logId() + ": new session-id is issued: " + this.id);
         SyncConfig ack = new SyncConfig(
-            Asterisque.Protocol.Version_0_1, node.id, _id, System.currentTimeMillis(), getPingInterval(), getTimeout());
+            Asterisque.Protocol.Version_0_1, node.id, id, System.currentTimeMillis(), getPingInterval(), getTimeout());
         post(Priority.Normal, ack.toControl());
       } else {
         Optional<Principal> principal = Optional.empty();
@@ -517,7 +516,7 @@ public class Session {
         Optional<byte[]> service = node.repository.loadAndDelete(principal, header.sessionId);
         if (service.isPresent()) {
           SyncConfig ack = new SyncConfig(
-              Asterisque.Protocol.Version_0_1, node.id, _id, System.currentTimeMillis(), getPingInterval(), getTimeout());
+              Asterisque.Protocol.Version_0_1, node.id, id, System.currentTimeMillis(), getPingInterval(), getTimeout());
           post(Priority.Normal, ack.toControl());
         } else {
           // TODO retry after
@@ -529,11 +528,11 @@ public class Session {
       if (header.sessionId.equals(Asterisque.Zero)) {
         throw new ProtocolViolationException("session-id is not specified from server: " + header.sessionId);
       }
-      if (this._id.equals(Asterisque.Zero)) {
-        this._id = header.sessionId;
-        logger.trace(logId() + ": new session-id is specified: " + this._id);
-      } else if (!this._id.equals(header.sessionId)) {
-        throw new ProtocolViolationException("unexpected session-id specified from server: " + header.sessionId + " != " + this._id);
+      if (this.id.equals(Asterisque.Zero)) {
+        this.id = header.sessionId;
+        logger.trace(logId() + ": new session-id is specified: " + this.id);
+      } else if (!this.id.equals(header.sessionId)) {
+        throw new ProtocolViolationException("unexpected session-id specified from server: " + header.sessionId + " != " + this.id);
       }
     }
     logger.info(logId() + ": sync-configuration success, beginning session");
@@ -647,16 +646,18 @@ public class Session {
   }
 
   String logId() {
-    return Asterisque.logPrefix(isServer, id());
+    return Asterisque.logPrefix(isPrimary, id());
   }
 
   /**
    * このセッションが開始していることを保証する処理。
+   *
+   * @param msg 受信したメッセージ
    */
-  private void ensureSessionStarted(Message msg) {
-    if (!header.isPresent() && (!(msg instanceof Control) || ((Control) msg).code != Control.SyncConfig)) {
+  private void ensureSessionStarted(@Nonnull Message msg) {
+    if (header != null && (!(msg instanceof Control) || ((Control) msg).code != Control.SyncConfig)) {
       logger.error(id() + ": unexpected message received; session is not initialized yet: " + msg);
-      throw new ProtocolViolationException("unexpected message received");
+      throw new ProtocolException("unexpected message received");
     }
   }
 

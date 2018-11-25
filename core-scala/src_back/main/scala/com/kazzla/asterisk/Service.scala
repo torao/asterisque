@@ -160,7 +160,7 @@ abstract class Service(context:ExecutionContext) {
             case Success(result) =>
               pipe.close(result)
             case Failure(ex) =>
-              logger.error(s"unexpected exception: $ex", ex)
+              logger.error(s"unexpected wsCaughtException: $ex", ex)
               pipe.close(ex)
           }
         case None =>

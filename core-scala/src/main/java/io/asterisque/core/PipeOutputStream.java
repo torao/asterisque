@@ -3,7 +3,7 @@
  * All sources and related resources are available under Apache License 2.0.
  * http://www.apache.org/licenses/LICENSE-2.0.html
 */
-package io.asterisque;
+package io.asterisque.core;
 
 import io.asterisque.core.msg.Block;
 import io.asterisque.core.util.Latch;
@@ -17,6 +17,7 @@ import java.nio.ByteBuffer;
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // PipeOutputStream
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 /**
  * パイプに対してバイナリデータを Block メッセージとして送信するための出力ストリームです。出力されたバイナリは内部
  * でバッファリングされ、フラグメント化されたブロックとして送信されます。

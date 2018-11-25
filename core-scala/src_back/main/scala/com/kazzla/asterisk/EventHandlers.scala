@@ -85,7 +85,7 @@ private[asterisk] final class EventHandlers[T] {
       }
     } catch {
       case ex:Throwable if ! ex.isInstanceOf[ThreadDeath] =>
-        logger.error(s"unexpected exception on calling ${l.getClass.getSimpleName}($s)", ex)
+        logger.error(s"unexpected wsCaughtException on calling ${l.getClass.getSimpleName}($s)", ex)
     }
   }
 }

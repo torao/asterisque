@@ -120,7 +120,7 @@ bi-directional heavy call between nodes. $e2
         _.zipWithIndex.map { case (s, i) => this.reverse(s) === i.toString }.reduce { (a, b) => a and b }
       })
     }
-    Await.ready(future, waitTime)
+    Await.wsReady(future, waitTime)
 
     val p1 = Promise[MatchResult[Any]]()
     val reverse = new Node(UUID.randomUUID(), "reverse", exec, ReverseService, repository)

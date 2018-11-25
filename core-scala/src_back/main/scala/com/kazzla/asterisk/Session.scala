@@ -140,7 +140,7 @@ class Session private[asterisk](val node:Node, val name:String, defaultService:S
     }
   } catch {
     case ex:Throwable =>
-      logger.error(s"unexpected error: $msg, closing pipe", ex)
+      logger.error(s"unexpected error: $msg, wsClosed pipe", ex)
       post(Close.unexpectedError(msg.pipeId, s"internal error"))
       if(ex.isInstanceOf[ThreadDeath]){
         throw ex
@@ -230,14 +230,14 @@ class Session private[asterisk](val node:Node, val name:String, defaultService:S
 
     // 残っているすべてのパイプに Close メッセージを送信
     pipes.get().values.foreach{ p =>
-      Try(p.close(new IOException(s"session $name closed"))).recover {
-        case ex:IOException => logger.debug(s"wire may already closed: $ex")
+      Try(p.close(new IOException(s"session $name wsClosed"))).recover {
+        case ex:IOException => logger.debug(s"wire may already wsClosed: $ex")
       }
     }
 
     // 以降のメッセージ送信をすべて例外に変更して送信を終了
     // ※Pipe#close() で Session#post() が呼び出されるためすべてのパイプに Close を投げた後に行う
-    post = { (_) => throw new IOException(s"session $name closed") }
+    post = { (_) => throw new IOException(s"session $name wsClosed") }
 
     // Wire のクローズ
     wire.close()
