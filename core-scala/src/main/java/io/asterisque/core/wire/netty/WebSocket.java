@@ -124,7 +124,7 @@ public class WebSocket {
       return channelFutureToFuture(bootstrap.bind(address)).whenComplete((ch, ex) -> {
         if (ex == null) {
           channel = ch;
-          logger.trace("the server has completed binding: {}", channel);
+          logger.debug("the server has completed binding: {}", channel);
         } else {
           listener.wsServerCaughtException(null, ex);
         }

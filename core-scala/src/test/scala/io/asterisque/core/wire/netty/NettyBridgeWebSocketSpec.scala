@@ -3,22 +3,24 @@ package io.asterisque.core.wire.netty
 import java.net.{InetSocketAddress, URI}
 import java.util.concurrent.TimeUnit
 
-import io.asterisque.core.ProtocolException
 import io.asterisque.Scala._
-import io.asterisque.test._
-import io.asterisque.core.msg.{Message, Open}
+import io.asterisque.core.msg.Open
 import io.asterisque.core.wire.netty.WebSocket.Servant
-import io.asterisque.core.wire.{Bridge, BridgeSpec, Wire}
+import io.asterisque.core.wire.{Bridge, BridgeSpec, MessageQueue, Wire}
+import io.asterisque.core.{Debug, ProtocolException}
+import io.asterisque.test._
 import io.netty.buffer.Unpooled
-import io.netty.channel.{Channel, ChannelHandlerContext}
 import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.{Channel, ChannelHandlerContext}
 import io.netty.handler.codec.http.websocketx.{BinaryWebSocketFrame, TextWebSocketFrame, WebSocketFrame}
 import javax.annotation.Nonnull
 import org.slf4j.LoggerFactory
+import org.specs2.matcher.MatchResult
 import org.specs2.specification.core.SpecStructure
 
-import scala.concurrent.{Await, Promise}
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future, Promise}
 
 class NettyBridgeWebSocketSpec extends BridgeSpec {
 
@@ -26,9 +28,9 @@ class NettyBridgeWebSocketSpec extends BridgeSpec {
     s2"""
         |Echo server and client work. $echoServerAndClient
         |communicate simple echo messaging. $echoCommunication
-        |WebSocket peer returns a frame that isn't asterisque message. $messageCannotRestore
+        |WebSocket peer returns a frame that isn't asterisque message. ${if(false) skipped else messageCannotRestore}
         |peer sends unsupported WebSocket frame. $peerSendUnsupportedWSFrame
-"""
+""".stripMargin
 
   private[this] val logger = LoggerFactory.getLogger(getClass)
 
@@ -64,7 +66,7 @@ class NettyBridgeWebSocketSpec extends BridgeSpec {
     // Echo サーバの開始
     val serverEventLoop = new NioEventLoopGroup()
     val server = new WebSocket.Server(serverEventLoop, subprotocol, path)
-    Await.result(server.bind(new InetSocketAddress(0), ch => new EchoServant(ch)).asScala.map { ch =>
+    val result = Await.result(server.bind(new InetSocketAddress(0), ch => new EchoServant(ch)).asScala.map { ch =>
       val port = ch.localAddress().asInstanceOf[InetSocketAddress].getPort
 
       // Echo クライアントから接続してメッセージ送信
@@ -78,45 +80,70 @@ class NettyBridgeWebSocketSpec extends BridgeSpec {
         wire.outbound.offer(expected)
         val actual = wire.inbound.poll(Int.MaxValue, TimeUnit.SECONDS)
 
-        server.destroy()
+        bridge.close()
 
         (wire.isPrimary === false) and (wire.session().isPresent === false) and (actual === expected)
       }
     }.flatten, Duration.Inf)
+
+    server.destroy()
+    serverEventLoop.shutdownGracefully()
+
+    result
   }
 
-  private[this] def echoCommunication = {
+  private[this] def echoCommunication:MatchResult[String] = {
     val bridge = newBridge()
 
-    class OneTimeEchoMessageQueue(@Nonnull id:String, pipeId:Int) extends QueuedMessageQueue[Object] {
-
-      override def offer(msg:Message):Unit = if(msg.pipeId != pipeId) {
-        super.send(msg)
-        logger.info(s"echoback send from $id")
-      } else {
-        super.offer(msg)
-        logger.info(s"echoback received at $id")
-      }
+    // (message:String, ttl:Int) パラメータの Open メッセージを受け付ける Echo Servant
+    def initTTLEchoServant(name:String, wire:Wire):Future[String] = {
+      val promise = Promise[String]()
+      wire.inbound.addListener(new MessageQueue.Listener {
+        override def messagePollable(messageQueue:MessageQueue, pollable:Boolean):Unit = while(pollable) {
+          Option(wire.inbound.poll()) match {
+            case Some(open:Open) =>
+              open.params match {
+                case Array(message:String, ttl:Integer) =>
+                  if(ttl <= 1) {
+                    logger.info(s"$name: terminate: $message")
+                    promise.success(message)
+                  } else {
+                    val params = Array[AnyRef](message, Integer.valueOf(ttl.intValue() - 1))
+                    val echoback = new Open(open.priority, open.priority, open.functionId, params)
+                    logger.info(s"$name: echoback: $open -> $echoback")
+                    wire.outbound.offer(echoback)
+                  }
+                case _ =>
+                  logger.error(s"unexpected open parameter: ${Debug.toString(open.params)}")
+              }
+            case None => return
+          }
+        }
+      })
+      promise.future
     }
 
-    val serverPlug = new OneTimeEchoMessageQueue("server", 0)
-    val clientPlug = new OneTimeEchoMessageQueue("client", -1)
-
+    val serverPromise = Promise[String]()
     val server = bridge.newServer(new URI("ws://localhost:0"), "echo", null,
-      { f => f.asScala.foreach(_.bound(serverPlug)) }
+      { f =>
+        f.asScala.foreach(wire => {
+          val future = initTTLEchoServant("SERVER", wire)
+
+          wire.outbound.offer(new Open(0, 1, 3, Array[Object]("foo", Integer.valueOf(10))))
+
+          serverPromise.completeWith(future)
+        })
+      }
     ).join()
 
     val port = server.bindAddress().asInstanceOf[InetSocketAddress].getPort
     val wire = bridge.newWire(new URI(s"ws://localhost:$port"), "echo").join()
-    wire.bound(clientPlug)
+    val future = initTTLEchoServant("CLIENT", wire)
 
-    val serverExpected = new Open(0, 1, 3, Array[Object](Integer.valueOf(100), "foo"))
-    serverPlug.send(serverExpected)
-    val serverActual = serverPlug.receive()
+    wire.outbound.offer(new Open(-1, -2, -3, Array[Object]("bar", Integer.valueOf(10))))
 
-    val clientExpected = new Open(-1, -2, -3, Array[Object](Integer.valueOf(200), "bar"))
-    clientPlug.send(clientExpected)
-    val clientActual = clientPlug.receive()
+    val serverResult = Await.result(serverPromise.future, Duration.Inf) === "foo"
+    val clientResult = Await.result(future, Duration.Inf) === "bar"
 
     wire.local()
     wire.remote()
@@ -125,8 +152,9 @@ class NettyBridgeWebSocketSpec extends BridgeSpec {
     wire.close()
     server.close()
 
-    (serverActual === serverExpected) and (clientActual === clientExpected) and
-      (server.node() === serverNode) and (wire.node() === clientNode)
+    bridge.close()
+
+    clientResult and serverResult
   }
 
   private[this] def messageCannotRestore = exceptionCallback(new Servant {
@@ -155,19 +183,19 @@ class NettyBridgeWebSocketSpec extends BridgeSpec {
 
   private[this] def exceptionCallback(@Nonnull servant:Servant, @Nonnull expectedType:Class[_ <: Throwable]) = {
     val promise = Promise[Throwable]()
-    val plug = new QueuedMessageQueue[String]() {
-      override def onException(wire:Wire[String], ex:Throwable):Unit = {
-        promise.success(ex)
-      }
+    val listener = new Wire.Listener {
+      override def wireClosed(wire:Wire):Unit = {}
+
+      override def wireError(wire:Wire, ex:Throwable):Unit = promise.success(ex)
     }
 
     val eventLoop = new NioEventLoopGroup()
     val server = new WebSocket.Server(eventLoop, "errorcase", "/ws")
     val future = server.bind(new InetSocketAddress(0), _ => servant).asScala.flatMap { ch =>
       val port = ch.localAddress().asInstanceOf[InetSocketAddress].getPort
-      val bridge = newBridge[String]()
-      bridge.newWire("foo", URI.create(s"ws://localhost:$port/ws"), "errorcase").asScala.map { wire =>
-        wire.bound(plug)
+      val bridge = newBridge()
+      bridge.newWire(URI.create(s"ws://localhost:$port/ws"), "errorcase").asScala.map { wire =>
+        wire.addListener(listener)
         wire
       }
     }
@@ -175,6 +203,7 @@ class NettyBridgeWebSocketSpec extends BridgeSpec {
     val ex = Await.result(promise.future, Duration.Inf)
     server.destroy()
     wire.close()
+    eventLoop.shutdownGracefully()
 
     expectedType.isAssignableFrom(ex.getClass) must beTrue
   }

@@ -20,6 +20,9 @@ import java.util.function.Consumer;
  */
 public abstract class Wire implements AutoCloseable {
 
+  @Nonnull
+  public final String name;
+
   /**
    * 受信メッセージのキュー。
    */
@@ -37,9 +40,10 @@ public abstract class Wire implements AutoCloseable {
    */
   private final List<Listener> listeners = new ArrayList<>();
 
-  protected Wire(int inboundQueueSize, int outboundQueueSize) {
-    this.inbound = new MessageQueue(inboundQueueSize);
-    this.outbound = new MessageQueue(outboundQueueSize);
+  protected Wire(@Nonnull String name, int inboundQueueSize, int outboundQueueSize) {
+    this.name = name;
+    this.inbound = new MessageQueue(name + ":IN", inboundQueueSize);
+    this.outbound = new MessageQueue(name + ":OUT", outboundQueueSize);
   }
 
   /**
@@ -73,7 +77,7 @@ public abstract class Wire implements AutoCloseable {
   /**
    * この Wire をクローズしリソースを解放します。登録されている {@link Listener} に対して wireClosed() が通知されます。
    */
-  public void close(){
+  public void close() {
     inbound.close();
     outbound.close();
   }

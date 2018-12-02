@@ -45,8 +45,8 @@ class WebSocketWire extends Wire {
 
   private final AtomicBoolean closed = new AtomicBoolean();
 
-  WebSocketWire(@Nonnull MessageCodec codec, boolean primary, int inboundQueueSize, int outboundQueueSize) {
-    super(inboundQueueSize, outboundQueueSize);
+  WebSocketWire(@Nonnull String name, @Nonnull MessageCodec codec, boolean primary, int inboundQueueSize, int outboundQueueSize) {
+    super(name, inboundQueueSize, outboundQueueSize);
     this.codec = codec;
     this.primary = primary;
 
@@ -108,7 +108,7 @@ class WebSocketWire extends Wire {
     while (channel != null && channel.isOpen() && channel.isWritable() && messagePollable.get()) {
       Message msg = super.outbound.poll();
       if (msg != null) {
-        logger.trace("pumpUp(): send {}", msg);
+        logger.debug("{} >> {}: {}", local(), remote(), msg);
         channel.writeAndFlush(messageToFrame(msg));
       } else {
         break;

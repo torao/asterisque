@@ -57,7 +57,7 @@ public class NettyBridge implements Bridge {
                                          @Nullable SSLContext sslContext) {
     return getScheme(uri).thenCompose(scheme -> {
       if (scheme.equals("ws") || scheme.equals("wss")) {
-        WebSocketWire wire = new WebSocketWire(
+        WebSocketWire wire = new WebSocketWire("C:" + uri,
             MessageCodec.MessagePackCodec, false, inboundQueueSize, outboundQueueSize);
         SslContext ssl = null;
         if (scheme.equals("wss")) {
@@ -102,7 +102,7 @@ public class NettyBridge implements Bridge {
         WebSocket.Server driver = new WebSocket.Server(worker(), subprotocol, path, server, ssl);
 
         return driver.bind(uriToSocketAddress(uri), channel -> {
-          WebSocketWire wire = new WebSocketWire(
+          WebSocketWire wire = new WebSocketWire("S:" + uri,
               MessageCodec.MessagePackCodec, true, inboundQueueSize, outboundQueueSize);
           onAccept.accept(wire.future);
           return wire.servant;
