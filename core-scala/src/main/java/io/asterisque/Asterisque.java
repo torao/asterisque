@@ -36,6 +36,7 @@ public final class Asterisque {
   public interface Empty {
     byte[] Bytes = new byte[0];
     char[] Chars = new char[0];
+    Object[] Objests = new Object[0];
   }
 
   public static class Future {

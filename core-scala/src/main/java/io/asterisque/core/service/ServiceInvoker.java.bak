@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -133,11 +132,6 @@ class ServiceInvoker {
       this.threads = threads;
       this.services = services.entrySet().stream()
           .collect(Collectors.toMap(Map.Entry::getKey, e -> new ServiceInvoker(e.getKey(), e.getValue())));
-    }
-
-    @Nullable
-    public Object invoke(@Nonnull Pipe pipe, short functionId, @Nonnull Object[] args){
-
     }
 
   }

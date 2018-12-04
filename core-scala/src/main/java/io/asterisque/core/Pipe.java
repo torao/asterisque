@@ -32,8 +32,8 @@ public interface Pipe {
 
   byte priority();
 
-  @Nonnull
-  Session session();
+//  @Nonnull
+//  Session session();
 
   /**
    * このパイプによる双方の処理で確定した結果 (成功/失敗にかかわらず) を参照するための Future です。
@@ -54,7 +54,7 @@ public interface Pipe {
    * クローズされていないパイプに対してであればどのようなスレッドからでもメッセージの送信を行うことが出来ます。
    */
   @Nonnull
-  PipeMessageSink sink();
+//  PipeMessageSink sink();
 
   /**
    * このパイプがクローズされているときに true を返します。

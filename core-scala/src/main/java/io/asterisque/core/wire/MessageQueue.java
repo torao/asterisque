@@ -43,7 +43,7 @@ public class MessageQueue implements AutoCloseable {
   private final List<Listener> listeners = new ArrayList<>();
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
-  MessageQueue(@Nonnull String name, int cooperativeLimit) {
+  public MessageQueue(@Nonnull String name, int cooperativeLimit) {
     if (cooperativeLimit <= 0) {
       throw new IllegalArgumentException("incorrect queue size: " + cooperativeLimit);
     }

@@ -73,7 +73,7 @@ class PipeOutputStream extends OutputStream {
   }
   private void ensureWrite(int len) throws IOException {
     if(closed){
-      throw new IOException(pipe + ": unable to write to wsClosed pipe or stream: " + pipe.id);
+//      throw new IOException(pipe + ": unable to write to wsClosed pipe or stream: " + pipe.id);
     }
     // TODO バッファサイズより大きなデータが書き込めない?
     if(buffer.position() + len > buffer.capacity()){
@@ -91,7 +91,7 @@ class PipeOutputStream extends OutputStream {
         int len = Math.min(buffer.remaining(), Block.MaxPayloadSize);
         byte[] b = new byte[len];
         buffer.get(b, 0, b.length);
-        pipe.sink.send(b);
+//        pipe.sink.send(b);
       }
       buffer.clear();
     }
@@ -100,7 +100,7 @@ class PipeOutputStream extends OutputStream {
   public void close() {
     if(!closed){
       flush();
-      pipe.sink.sendEOF();
+//      pipe.sink.sendEOF();
       closed = true;
       logger.trace(pipe + ": close()");
     }

@@ -83,7 +83,9 @@ The path of Server must begin with slash. $serverURIShouldStartsWithSlash
             results.append(expected === t.text())
             remaining -= 1
             if(remaining <= 0) {
-              ctx.channel.writeAndFlush(new CloseWebSocketFrame()).addListener((future:util.concurrent.Future[_ >: Void]) => ctx.channel().close())
+              ctx.channel.writeAndFlush(new CloseWebSocketFrame()).addListener { _:util.concurrent.Future[_ >: Void] =>
+                ctx.channel().close()
+              }
               logger.info("CLIENT[{}]<< CLOSE", i)
             } else {
               expected = randomString

@@ -30,6 +30,16 @@ public final class Control extends Message {
   public static final byte Close = 'C';
 
   /**
+   * メッセージストリームの終了を表す制御コードです。予約のみで実際の通信上では使用していません。
+   */
+  private static final byte EndOfMessage = ']';
+
+  /**
+   * メッセージストリーム上でメッセージの終端を表すために使用することのできるインスタンス。
+   */
+  public static final Message EOM = new Control(Control.EndOfMessage);
+
+  /**
    * このインスタンスが表す制御コードです。
    */
   public final byte code;

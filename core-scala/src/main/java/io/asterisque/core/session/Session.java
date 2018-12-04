@@ -1,15 +1,16 @@
-package io.asterisque.core;
+package io.asterisque.core.session;
 
 import io.asterisque.Asterisque;
-import io.asterisque.Node;
-import io.asterisque.Service;
-import io.asterisque.core.codec.TypeConversion;
-import io.asterisque.core.codec.VariableCodec;
+import io.asterisque.Priority;
+import io.asterisque.core.Debug;
+import io.asterisque.core.ProtocolException;
+import io.asterisque.core.codec.TypeVariableCodec;
 import io.asterisque.core.msg.*;
-import io.asterisque.core.service.PipeSpace;
-import io.asterisque.core.wire.Wire;
-import io.asterisque.core.util.CircuitBreaker;
+import io.asterisque.core.service.Export;
+import io.asterisque.core.util.EventHandlers;
 import io.asterisque.core.util.Latch;
+import io.asterisque.core.wire.MessageQueue;
+import io.asterisque.core.wire.Wire;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,20 +20,17 @@ import javax.net.ssl.SSLPeerUnverifiedException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.security.Principal;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 /**
- * ピアとの通信状態を表すクラスです。
+ * 一つの {@link Wire} 上で行われるピアとの通信状態を表すクラスです。
  * <p>
  * ピア間の通信において役割の衝突を避ける目的で、便宜的に接続受付側をプライマリ (primary)、通信開始側をセカンダリ (secondary)
  * と定めます。
@@ -52,305 +50,145 @@ public class Session {
   private static final Logger logger = LoggerFactory.getLogger(Session.class);
 
   /**
-   * セッション ID。ピアと状態同期が済んでいない場合は {@link Asterisque#Zero} の値を取る。
+   * このセッションの ID。
    */
   @Nonnull
-  public final UUID id() {
-    return id;
-  }
-
-  /**
-   * このセッションを使用しているノード。
-   */
-  @Nonnull
-  public final Node node;
-
-  /**
-   * peer 間においてこのセッションが primary の場合に true を示す。
-   */
-  public final boolean isPrimary;
+  private final UUID id;
 
   /**
    * このセッション上で使用する RPC のパラメータや返値を転送可能型に変換するコンバーター。
    */
   @Nonnull
-  private final TypeConversion conversion;
+  private final TypeVariableCodec conversion;
 
   /**
-   * このセッションの ID。初期状態で Zero であり、セッションが確立したときに有効な値が設定される。
-   */
-  @Nonnull
-  private UUID id = Asterisque.Zero;
-
-  /**
-   * このセッションが使用している Wire から受信した状態同期メッセージ。初期状態で null でありセッションが確立したときに有効な
-   * 値が設定される。
+   * このセッションが使用している Wire から受信した状態同期メッセージ。
    */
   @Nullable
-  private SyncConfig header;
+  private final SyncConfig config;
 
   /**
-   * このセッションの peer アドレスを参照します。ピアと接続していない場合は Optional.empty() を返します。
-   */
-  @Nonnull
-  public Optional<InetAddress> remote() {
-    return Optional.ofNullable(wire)
-        .flatMap(w -> Optional.ofNullable((InetSocketAddress) w.remote()))
-        .map(InetSocketAddress::getAddress);
-  }
-
-  /**
-   * このセッションがクローズ中またはクローズ完了済み1を表すフラグ
-   */
-  private final AtomicBoolean closing = new AtomicBoolean(false);
-  /**
-   * このセッションがクローズ完了済みを表すフラグ
+   * このセッションがクローズ済みかを表すフラグ。
    */
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
-  private final Supplier<Optional<CompletableFuture<Wire>>> wireFactory;
-  private Wire wire;
-  private volatile Service service;
+  /**
+   * このセッションの使用している {@code Wire}。
+   */
+  private final Wire wire;
 
-  private final Options options;
-  private final DepartureGate departure;
   private final PipeSpace pipes;
-  private final Plug plug;
 
   /**
-   * 出力キューの高負荷を検知するブレーカー
+   * {@link Wire#outbound} のメッセージ流入を調整するためのラッチです。
    */
-  final CircuitBreaker writeBreaker;
-  final CircuitBreaker readBreaker;
-
-  /**
-   * Block の同期出力 {@link PipeOutputStream#write(byte[], int, int)} を一時停止させる
-   * ためのバリア。
-   */
-  final Latch writeBarrier;
+  private final Latch outboundLatch = new Latch();
 
   /**
    * このセッションがクローズされたときに呼び出されるイベントハンドラです。
    */
   public final EventHandlers<Session> onClosed = new EventHandlers<>();
 
-  /**
-   * このセッション上での出力保留メッセージ数が soft limit に達しバックプレッシャーがかかったときに呼び出されます。
-   */
-  public final EventHandlers<Boolean> onBackPressure = new EventHandlers<>();
-
-  private final BiConsumer<Session, UUID> onSync;
-
-  Session(Node node, boolean isPrimary, VariableCodec codec, Service defaultService, Options options,
-          Supplier<Optional<CompletableFuture<Wire>>> wireFactory, BiConsumer<Session, UUID> onSync) {
-    this.id = Asterisque.Zero;
-    this.node = node;
-    this.isPrimary = isPrimary;
-    this.codec = codec;
-    this.service = defaultService;
-    this.wireFactory = wireFactory;
-    this.onSync = onSync;
-
-    this.writeBarrier = new Latch();
-
-    this.options = options;
-    int readSoftLimit = options.get(Options.KEY_READ_SOFT_LIMIT).get();
-    int readHardLimit = options.get(Options.KEY_READ_HARD_LIMIT).get();
-    int writeSoftLimit = options.get(Options.KEY_WRITE_SOFT_LIMIT).get();
-    int writeHardLimit = options.get(Options.KEY_WRITE_HARD_LIMIT).get();
-
-    this.writeBreaker = new CircuitBreaker(writeSoftLimit, writeHardLimit) {
-      @Override
-      protected void overload(boolean overload) {
-        // Wire 出力が過負荷になった場合は同期 Block 送信を一時停止
-        writeBarrier.lock(overload);
-        // ハンドラへの通知
-        onBackPressure.accept(overload);
-      }
-
-      @Override
-      protected void broken() {
-        logger.error(id() + ": write hard-limit reached, wsClosed session");
-        reconnect();
-      }
-    };
-
-    this.readBreaker = new CircuitBreaker(readSoftLimit, readHardLimit) {
-      @Override
-      protected void overload(boolean overload) {
-        // 同期 Block 読み込みが過負荷になった場合は Wire からの読み込み一時停止
-        wire.get().setReadable(!overload);
-      }
-
-      @Override
-      protected void broken() {
-        logger.error(id() + ": wsFrameReceived hard-limit reached, wsClosed session");
-        reconnect();
-      }
-
-    };
-
-    this.departure = new DepartureGate(this, writeSoftLimit);
-
+  Session(@Nonnull Wire wire, @Nonnull UUID id, @Nonnull TypeVariableCodec conversion, @Nonnull SyncConfig config) {
+    if (wire.remote() == null) {
+      throw new IllegalStateException("remote address of wire has not been confirmed");
+    }
+    this.id = id;
+    this.wire = wire;
+    this.conversion = conversion;
+    this.config = config;
     this.pipes = new PipeSpace(this);
 
-    this.plug = new Plug() {
+    this.wire.outbound.addListener(new MessageQueue.Listener() {
       @Override
-      public Message produce() {
-        return departure.ship();
-      }
-
-      @Override
-      public void consume(@Nonnull Message msg) {
-        try {
-          deliver(msg);
-        } catch (ProtocolViolationException ex) {
-          logger.error(logId() + ": protocol violation", ex);
-          close(true);
+      public void messageOfferable(@Nonnull MessageQueue messageQueue, boolean offerable) {
+        if (offerable) {
+          outboundLatch.open();
+        } else {
+          outboundLatch.close();
         }
       }
+    });
 
-      @Override
-      public void onClose(Wire wire) {
-        reconnect();
-      }
-
-      @Override
-      public String id() {
-        return logId();
-      }
-    };
-
-    logger.debug(logId() + ": session created, waiting sync-config");
-
-    // 非同期で Wire を構築してメッセージの開始
-    connect();
+    logger.debug("{}: session created", logId());
   }
 
-  // ==============================================================================================
-  // サービスの設定
-  // ==============================================================================================
-
   /**
-   * このセッション上でピアに公開するサービスを設定します。
+   * このセッションの ID を参照します。この ID は同じノード上に存在するセッションに対してユニークです。
    *
-   * @param s 新しく公開するサービス
-   * @return 以前のサービス
+   * @return セッションID
    */
-  public Service setService(Service s) {
-    Service old = service;
-    service = s;
-    return old;
+  @Nonnull
+  public UUID id() {
+    return id;
   }
 
   /**
-   * @return このセッションがクローズプロセスに入っている場合 true
+   * このセッションが peer に対してプライマリかを参照します。この判定値は P2P での役割を決めるために使用
+   * されます。
+   *
+   * @return プライマリの場合 true、セカンダリの場合 false
    */
-  public boolean closing() {
-    return closing.get();
+  public boolean isPrimary() {
+    return wire.isPrimary();
   }
 
   /**
-   * @return このセッションがクローズを完了している場合 true
+   * このセッションが接続している peer の IP アドレスを参照します。
+   *
+   * @return リモート IP アドレス
+   */
+  @Nonnull
+  public InetSocketAddress remote() {
+    InetSocketAddress address = (InetSocketAddress) wire.remote();
+    if (address == null) {
+      throw new IllegalStateException("remote address of wire has not been confirmed");
+    }
+    return address;
+  }
+
+  /**
+   * このセッションがクローズされているかを参照します。
+   *
+   * @return セッションがクローズを完了している場合 true
    */
   public boolean closed() {
     return closed.get();
   }
 
-  // ==============================================================================================
-  // セッションのクローズ
-  // ==============================================================================================
-
   /**
-   * このセッションを好意的にクローズします。このメソッドは {@code close(true)} と等価です。
+   * このセッションを graceful にクローズします。このメソッドは {@code close(true)} と等価です。
    */
   public void close() {
     close(true);
   }
 
-  // ==============================================================================================
-  // セッションのクローズ
-  // ==============================================================================================
-
   /**
    * このセッションをクローズします。
-   * 実行中のすべてのパイプはクローズされ、以後のメッセージ配信は行われなくなります。
+   * このセッションが使用している {@link Wire} および実行中のすべての {@link Pipe} はクローズされ、以後のメッセージ配信は
+   * 行われなくなります。
    */
   public void close(boolean graceful) {
-    if (closing.compareAndSet(false, true)) {
-      logger.debug(logId() + ": wsClosed session with " + (graceful ? "graceful" : "forceful"));
+    if (closed.compareAndSet(false, true)) {
+      logger.debug("{}: this session is {} closing", logId(), graceful ? "gracefully" : "forcibly");
 
       // 残っているすべてのパイプに Close メッセージを送信
       pipes.close(graceful);
 
+      // Close 制御メッセージを送信
       if (graceful) {
-        post(Priority.Normal, new Control(Control.Close));
+        post(new Control(Control.Close));
       }
 
       // 以降のメッセージ送信をすべて例外に変更して送信を終了
       // ※Pipe#close() で Session#post() が呼び出されるためすべてのパイプに Close を投げた後に行う
-      closed.set(true);
 
       // Wire のクローズ
-      disconnect();
+      wire.close();
 
       // セッションのクローズを通知
       onClosed.accept(this);
     }
-  }
-
-  // ==============================================================================================
-  // 接続の実行
-  // ==============================================================================================
-
-  /**
-   * このセッションを非同期で接続状態にします。
-   */
-  private void connect() {
-    logger.debug(logId() + ": connecting...");
-    Optional<CompletableFuture<Wire>> opt = wireFactory.get();
-    if (opt.isPresent()) {
-      opt.get().thenAccept(this::onConnect).exceptionally(ex -> {
-        logger.error(id() + ": fail to connect: " + remote(), ex);
-        return null;
-      });
-    } else {
-      logger.debug(logId() + ": reconnection not supported: " + remote());
-    }
-  }
-
-  private void onConnect(Wire wire) {
-    this.wire = Optional.of(wire);
-    this.departure.wire(Optional.of(wire));
-    wire.setPlug(this.plug);
-
-    wire.setReadable(true);
-
-    // クライアントであればヘッダの送信
-    if (!isPrimary) {
-      // ※サーバ側からセッションIDが割り当てられていない場合は Zero が送信される
-      int ping = options.get(Options.KEY_PING_REQUEST).get();
-      int timeout = options.get(Options.KEY_SESSION_TIMEOUT_REQUEST).get();
-      SyncConfig header = new SyncConfig(node.id, Asterisque.Zero, System.currentTimeMillis(), ping, timeout);
-      post(Priority.Normal, header.toControl());
-    }
-  }
-
-  private void reconnect() {
-    // TODO 再接続のストラテジーを実装する (exponential backoff など)
-    disconnect();
-    connect();
-  }
-
-  private void disconnect() {
-    header = Optional.empty();
-    wire.ifPresent(w -> {
-      wire = Optional.empty();
-      w.setPlug(null);
-      w.close();
-    });
-    // TODO DepartureGate のクリア
-    // TODO PipeSpace 内の全ての Pipe を失敗で終了
   }
 
   // ==============================================================================================
@@ -366,15 +204,15 @@ public class Session {
    * @param onTransferComplete 呼び出し先とのパイプが生成されたときに実行される処理
    * @return パイプに対する Future
    */
-  public CompletableFuture<Object> open(byte priority, short function, Object[] params,
-                                        Function<Pipe, CompletableFuture<Object>> onTransferComplete) {
+  public CompletableFuture<Object> open(byte priority, short function, @Nonnull Object[] params,
+                                        @Nonnull Function<Pipe, CompletableFuture<Object>> onTransferComplete) {
     Pipe pipe = pipes.create(priority, function);
     pipe.open(params);
-    return Pipe.using(pipe, () -> onTransferComplete.apply(pipe));
+    return onTransferComplete.apply(pipe);
   }
 
-  public CompletableFuture<Object> open(byte priority, short function, Object[] params) {
-    return open(priority, function, params, pipe -> pipe.future);
+  public CompletableFuture<Object> open(byte priority, short function, @Nonnull Object[] params) {
+    return open(priority, function, params, Pipe::future);
   }
 
   // ==============================================================================================
@@ -457,7 +295,7 @@ public class Session {
    * @return ping 間隔 (秒)。接続していない場合は 0。
    */
   public int getPingInterval() {
-    return header.map(h -> {
+    return config.map(h -> {
       if (isPrimary) {
         int maxPing = options.get(Options.KEY_MAX_PING).get();
         int minPing = options.get(Options.KEY_MIN_PING).get();
@@ -472,7 +310,7 @@ public class Session {
    * @return セッションタイムアウト (秒)。接続していない場合は 0。
    */
   public int getTimeout() {
-    return header.map(h -> {
+    return config.map(h -> {
       if (isPrimary) {
         int maxSession = options.get(Options.KEY_MAX_SESSION_TIMEOUT).get();
         int minSession = options.get(Options.KEY_MIN_SESSION_TIMEOUT).get();
@@ -491,10 +329,10 @@ public class Session {
    * 新たな Wire 接続から受信したストリームヘッダでこのセッションの内容を同期化します。
    */
   private void sync(SyncConfig header) throws ProtocolViolationException {
-    if (this.header.isPresent()) {
+    if (this.config.isPresent()) {
       throw new ProtocolViolationException("multiple sync message");
     }
-    this.header = Optional.of(header);
+    this.config = Optional.of(header);
     if (isPrimary) {
       // サーバ側の場合は応答を返す
       if (header.sessionId.equals(Asterisque.Zero)) {
@@ -546,22 +384,11 @@ public class Session {
   /**
    * ピアに対して指定されたメッセージを送信します。
    */
-  void post(byte priority, Message msg) {
-    if (closed() || (closing() && !(msg instanceof Control))) {
-      logger.error("session " + id() + " wsClosed");
+  private void post(Message msg) {
+    if (closed() && !(msg instanceof Control)) {
+      logger.error("session {} has been closed, message is discarded: {}", id, msg);
     } else {
-      try {
-        departure.forward(priority, msg);
-        if (logger.isTraceEnabled()) {
-          logger.trace(logId() + ": post: " + msg);
-        }
-      } catch (DepartureGate.MaxSequenceReached ex) {
-        logger.warn(id() + ": max sequence reached on wire, reconnecting", ex);
-        reconnect();
-      } catch (DepartureGate.HardLimitReached ex) {
-        logger.error(id() + ": write queue reached hard limit by pending messages, reconnecting", ex);
-        reconnect();
-      }
+      outboundLatch.exec(() -> wire.outbound.offer(msg));
     }
   }
 
@@ -646,18 +473,36 @@ public class Session {
   }
 
   String logId() {
-    return Asterisque.logPrefix(isPrimary, id());
+    return Asterisque.logPrefix(isPrimary(), id());
   }
 
   /**
-   * このセッションが開始していることを保証する処理。
+   * このセッションがクローズしていないことを保証する。
    *
    * @param msg 受信したメッセージ
    */
   private void ensureSessionStarted(@Nonnull Message msg) {
-    if (header != null && (!(msg instanceof Control) || ((Control) msg).code != Control.SyncConfig)) {
-      logger.error(id() + ": unexpected message received; session is not initialized yet: " + msg);
+    if (config != null && (!(msg instanceof Control) || ((Control) msg).code != Control.SyncConfig)) {
+      logger.error("{}: unexpected message received; session is not initialized yet: {}", id, msg);
       throw new ProtocolException("unexpected message received");
+    }
+  }
+
+  Pipe.Stub stub = new Pipe.Stub() {
+    @Nonnull
+    @Override
+    public String id() {
+      return Session.this.id().toString();
+    }
+
+    @Override
+    public void post(@Nonnull Message msg) {
+      Session.this.post(msg);
+    }
+
+    @Override
+    public void closed(@Nonnull Pipe pipe) {
+      pipes.destroy(pipe.id());
     }
   }
 

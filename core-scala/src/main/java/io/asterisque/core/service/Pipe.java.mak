@@ -1,5 +1,6 @@
 package io.asterisque.core.service;
 
+import io.asterisque.PipeMessageSink;
 import io.asterisque.core.util.EventHandlers;
 import io.asterisque.core.msg.Abort;
 import io.asterisque.core.msg.Block;
@@ -94,7 +95,7 @@ public final class Pipe {
    * private final BlockingQueue<Block> blocks = new LinkedBlockingQueue<>(0);
    */
 
-  private final PipeOutputStream out;
+  // private final PipeOutputStream out;
 
   /**
    * @param id       パイプ ID
@@ -108,7 +109,7 @@ public final class Pipe {
     this.priority = priority;
     this.session = session;
 
-    this.out = new PipeOutputStream(this, session.writeBarrier);
+    // this.out = new PipeOutputStream(this, session.writeBarrier);
 
     logger.trace(this + ": pipe " + id + " for function " + function + " with priority " + priority + " created");
     // ブロックを受信したらメッセージソースに通知
