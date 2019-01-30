@@ -1,7 +1,6 @@
 package io.asterisque.core.msg;
 
 import io.asterisque.Asterisque;
-import io.asterisque.Pipe;
 
 import javax.annotation.Nonnull;
 import java.nio.ByteBuffer;

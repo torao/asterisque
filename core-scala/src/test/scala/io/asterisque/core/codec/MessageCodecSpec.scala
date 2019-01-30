@@ -31,8 +31,8 @@ ${codec.getClass.getSimpleName} should:
       Seq(
         new Open(1.toShort, 0.toShort, supportedDataTypeSamples.toArray),
         new Close(1.toShort, supportedDataTypeSamples.asJava),
-        Close.unexpectedError(103.toShort, ""),
-        Close.unexpectedError(104.toShort, "foo"),
+        Close.withError(103.toShort, ""),
+        Close.withError(104.toShort, "foo"),
         new Block(1, Array[Byte](), 0, 0),
         Block.eof(1),
         new Block(1, Array[Byte](0, 1, 2, 3), 0, 4),

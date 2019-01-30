@@ -69,13 +69,13 @@ public class Session {
    * このセッション上で使用する RPC のパラメータや返値を転送可能型に変換するコンバーター。
    */
   @Nonnull
-  private final TypeVariableCodec conversion;
+  private final TypeVariableCodec codec;
 
   /**
    * このセッションが使用している Wire から受信した状態同期メッセージ。
    */
   @Nullable
-  private final SyncConfig config;
+  private final SyncConfig sent;
 
   /**
    * このセッションがクローズ済みかを表すフラグ。
@@ -91,16 +91,16 @@ public class Session {
    */
   public final EventHandlers<Session> onClosed = new EventHandlers<>();
 
-  Session(@Nonnull Node node, @Nonnull Wire wire, @Nonnull UUID id, @Nonnull TypeVariableCodec conversion, @Nonnull SyncConfig config) {
+  Session(@Nonnull Node node, @Nonnull Wire wire, @Nonnull UUID id, @Nonnull TypeVariableCodec codec, @Nonnull SyncConfig sent) {
     this.id = id;
     this.node = node;
     this.wire = wire;
     this.isPrimary = wire.isPrimary();
-    this.conversion = conversion;
+    this.codec = codec;
     this.pipes = new PipeSpace(this);
-    this.config = config;
+    this.sent = sent;
 
-    logger.debug("{}: session created, waiting sync-config", logId());
+    logger.debug("{}: session created, waiting sync-sent", logId());
 
     // クライアントであればヘッダの送信
     if (!isPrimary) {
@@ -268,7 +268,7 @@ public class Session {
    * @return ping 間隔 (秒)。接続していない場合は 0。
    */
   public int getPingInterval() {
-    return config.map(h -> {
+    return sent.map(h -> {
       if (isPrimary) {
         int maxPing = options.get(Options.KEY_MAX_PING).get();
         int minPing = options.get(Options.KEY_MIN_PING).get();
@@ -283,7 +283,7 @@ public class Session {
    * @return セッションタイムアウト (秒)。接続していない場合は 0。
    */
   public int getTimeout() {
-    return config.map(h -> {
+    return sent.map(h -> {
       if (isPrimary) {
         int maxSession = options.get(Options.KEY_MAX_SESSION_TIMEOUT).get();
         int minSession = options.get(Options.KEY_MIN_SESSION_TIMEOUT).get();
@@ -302,10 +302,10 @@ public class Session {
    * 新たな Wire 接続から受信したストリームヘッダでこのセッションの内容を同期化します。
    */
   private void sync(SyncConfig header) throws ProtocolViolationException {
-    if (this.config.isPresent()) {
+    if (this.sent.isPresent()) {
       throw new ProtocolViolationException("multiple sync message");
     }
-    this.config = Optional.of(header);
+    this.sent = Optional.of(header);
     if (isPrimary) {
       // サーバ側の場合は応答を返す
       if (header.sessionId.equals(Asterisque.Zero)) {
@@ -455,7 +455,7 @@ public class Session {
    * @param msg 受信したメッセージ
    */
   private void ensureSessionStarted(@Nonnull Message msg) {
-    if (config != null && (!(msg instanceof Control) || ((Control) msg).code != Control.SyncConfig)) {
+    if (sent != null && (!(msg instanceof Control) || ((Control) msg).code != Control.SyncConfig)) {
       logger.error("{}: unexpected message received; session is not initialized yet: {}", id, msg);
       throw new ProtocolException("unexpected message received");
     }

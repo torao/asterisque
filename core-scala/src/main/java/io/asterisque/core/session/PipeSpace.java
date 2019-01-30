@@ -3,7 +3,6 @@ package io.asterisque.core.session;
 import io.asterisque.Asterisque;
 import io.asterisque.core.ProtocolException;
 import io.asterisque.core.msg.Abort;
-import io.asterisque.core.msg.Close;
 import io.asterisque.core.msg.Open;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,7 +79,7 @@ class PipeSpace {
     }
 
     // 新しいパイプを構築して登録
-    Pipe pipe = new Pipe(open, session.stub);
+    Pipe pipe = new Pipe(session.codec(), open, session.stub);
     Pipe old = pipes.putIfAbsent(open.pipeId, pipe);
     if (old != null) {
       // 既に使用されているパイプ ID が指定された場合はエラー
@@ -104,7 +103,8 @@ class PipeSpace {
         throw new IllegalStateException("session has already been closed");
       }
       short id = (short) ((sequence.getAndIncrement() & 0x7FFF) | pipeMask);
-      Pipe pipe = new Pipe(new Open(id, priority, function, Asterisque.Empty.Objests), session.stub);
+      Open open = new Open(id, priority, function, Asterisque.Empty.Objests);
+      Pipe pipe = new Pipe(session.codec(), open, session.stub);
       if (pipes.putIfAbsent(id, pipe) == null) {
         return pipe;
       }
@@ -132,8 +132,7 @@ class PipeSpace {
         // 残っているすべてのパイプに Close メッセージを送信
         pipes.values().forEach(pipe -> {
           String msg = String.format("session %s is closing", session.id());
-          Abort abort = new Abort(Abort.SessionClosing, msg);
-          pipe.close(new Close(pipe.id(), abort));
+          pipe.closeWithError(Abort.SessionClosing, msg);
         });
       }
       pipes.clear();

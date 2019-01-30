@@ -133,7 +133,6 @@ public class Options {
     return this;
   }
 
-  public static final Key<Bridge> KEY_BRIDGE = new Key<>("io.asterisque.bridge", Bridge.class);
   public static final Key<SSLContext> KEY_SSL_CONTEXT = new Key<>("io.asterisque.ssl", SSLContext.class);
   public static final Key<MessageCodec> KEY_CODEC = new Key<>("io.asterisque.codec", MessageCodec.class, MessageCodec.MessagePackCodec);
   // TODO 他に SocketOption など

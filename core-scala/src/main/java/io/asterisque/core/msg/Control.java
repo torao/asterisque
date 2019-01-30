@@ -17,12 +17,12 @@ public final class Control extends Message {
 
   /**
    * 通信を開始したときにピア間の設定を同期するための制御コードです。バイナリストリームの先頭で {@code *Q} として出現するように
-   * {@link io.asterisque.core.codec.MessageFieldCodec.Msg#Control} が {@code *}、{@code SyncConfig} が {@code Q}
+   * {@link io.asterisque.core.codec.MessageFieldCodec.Msg#Control} が {@code *}、{@code SyncSession} が {@code Q}
    * の値を取ります。
-   * SyncConfig を持つ制御メッセージのバイナリフィールドはヘルパークラス
-   * {@link io.asterisque.core.msg.SyncConfig} 経由で参照することができます。
+   * SyncSession を持つ制御メッセージのバイナリフィールドはヘルパークラス
+   * {@link SyncSession} 経由で参照することができます。
    */
-  public static final byte SyncConfig = 'Q';
+  public static final byte SyncSession = 'Q';
 
   /**
    * セッションの終了を表す制御コードです。この制御メッセージに有効なデータは付随しません。

@@ -110,11 +110,11 @@ public final class Asterisque {
     return "-:--------";
   }
 
-  public static String logPrefix(boolean isServer) {
-    return logPrefix(isServer, null);
+  public static String logPrefix(boolean isPrimary) {
+    return logPrefix(isPrimary, null);
   }
 
-  public static String logPrefix(boolean isServer, UUID id) {
-    return (isServer ? 'S' : 'C') + ":" + (id == null ? "--------" : id.toString().substring(0, 8).toUpperCase());
+  public static String logPrefix(boolean isPrimary, UUID id) {
+    return (isPrimary ? 'S' : 'C') + ":" + (id == null ? "--------" : id.toString().substring(0, 8).toUpperCase());
   }
 }

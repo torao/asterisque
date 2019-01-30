@@ -102,8 +102,8 @@ package object asterisque {
   }
 
   implicit class RichLocalHost(local:Node) {
-    def listen(address:SocketAddress, config:Options)(onAccept:(Session) => Unit):Future[Bridge.Server] = {
-      local.listen(address, config, onAccept)
+    def listen(address:SocketAddress, sent:Options)(onAccept:(Session) => Unit):Future[Bridge.Server] = {
+      local.listen(address, sent, onAccept)
     }
   }
 
@@ -116,7 +116,7 @@ package object asterisque {
     import java.lang.{Boolean => JBoolean, Byte => JByte, Short => JShort, Integer => JInt, Long => JLong, Float => JFloat, Double => JDouble}
     import java.util.{Map => JMap, List => JList}
     try {
-      logger.debug("installing scala type-conversion")
+      logger.debug("installing scala type-codec")
       setFromTo(classOf[Unit], classOf[Void],
       { i:Unit => null:Void }, { i:Void => () })
       setFromTo(classOf[BoxedUnit], classOf[Tuple],

@@ -82,14 +82,39 @@ public final class Close extends Message {
   }
 
   /**
+   * 指定された結果によってパイプを終了するときのクローズメッセージを作成します。
+   *
+   * @param pipeId 宛先のパイプ ID
+   * @param result 処理結果
+   * @return 処理結果付きのクローズメッセージ
+   */
+  @Nonnull
+  public static Close withSuccess(short pipeId, @Nullable Object result) {
+    return new Close(pipeId, result);
+  }
+
+  /**
+   * 指定されたエラーコードによってパイプを終了するときのクローズメッセージを作成します。
+   * @param pipeId 宛先のパイプ ID
+   * @param code エラーコード
+   * @param msg エラーメッセージ
+   * @return エラーによる処理中断を表すクローズメッセージ
+   */
+  @Nonnull
+  public static Close withError(short pipeId, int code, @Nonnull String msg) {
+    return new Close(pipeId, new Abort(code, msg));
+  }
+
+  /**
    * 予期しない状態によってパイプを終了するときのクローズメッセージを作成します。
    *
    * @param pipeId 宛先のパイプ ID
    * @param msg    エラーメッセージ
    * @return 予期しない状況による処理中断を表すクローズメッセージ
    */
-  public static Close unexpectedError(short pipeId, @Nonnull String msg) {
-    return new Close(pipeId, new Abort(Abort.Unexpected, msg));
+  @Nonnull
+  public static Close withError(short pipeId, @Nonnull String msg) {
+    return withError(pipeId, Abort.Unexpected, msg);
   }
 
 }

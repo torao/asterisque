@@ -3,7 +3,7 @@ package io.asterisque.core.service;
 import io.asterisque.core.codec.JavaTypeVariableCodec;
 import io.asterisque.core.codec.MessageCodec;
 import io.asterisque.core.codec.TypeVariableCodec;
-import io.asterisque.core.msg.SyncConfig;
+import io.asterisque.core.msg.SyncSession;
 import io.asterisque.core.wire.Bridge;
 import io.asterisque.core.wire.Server;
 import io.asterisque.core.wire.Wire;
@@ -25,7 +25,7 @@ public class Node implements AutoCloseable {
   private final ServiceInvoker.Manager services;
   private final Bridge bridge;
   private final MessageCodec codec;
-  private final TypeVariableCodec conversion;
+  private final TypeVariableCodec codec;
 
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
@@ -35,12 +35,12 @@ public class Node implements AutoCloseable {
    * インスタンスは {@link Builder#build()} によって構築されます。
    */
   private Node(@Nonnull UUID id, @Nonnull Map<String, Object> services,
-               @Nonnull Bridge bridge, @Nonnull MessageCodec codec, @Nonnull TypeVariableCodec conversion) {
+               @Nonnull Bridge bridge, @Nonnull MessageCodec codec, @Nonnull TypeVariableCodec codec) {
     this.id = id;
     this.services = new ServiceInvoker.Manager(executor, services);
     this.bridge = bridge;
     this.codec = codec;
-    this.conversion = conversion;
+    this.codec = codec;
   }
 
   @Nonnull
@@ -145,8 +145,8 @@ public class Node implements AutoCloseable {
     }
 
     @Nonnull
-    public Builder conversion(@Nonnull TypeVariableCodec conversion) {
-      this.typeCodec = conversion;
+    public Builder codec(@Nonnull TypeVariableCodec codec) {
+      this.typeCodec = codec;
       return this;
     }
 

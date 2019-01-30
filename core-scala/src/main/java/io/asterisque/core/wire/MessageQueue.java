@@ -241,12 +241,16 @@ public class MessageQueue implements AutoCloseable {
   }
 
   /**
-   * 指定された Listener をこの MessageQueue に追加します。
+   * 指定された Listener をこの MessageQueue に追加します。このメソッドの呼び出しにより listener には現在のキューの状況が
+   * 通知されます。
    *
    * @param listener 追加するリスナ
    */
   public void addListener(@Nonnull Listener listener) {
     listeners.add(listener);
+    int size = queue.size();
+    listener.messagePollable(this, size > 0);
+    listener.messageOfferable(this, size < cooperativeLimit);
   }
 
   /**

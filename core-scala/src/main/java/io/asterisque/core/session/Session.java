@@ -1,13 +1,11 @@
 package io.asterisque.core.session;
 
 import io.asterisque.Asterisque;
-import io.asterisque.Priority;
 import io.asterisque.core.Debug;
 import io.asterisque.core.ProtocolException;
-import io.asterisque.core.codec.TypeVariableCodec;
+import io.asterisque.core.codec.VariableCodec;
 import io.asterisque.core.msg.*;
 import io.asterisque.core.service.Export;
-import io.asterisque.core.util.EventHandlers;
 import io.asterisque.core.util.Latch;
 import io.asterisque.core.wire.MessageQueue;
 import io.asterisque.core.wire.Wire;
@@ -15,13 +13,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import javax.net.ssl.SSLPeerUnverifiedException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
-import java.security.Principal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -39,7 +36,7 @@ import java.util.stream.Stream;
  * いない状態を表します)。セッションは Wire が切断されると新しい Wire の接続を試みます。
  * <p>
  * セッション ID はサーバ側
- * セッションが構築されると {@link SyncConfig 状態同期} のための
+ * セッションが構築されると {@link SyncSession 状態同期} のための
  * {@link Control} メッセージがクライアントから送信されます。サーバはこのメッセージを受け
  * ると新しいセッション ID を発行して状態同期の {@link Control} メッセージで応答し、双方の
  * セッションが開始します。
@@ -59,13 +56,13 @@ public class Session {
    * このセッション上で使用する RPC のパラメータや返値を転送可能型に変換するコンバーター。
    */
   @Nonnull
-  private final TypeVariableCodec conversion;
+  private final VariableCodec codec;
 
   /**
-   * このセッションが使用している Wire から受信した状態同期メッセージ。
+   * このセッションを生成するために Wire に対して送受信した状態同期メッセージ。
    */
-  @Nullable
-  private final SyncConfig config;
+  @Nonnull
+  private final SyncSession.Pair sync;
 
   /**
    * このセッションがクローズ済みかを表すフラグ。
@@ -80,6 +77,13 @@ public class Session {
   private final PipeSpace pipes;
 
   /**
+   * このセッションが使用する {@link Dispatcher}。
+   */
+  private final Dispatcher dispatcher;
+
+  private final String serviceId;
+
+  /**
    * {@link Wire#outbound} のメッセージ流入を調整するためのラッチです。
    */
   private final Latch outboundLatch = new Latch();
@@ -87,17 +91,24 @@ public class Session {
   /**
    * このセッションがクローズされたときに呼び出されるイベントハンドラです。
    */
-  public final EventHandlers<Session> onClosed = new EventHandlers<>();
+  private final List<Listener> listeners = new ArrayList<>();
 
-  Session(@Nonnull Wire wire, @Nonnull UUID id, @Nonnull TypeVariableCodec conversion, @Nonnull SyncConfig config) {
+  /**
+   * ログメッセージに付与する識別子。
+   */
+  private final String logId;
+
+  Session(@Nonnull UUID id, @Nonnull Dispatcher dispatcher, @Nonnull Wire wire, @Nonnull VariableCodec codec, @Nonnull SyncSession.Pair sync) {
     if (wire.remote() == null) {
       throw new IllegalStateException("remote address of wire has not been confirmed");
     }
     this.id = id;
+    this.dispatcher = dispatcher;
     this.wire = wire;
-    this.conversion = conversion;
-    this.config = config;
+    this.codec = codec;
+    this.sync = sync;
     this.pipes = new PipeSpace(this);
+    this.serviceId = (wire.isPrimary() ? sync.primary : sync.secondary).serviceId;
 
     this.wire.outbound.addListener(new MessageQueue.Listener() {
       @Override
@@ -110,7 +121,22 @@ public class Session {
       }
     });
 
-    logger.debug("{}: session created", logId());
+    this.wire.inbound.addListener(new MessageQueue.Listener() {
+      @Override
+      public void messagePollable(@Nonnull MessageQueue messageQueue, boolean pollable) {
+        if(pollable){
+          Message msg = messageQueue.poll();
+          while(msg != null){
+            deliver(msg);
+            msg = messageQueue.poll();
+          }
+        }
+      }
+    });
+
+    this.logId = Asterisque.logPrefix(wire.isPrimary(), id);
+
+    logger.debug("{}: session created", logId);
   }
 
   /**
@@ -133,6 +159,16 @@ public class Session {
     return wire.isPrimary();
   }
 
+  @Nonnull
+  public String serviceId() {
+    return serviceId;
+  }
+
+  @Nonnull
+  public VariableCodec codec() {
+    return codec;
+  }
+
   /**
    * このセッションが接続している peer の IP アドレスを参照します。
    *
@@ -145,6 +181,19 @@ public class Session {
       throw new IllegalStateException("remote address of wire has not been confirmed");
     }
     return address;
+  }
+
+  @Nonnull
+  public SyncSession.Pair config() {
+    return sync;
+  }
+
+  public void addListener(@Nonnull Listener listener) {
+    this.listeners.add(listener);
+  }
+
+  public void removeListener(@Nonnull Listener listener) {
+    this.listeners.remove(listener);
   }
 
   /**
@@ -165,17 +214,17 @@ public class Session {
 
   /**
    * このセッションをクローズします。
-   * このセッションが使用している {@link Wire} および実行中のすべての {@link Pipe} はクローズされ、以後のメッセージ配信は
+   * セッションが使用している {@link Wire} および実行中のすべての {@link Pipe} はクローズされ、以後のメッセージ配信は
    * 行われなくなります。
    */
   public void close(boolean graceful) {
     if (closed.compareAndSet(false, true)) {
-      logger.debug("{}: this session is {} closing", logId(), graceful ? "gracefully" : "forcibly");
+      logger.debug("{}: this session is closing in {}", logId, graceful ? "gracefully" : "forcibly");
 
       // 残っているすべてのパイプに Close メッセージを送信
       pipes.close(graceful);
 
-      // Close 制御メッセージを送信
+      // パイプクローズの後に Close 制御メッセージをポスト
       if (graceful) {
         post(new Control(Control.Close));
       }
@@ -187,13 +236,9 @@ public class Session {
       wire.close();
 
       // セッションのクローズを通知
-      onClosed.accept(this);
+      listeners.forEach(listener -> listener.sessionClosed(this));
     }
   }
-
-  // ==============================================================================================
-  // パイプのオープン
-  // ==============================================================================================
 
   /**
    * このセッション上のピアに対して指定された function との非同期呼び出しのためのパイプを作成します。
@@ -202,7 +247,7 @@ public class Session {
    * @param function           function の識別子
    * @param params             function の実行パラメータ
    * @param onTransferComplete 呼び出し先とのパイプが生成されたときに実行される処理
-   * @return パイプに対する Future
+   * @return オープンしたパイプでの処理の実行結果を通知する Future
    */
   public CompletableFuture<Object> open(byte priority, short function, @Nonnull Object[] params,
                                         @Nonnull Function<Pipe, CompletableFuture<Object>> onTransferComplete) {
@@ -215,166 +260,95 @@ public class Session {
     return open(priority, function, params, Pipe::future);
   }
 
-  // ==============================================================================================
-  // メッセージの配信
-  // ==============================================================================================
-
   /**
-   * 指定されたメッセージを受信したときに呼び出されその種類によって処理を分岐します。
+   * ピアからメッセージを受信したときに呼び出されます。メッセージの種類によって処理を分岐します。
+   *
+   * @param msg 受信したメッセージ
    */
   private void deliver(Message msg) {
-    if (logger.isTraceEnabled()) {
-      logger.trace(logId() + ": deliver: " + msg);
-    }
-    ensureSessionStarted(msg);
+    logger.trace("{}: deliver: {}", logId, msg);
 
     // Control メッセージはこのセッション内で処理する
     if (msg instanceof Control) {
       Control ctrl = (Control) msg;
       switch (ctrl.code) {
-        case Control.SyncConfig:
-          sync(SyncConfig.parse(ctrl));
-          break;
         case Control.Close:
           close(false);
           break;
+        case Control.SyncSession:
+          // SYNC_SESSION はセッション構築前に処理されているはず
         default:
-          logger.error(id() + ": unsupported control code: 0x" + Integer.toHexString(ctrl.code & 0xFF));
+          logger.error("{}: unsupported control code: 0x{}", logId, Integer.toHexString(ctrl.code & 0xFF));
+          logger.error("{}: {}", logId, msg);
           throw new ProtocolViolationException("unsupported control");
       }
       return;
     }
 
-    // メッセージの配信先パイプを参照
-    Optional<Pipe> _pipe;
+    // Open メッセージを受信した場合
     if (msg instanceof Open) {
-      _pipe = pipes.create((Open) msg);
-    } else {
-      _pipe = pipes.get(msg.pipeId);
+      Pipe pipe = pipes.create((Open) msg);
+      dispatcher.dispatch(serviceId(), pipe, logId).whenComplete((result, ex) -> {
+        if (ex == null) {
+          try {
+            post(Close.withSuccess(pipe.id(), codec.nativeToTransferable(result)));
+          } catch (Exception ex2) {
+            logger.error("failed to post the result: {}", result);
+            post(Close.withError(pipe.id(), Abort.Unexpected, ex2.getMessage()));
+          }
+        } else {
+          int code = Abort.Unexpected;
+          if (ex instanceof NoSuchServiceException) {
+            code = Abort.ServiceUndefined;
+          } else if (ex instanceof NoSuchFunctionException) {
+            code = Abort.FunctionUndefined;
+          }
+          post(Close.withError(pipe.id(), code, ex.getMessage()));
+        }
+      });
+      return;
     }
 
-    // パイプが定義されていない場合
-    if (!_pipe.isPresent()) {
+    // メッセージの配信先パイプを参照
+    Optional<Pipe> optPipe = pipes.get(msg.pipeId);
+    if (!optPipe.isPresent()) {
       if (msg instanceof Close) {
-        logger.debug(logId() + ": both of sessions unknown pipe #" + msg.pipeId);
-      } else if (msg instanceof Open) {
-        post(Priority.Normal, Close.unexpectedError(msg.pipeId, "duplicate pipe-id specified: " + msg.pipeId));
+        logger.debug("{}: both of sessions unknown pipe #{}", logId, msg.pipeId & 0xFFFF);
       } else if (msg instanceof Block) {
-        logger.debug(logId() + ": unknown pipe-id: " + msg);
-        post(Priority.Normal, Close.unexpectedError(msg.pipeId, "unknown pipe-id specified: " + msg.pipeId));
+        logger.debug("{}: unknown pipe-id: {}", logId, msg);
+        post(Close.withError(msg.pipeId, String.format("unknown pipe-id specified: #%04X", msg.pipeId & 0xFFFF)));
+      } else {
+        logger.warn("{}: unexpected message was delivered: {}", logId, msg);
       }
       return;
     }
 
-    Pipe pipe = _pipe.get();
+    Pipe pipe = optPipe.get();
+
     try {
-      if (msg instanceof Open) {
-        // サービスを起動しメッセージポンプの開始
-        Open open = (Open) msg;
-        service.dispatch(pipe, open, logId(), codec);
-      } else if (msg instanceof Block) {
+      if (msg instanceof Block) {
         // Open は受信したがサービスの処理が完了していない状態でメッセージを受信した場合にパイプのキューに保存できるよう
         // 一度パイプを経由して deliver(Pipe,Message) を実行する
-        pipe.dispatchBlock((Block) msg);
+        if (pipe instanceof StreamPipe) {
+          ((StreamPipe) pipe).dispatchBlock((Block) msg);
+        } else {
+          // ブロックの受信が宣言されていないパイプに対してはエラーでクローズする
+          logger.warn("{}: block reception is not permitted on this pipe: {}, closing", logId, pipe);
+          pipe.closeWithError(Abort.FunctionCannotReceiveBlock,
+              "function %d does not allow block transmission", pipe.functionId());
+        }
       } else if (msg instanceof Close) {
-        pipe.close((Close) msg);
+        pipe.closePassively((Close) msg);
       } else {
         throw new IllegalStateException("unexpected message: " + msg);
       }
     } catch (Throwable ex) {
-      logger.error(id() + ": unexpected error: " + msg + ", wsClosed pipe " + pipe, ex);
-      post(pipe.priority, Close.unexpectedError(msg.pipeId, "internal error"));
+      logger.error("{}: unexpected error: {}, wsClosed pipe {}", logId, msg, pipe, ex);
+      post(Close.withError(msg.pipeId, "internal error"));
       if (ex instanceof ThreadDeath) {
         throw (ThreadDeath) ex;
       }
     }
-  }
-
-
-  /**
-   * @return ping 間隔 (秒)。接続していない場合は 0。
-   */
-  public int getPingInterval() {
-    return config.map(h -> {
-      if (isPrimary) {
-        int maxPing = options.get(Options.KEY_MAX_PING).get();
-        int minPing = options.get(Options.KEY_MIN_PING).get();
-        return Math.min(maxPing, Math.max(minPing, h.ping));
-      } else {
-        return h.ping;
-      }
-    }).orElse(0);
-  }
-
-  /**
-   * @return セッションタイムアウト (秒)。接続していない場合は 0。
-   */
-  public int getTimeout() {
-    return config.map(h -> {
-      if (isPrimary) {
-        int maxSession = options.get(Options.KEY_MAX_SESSION_TIMEOUT).get();
-        int minSession = options.get(Options.KEY_MIN_SESSION_TIMEOUT).get();
-        return Math.min(maxSession, Math.max(minSession, h.sessionTimeout));
-      } else {
-        return h.sessionTimeout;
-      }
-    }).orElse(0);
-  }
-
-  // ==============================================================================================
-  // セッション同期の実行
-  // ==============================================================================================
-
-  /**
-   * 新たな Wire 接続から受信したストリームヘッダでこのセッションの内容を同期化します。
-   */
-  private void sync(SyncConfig header) throws ProtocolViolationException {
-    if (this.config.isPresent()) {
-      throw new ProtocolViolationException("multiple sync message");
-    }
-    this.config = Optional.of(header);
-    if (isPrimary) {
-      // サーバ側の場合は応答を返す
-      if (header.sessionId.equals(Asterisque.Zero)) {
-        // 新規セッションの開始
-        this.id = node.repository.nextUUID();
-        logger.trace(logId() + ": new session-id is issued: " + this.id);
-        SyncConfig ack = new SyncConfig(
-            Asterisque.Protocol.Version_0_1, node.id, id, System.currentTimeMillis(), getPingInterval(), getTimeout());
-        post(Priority.Normal, ack.toControl());
-      } else {
-        Optional<Principal> principal = Optional.empty();
-        try {
-          principal = Optional.of(wire.get().getSSLSession().get().getPeerPrincipal());
-        } catch (SSLPeerUnverifiedException ex) {
-          // TODO クライアント認証が無効な場合? 動作確認
-          logger.debug(logId() + ": client authentication ignored: " + ex);
-        }
-        // TODO リポジトリからセッション?サービス?を復元する
-        Optional<byte[]> service = node.repository.loadAndDelete(principal, header.sessionId);
-        if (service.isPresent()) {
-          SyncConfig ack = new SyncConfig(
-              Asterisque.Protocol.Version_0_1, node.id, id, System.currentTimeMillis(), getPingInterval(), getTimeout());
-          post(Priority.Normal, ack.toControl());
-        } else {
-          // TODO retry after
-          post(Priority.Normal, new Control(Control.Close));
-        }
-      }
-    } else {
-      // クライアントの場合はサーバが指定したセッション ID を保持
-      if (header.sessionId.equals(Asterisque.Zero)) {
-        throw new ProtocolViolationException("session-id is not specified from server: " + header.sessionId);
-      }
-      if (this.id.equals(Asterisque.Zero)) {
-        this.id = header.sessionId;
-        logger.trace(logId() + ": new session-id is specified: " + this.id);
-      } else if (!this.id.equals(header.sessionId)) {
-        throw new ProtocolViolationException("unexpected session-id specified from server: " + header.sessionId + " != " + this.id);
-      }
-    }
-    logger.info(logId() + ": sync-configuration success, beginning session");
-    onSync.accept(this, header.sessionId);
   }
 
   // ==============================================================================================
@@ -386,9 +360,13 @@ public class Session {
    */
   private void post(Message msg) {
     if (closed() && !(msg instanceof Control)) {
-      logger.error("session {} has been closed, message is discarded: {}", id, msg);
+      logger.error("{}: session {} has been closed, message is discarded: {}", logId, id, msg);
     } else {
-      outboundLatch.exec(() -> wire.outbound.offer(msg));
+      try {
+        outboundLatch.exec(() -> wire.outbound.offer(msg));
+      } catch (InterruptedException ex) {
+        logger.error("{}: operation interrupted", logId, ex);
+      }
     }
   }
 
@@ -454,11 +432,11 @@ public class Session {
       Export export = method.getAnnotation(Export.class);
       if (export == null) {
         // toString() や hashCode() など Object 型のメソッド呼び出し?
-        logger.debug(logId() + ": normal method: " + Debug.getSimpleName(method));
+        logger.debug(logId + ": normal method: " + Debug.getSimpleName(method));
         return method.invoke(this, args);
       } else {
         // there is no way to receive block in interface binding
-        logger.debug(logId() + ": calling remote method: " + Debug.getSimpleName(method));
+        logger.debug(logId + ": calling remote method: " + Debug.getSimpleName(method));
         byte priority = export.priority();
         short function = export.value();
         return open(priority, function, (args == null ? new Object[0] : args));
@@ -470,22 +448,6 @@ public class Session {
   @Override
   public String toString() {
     return id().toString();
-  }
-
-  String logId() {
-    return Asterisque.logPrefix(isPrimary(), id());
-  }
-
-  /**
-   * このセッションがクローズしていないことを保証する。
-   *
-   * @param msg 受信したメッセージ
-   */
-  private void ensureSessionStarted(@Nonnull Message msg) {
-    if (config != null && (!(msg instanceof Control) || ((Control) msg).code != Control.SyncConfig)) {
-      logger.error("{}: unexpected message received; session is not initialized yet: {}", id, msg);
-      throw new ProtocolException("unexpected message received");
-    }
   }
 
   Pipe.Stub stub = new Pipe.Stub() {
@@ -504,6 +466,10 @@ public class Session {
     public void closed(@Nonnull Pipe pipe) {
       pipes.destroy(pipe.id());
     }
+  };
+
+  public interface Listener {
+    void sessionClosed(@Nonnull Session session);
   }
 
 }

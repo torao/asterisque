@@ -8,48 +8,50 @@ import org.specs2.Specification
 
 import scala.util.Random
 
-class SyncConfigSpec extends Specification {
+class SyncSessionSpec extends Specification {
   def is =
     s2"""
-SyncConfig should:
-be declared as final class. ${Modifier.isFinal(classOf[SyncConfig].getModifiers)}
+SyncSession should:
+be declared as final class. ${Modifier.isFinal(classOf[SyncSession].getModifiers)}
 restore all properties from control data. $e0
 throw wsCaughtException if signature is not sync-config. $e1
 throw wsCaughtException if data too short. $e2
-SyncConfig constracts instance without wsCaughtException. $allConstructorsTest
+SyncSession constracts instance without wsCaughtException. $allConstructorsTest
 Data size must be constant value. $verifyDataSize
 """
 
   def e0 = {
-    val r = new Random()
+    val r = new Random(7498374)
     val version = r.nextInt().toShort
     val nodeId = UUID.randomUUID()
     val sessionId = UUID.randomUUID()
+    val serviceId = r.nextString(0xFF)
     val utcTime = r.nextLong()
     val ping = r.nextInt()
     val sessionTimeout = r.nextInt()
-    val sc1 = new SyncConfig(version, nodeId, sessionId, utcTime, ping, sessionTimeout)
-    val sc2 = SyncConfig.parse(sc1.toControl)
+    val sc1 = new SyncSession(version, nodeId, sessionId, serviceId, utcTime, ping, sessionTimeout)
+    val sc2 = SyncSession.parse(sc1.toControl)
     (sc2.version === version) and (sc2.nodeId === nodeId) and (sc2.sessionId === sessionId) and
+      (sc2.serviceId === serviceId) and
       (sc2.utcTime === utcTime) and (sc2.ping === ping) and (sc2.sessionTimeout === sessionTimeout)
   }
 
   def e1 = {
-    SyncConfig.parse(new Control(Control.Close)) must throwA[ProtocolViolationException]
+    SyncSession.parse(new Control(Control.Close)) must throwA[ProtocolViolationException]
   }
 
   def e2 = {
-    SyncConfig.parse(new Control(Control.SyncConfig, new Array[Byte](10))) must throwA[ProtocolViolationException]
+    SyncSession.parse(new Control(Control.SyncSession, new Array[Byte](10))) must throwA[ProtocolViolationException]
   }
 
   private[this] def allConstructorsTest = {
-    new SyncConfig(0, UUID.randomUUID(), UUID.randomUUID(), 0, 0, 0)
-    new SyncConfig(UUID.randomUUID(), UUID.randomUUID(), 0, 0, 0)
+    new SyncSession(0, UUID.randomUUID(), UUID.randomUUID(), "", 0, 0, 0)
+    new SyncSession(UUID.randomUUID(), UUID.randomUUID(), "", 0, 0, 0)
     success
   }
 
   private[this] def verifyDataSize = {
-    val control = new SyncConfig(UUID.randomUUID(), UUID.randomUUID(), 0, 0, 0).toControl
-    control.data.length === SyncConfig.DataLength
+    val control = new SyncSession(UUID.randomUUID(), UUID.randomUUID(), "", 0, 0, 0).toControl
+    control.data.length === SyncSession.MinLength
   }
 }

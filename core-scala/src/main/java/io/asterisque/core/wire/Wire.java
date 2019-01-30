@@ -1,7 +1,5 @@
 package io.asterisque.core.wire;
 
-import io.asterisque.Session;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;

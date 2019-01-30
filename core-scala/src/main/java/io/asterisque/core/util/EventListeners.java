@@ -1,6 +1,5 @@
 package io.asterisque.core.util;
 
-import jdk.internal.jline.internal.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,7 +19,6 @@ public class EventListeners<LISTENER> {
   /**
    * このインスタンスに登録されているイベントリスナ。
    */
-  @Nullable
   private List<LISTENER> listeners;
 
   /**

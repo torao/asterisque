@@ -1,11 +1,8 @@
 package io.asterisque.core.session;
 
-import io.asterisque.PipeMessageSink;
 import io.asterisque.core.Debug;
-import io.asterisque.core.msg.Block;
-import io.asterisque.core.msg.Close;
-import io.asterisque.core.msg.Message;
-import io.asterisque.core.msg.Open;
+import io.asterisque.core.codec.VariableCodec;
+import io.asterisque.core.msg.*;
 import io.asterisque.core.wire.Wire;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +31,12 @@ public class Pipe {
    */
   public static final short PrimaryMask = (short) (1 << (Short.SIZE - 1));
 
+  /**
+   * このパイプを作成するときに使用した {@link Open} メッセージ。
+   */
   private final Open open;
+
+  private final VariableCodec codec;
 
   /**
    * このパイプがクローズされているかどうかを表すフラグ。
@@ -42,7 +44,7 @@ public class Pipe {
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
   /**
-   * パイプの処理結果。
+   * パイプの処理結果を通知する Future。
    */
   private final CompletableFuture<Object> future = new CompletableFuture<>();
 
@@ -68,7 +70,8 @@ public class Pipe {
    * @param open オープンメッセージ
    * @param stub スタブ
    */
-  Pipe(@Nonnull Open open, @Nonnull Stub stub) {
+  Pipe(@Nonnull VariableCodec codec, @Nonnull Open open, @Nonnull Stub stub) {
+    this.codec = codec;
     this.open = open;
     this.stub = stub;
     logger.trace("{}: pipe {} for function {} with priority {} created", this, id(), functionId(), priority());
@@ -101,6 +104,15 @@ public class Pipe {
     return open.functionId;
   }
 
+  public Object[] functionParams() {
+    return open.params;
+  }
+
+  @Nonnull
+  public VariableCodec codec(){
+    return codec;
+  }
+
   // ==============================================================================================
   //　クローズ判定
   // ==============================================================================================
@@ -122,7 +134,7 @@ public class Pipe {
    * @param params function 呼び出し時の引数
    */
   void open(Object[] params) {
-    logger.trace(this + ": sending open");
+    logger.trace("{}: sending open", this);
     Open open = new Open(id(), priority(), functionId(), params);
     stub.post(open);
   }
@@ -130,6 +142,7 @@ public class Pipe {
   // ==============================================================================================
   // ブロックの送信
   // ==============================================================================================
+  // ブロック送信が一方通行のみ許可されている設計を考慮して、基本機能として送信用 API は用意している。
 
   /**
    * 指定されたバイナリデータを非同期メッセージングのメッセージとして Block を送信します。
@@ -153,6 +166,41 @@ public class Pipe {
   }
 
   // ==============================================================================================
+  // 出力ストリーム
+  // ==============================================================================================
+
+  /**
+   * このパイプ上で {@link Block} を使用してバイナリデータを送信する {@link OutputStream} を参照します。
+   * 出力データが内部的なバッファの上限に達するか {@code flush()} が実行されるとバッファの内容が {@link Block}
+   * として非同期で送信されます。
+   * ストリームはマルチスレッドの出力に対応していません。
+   */
+  public OutputStream out() {
+    return new OutputStream() {
+      private final byte[] oneByte = new byte[1];
+
+      @Override
+      public void write(int b) throws IOException {
+        oneByte[0] = (byte) b;
+        write(oneByte);
+      }
+
+      @Override
+      public void write(byte[] b) throws IOException {
+        write(b, 0, b.length);
+      }
+
+      @Override
+      public void write(byte[] b, int o, int l) throws IOException {
+        if (closed()) {
+          throw new IOException("pipe is already been closed");
+        }
+        block(b, o, l);
+      }
+    };
+  }
+
+  // ==============================================================================================
   // パイプのクローズ
   // ==============================================================================================
 
@@ -161,7 +209,7 @@ public class Pipe {
    *
    * @param result Close に付加する結果
    */
-  void close(Object result) {
+  void closeWithSuccess(Object result) {
     close(new Close(id(), result));
   }
 
@@ -170,8 +218,20 @@ public class Pipe {
    *
    * @param msg エラーメッセージ
    */
+  void closeWithError(int code, @Nonnull String msg) {
+    close(new Close(id(), new Abort(code, msg)));
+  }
+
+  void closeWithError(int code, @Nonnull String format, Object... args) {
+    closeWithError(code, String.format(format, args));
+  }
+
   void closeWithError(String msg) {
-    close(Close.unexpectedError(id(), msg));
+    close(Close.withError(id(), msg));
+  }
+
+  void closeWithError(@Nonnull String format, Object... args) {
+    closeWithError(String.format(format, args));
   }
 
   /**
@@ -215,41 +275,6 @@ public class Pipe {
     } else {
       logger.trace("{}: pipe is already been closed: {}", this, close);
     }
-  }
-
-  // ==============================================================================================
-  // 出力ストリーム
-  // ==============================================================================================
-
-  /**
-   * このパイプ上で {@link Block} を使用してバイナリデータを送信する {@link OutputStream} を参照します。
-   * 出力データが内部的なバッファの上限に達するか {@code flush()} が実行されるとバッファの内容が {@link Block}
-   * として非同期で送信されます。
-   * ストリームはマルチスレッドの出力に対応していません。
-   */
-  public OutputStream out() {
-    return new OutputStream() {
-      private final byte[] oneByte = new byte[1];
-
-      @Override
-      public void write(int b) throws IOException {
-        oneByte[0] = (byte) b;
-        write(oneByte);
-      }
-
-      @Override
-      public void write(byte[] b) throws IOException {
-        write(b, 0, b.length);
-      }
-
-      @Override
-      public void write(byte[] b, int o, int l) throws IOException {
-        if (closed()) {
-          throw new IOException("pipe is already been closed");
-        }
-        block(b, o, l);
-      }
-    };
   }
 
   /**

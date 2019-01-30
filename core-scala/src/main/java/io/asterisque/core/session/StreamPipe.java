@@ -1,7 +1,9 @@
 package io.asterisque.core.session;
 
+import io.asterisque.core.codec.VariableCodec;
 import io.asterisque.core.msg.Block;
 import io.asterisque.core.msg.Message;
+import io.asterisque.core.msg.Open;
 import io.asterisque.core.wire.MessageQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,9 +25,31 @@ public class StreamPipe extends Pipe {
   private final MessageQueue blockQueue;
 
   /**
-   * 非同期メッセージングやストリーミングのための {@link Block} メッセージ受信を行う iterator。このパイプによる
-   * 非同期メッセージングの受信処理を設定する非同期コレクションです。の非同期コレクションは処理の呼び出しスレッド内で
-   * しか受信処理を設定することができません。
+   * @param open             パイプ生成に使用した Open メッセージ
+   * @param stub             スタブ
+   * @param cooperativeLimit バッファ上限
+   */
+  StreamPipe(@Nonnull VariableCodec codec, @Nonnull Open open, @Nonnull Stub stub, int cooperativeLimit) {
+    super(codec, open, stub);
+    this.blockQueue = new MessageQueue(super.toString(), cooperativeLimit);
+  }
+
+  /**
+   * このパイプに対してブロックが到着した時に呼び出されます。
+   *
+   * @param block 受信したブロック
+   */
+  void dispatchBlock(@Nonnull Block block) {
+    blockQueue.offer(block);
+    if (block.eof) {
+      blockQueue.close();
+    }
+  }
+
+  /**
+   * メッセージングやストリーミングのバイナリメッセージを同期処理で受信するための iterator を参照します。
+   *
+   * @return バイナリメッセージの iterator
    */
   @Nonnull
   public Iterator<byte[]> iterator() {
@@ -41,31 +65,6 @@ public class StreamPipe extends Pipe {
         return ((Block) it.next()).payload;
       }
     };
-  }
-
-  /**
-   *
-   * @param id       パイプ ID
-   * @param priority このパイプで発生するメッセージのプライオリティ
-   * @param function このパイプの呼び出し先 function 番号
-   * @param stub スタブ
-   * @param cooperativeLimit バッファ上限
-   */
-  StreamPipe(short id, byte priority, short function, @Nonnull Stub stub, int cooperativeLimit) {
-    super(id, priority, function, stub);
-    this.blockQueue = new MessageQueue(super.toString(), cooperativeLimit);
-  }
-
-  /**
-   * このパイプに対してブロックが到着した時に呼び出されます。
-   *
-   * @param block 受信したブロック
-   */
-  void dispatchBlock(@Nonnull Block block) {
-    blockQueue.offer(block);
-    if (block.eof) {
-      blockQueue.close();
-    }
   }
 
   /**

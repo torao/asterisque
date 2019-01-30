@@ -81,7 +81,7 @@ throw NullPointerException if data is null. ${new Open(1, 8, 12, null) must thro
   }
 
   private[this] def closeError = {
-    val c = Close.unexpectedError(1, "error")
+    val c = Close.withError(1, "error")
     (c.pipeId === 1) and (c.abort.code === Abort.Unexpected) and (c.abort.message === "error")
   }
 
@@ -99,7 +99,7 @@ throw NullPointerException if data is null. ${new Open(1, 8, 12, null) must thro
     new Block(2, 2, (0 to Block.MaxPayloadSize).map(_.toByte).toArray, 0, Block.MaxPayloadSize, false),
     new Open(0, 0, Seq("A", Integer.valueOf(100), new java.util.Date()).toArray),
     new Close(0.toShort, "foo"),
-    Close.unexpectedError(1, "bar")
+    Close.withError(1, "bar")
   )
 
 }
