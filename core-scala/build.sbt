@@ -4,7 +4,7 @@ name := "asterisque-core"
 
 version := "1.0.0"
 
-scalaVersion := "2.12.7"
+scalaVersion := "2.12.8"
 
 resolvers ++= Seq(
   "Sonatype snapshots" at "http://oss.sonatype.org/content/repositories/snapshots/"//,  // MessagePack
@@ -37,3 +37,4 @@ libraryDependencies ++= Seq(
   "org.specs2"  %% "specs2-core"   % "4.3.4" % Test
 )
 
+unmanagedSourceDirectories in Compile += baseDirectory.value / "src/main/generated"
