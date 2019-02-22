@@ -37,3 +37,15 @@ asterisque はいわゆる MOM と呼ばれるメッセージキュー、ある�
 ### asterisque is not transaction monitor
 
 asterisque は通信のためのフレームワークです。トランザクションモニターのようなミドルウェアは介在せず、したがって分散トランザクションの機能はありません。
+
+## Versioning
+
+リリースサイクルを明確化し修正の後方互換性を明らかにするために asterisque では [Semantic Versioning](https://semver.org/lang/ja/) ガイドラインに従い以下のバージョンフォーマットを適用します:
+
+> <major>.<minor>.<patch>
+
+ここで
+
+* major は後方互換性が破られている修正 (minor と patch がリセットされる)
+* minor は後方互換性が保たれている修正 (patch がリセットされる)
+* patch はバグフィクスや軽微な修正
