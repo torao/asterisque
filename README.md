@@ -1,18 +1,15 @@
-asterisque
-========
+# asterisque
 
 asterisque is lightweight bidirectional RPC with asynchronous messaging framework, protocol and implementation for P2P distributed system.
 
-Documents
-=========
+## Documents
 
 * [Motive](http://prezi.com/ia6rjvjrhe6d/asterisk-motivation/)
 * [Brain Storming](http://prezi.com/ktjdnfshx8dv/asterisk-brain-storming/)
 * [Document](docs/TableOfContents.md)
 * [Developer Guide](docs/developerguide.md)
 
-Getting Started
-===============
+## Getting Started
 
 To build asterisque\* JAR library, you may clone asterisque\* GitHub repository and build `asterisk_2.10-0.1.jar` by
 `sbt package`.

@@ -34,7 +34,18 @@ libraryDependencies ++= Seq(
   "org.msgpack" %  "msgpack"       % "0.6.12",
   "org.slf4j"   %  "slf4j-log4j12" % "1.7.+",
   "com.google.code.findbugs" % "jsr305" % "3.0.+",
-  "org.specs2"  %% "specs2-core"   % "4.3.4" % Test
+
+  // from Carillon
+  "org.msgpack"        %  "msgpack"         % "0.6.12",
+  "org.apache.commons" %  "commons-math3"   % "3.+",
+  "commons-codec"      %  "commons-codec"   % "1.+",
+  "net.i2p.crypto"     %  "eddsa"           % "0.+",
+  "com.typesafe"       %  "config"          % "1.+",
+  "com.typesafe.play"  %% "play-json"       % "2.+",
+  "org.rocksdb"        %  "rocksdbjni"      % "5.+",
+  "ch.qos.logback"     %  "logback-classic" % "1.+",
+  "org.specs2"         %% "specs2-core"     % "4.4.+" % Test
+
 )
 
 unmanagedSourceDirectories in Compile += baseDirectory.value / "src/main/generated"
