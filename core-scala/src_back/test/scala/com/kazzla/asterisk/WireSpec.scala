@@ -23,7 +23,7 @@ import java.security.cert.X509Certificate
 abstract class WireSpec extends Specification { def is = s2"""
 Wire should:
 have either server or not flag. $e0
-have correct close status. $e1
+have correct lock status. $e1
 have correct active/deactive status. $e2
 callback on receive. $e25
 transfer messages duplex. $e3

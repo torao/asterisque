@@ -5,7 +5,7 @@
  */
 package io.asterisque;
 
-import io.asterisque.core.Debug;
+import io.asterisque.utils.Debug;
 import io.asterisque.core.codec.MessageCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

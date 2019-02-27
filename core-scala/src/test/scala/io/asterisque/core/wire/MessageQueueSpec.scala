@@ -4,6 +4,7 @@ import java.util.Random
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
+import io.asterisque.core.wire.MessageQueue
 import io.asterisque.core.msg.{Control, Open}
 import org.slf4j.LoggerFactory
 import org.specs2.Specification
@@ -22,7 +23,7 @@ add and remove listener. $addAndRemoveListener
 message offering and polling callback. $offeringAndPollingCallback
 polling wait until available message reach. $pollingWithWait
 fail offer and alwayas returns null on closed queue. $failOfferAndAlwaysReturnNullOnClosedQueue
-The offer() for EOM means close. $offerWithEOMMeansClose
+The offer() for EOM means lock. $offerWithEOMMeansClose
 Use as Iterator. $useAsIterator
 """
 
@@ -33,7 +34,7 @@ Use as Iterator. $useAsIterator
     val cooperativeLimit = math.abs(random.nextInt())
     (new MessageQueue("constructor", 100).size() === 0) and
       (new MessageQueue("constructor", cooperativeLimit).cooperativeLimit() === cooperativeLimit) and
-      (new MessageQueue(null, 1) must throwA[IllegalArgumentException]) and
+      (new MessageQueue(null, 1) must throwA[NullPointerException]) and
       (new MessageQueue("constructor", 0) must throwA[IllegalArgumentException])
   }
 
@@ -72,17 +73,19 @@ Use as Iterator. $useAsIterator
     val actual = expected.map(_ => queue.poll(0, TimeUnit.SECONDS))
 
     queue.close()
-    val eom = queue.poll()
+    val eom = queue.poll() // will make messagePollable(empty, false)
 
-    (pollables.size === 3) and
-      (pollables.head._1 must beTrue) and (pollables.head._2 === 1) and
-      (pollables(1)._1 must beFalse) and (pollables(1)._2 === 0) and
+    (pollables.size === 4).setMessage(pollables.mkString("[", ", ", "]")) and
+      (pollables.head._1 must beFalse) and (pollables.head._2 === 0) and
+      (pollables(1)._1 must beTrue) and (pollables(1)._2 === 1) and
       (pollables(2)._1 must beFalse) and (pollables(2)._2 === 0) and
-      (offerables.size === 4) and
-      (offerables.head._1 must beFalse) and (offerables.head._2 === 1) and
-      (offerables(1)._1 must beFalse) and (offerables(1)._2 === 2) and
-      (offerables(2)._1 must beFalse) and (offerables(2)._2 === 3) and
-      (offerables(3)._1 must beTrue) and (offerables(3)._2 === 0) and
+      (pollables(3)._1 must beFalse) and (pollables(3)._2 === 0) and
+      (offerables.size === 5).setMessage(offerables.mkString("[", ", ", "]")) and
+      (offerables.head._1 must beTrue) and (offerables.head._2 === 0) and
+      (offerables(1)._1 must beFalse) and (offerables(1)._2 === 1) and
+      (offerables(2)._1 must beFalse) and (offerables(2)._2 === 2) and
+      (offerables(3)._1 must beFalse) and (offerables(3)._2 === 3) and
+      (offerables(4)._1 must beTrue) and (offerables(4)._2 === 0) and
       actual.zip(expected).map { case (a, e) => a === e }.reduceLeft(_ and _) and
       (eom must beNull) and
       (queue.offer(expected.head) must throwA[IllegalStateException])

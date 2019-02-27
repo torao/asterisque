@@ -24,7 +24,14 @@ lock or unlock parallel execution. $e0
 """
   def e0 = {
     val counter = new AtomicInteger(0)
-    def wait(n:Int) = while(counter.get() != n){ }
+    def wait(n:Int) = {
+      val t0 = System.currentTimeMillis()
+      while(counter.get() != n){
+        if(System.currentTimeMillis() - t0 > 5 * 1000){
+          throw new IllegalStateException(s"waiting too long: ${counter.get} != $n")
+        }
+      }
+    }
     val threads = Executors.newCachedThreadPool()
     val latch = new Latch()
     val exec = new Runnable(){
@@ -34,30 +41,39 @@ lock or unlock parallel execution. $e0
         })
       }
     }
-    // 2 つの処理を起動
-    threads.execute(exec)
-    threads.execute(exec)
-    wait(2)
-    // ロックをかけて 3 つの処理を起動
-    latch.lock(true)
-    threads.execute(exec)
-    threads.execute(exec)
-    threads.execute(exec)
-    Thread.sleep(200)
-    val c0 = counter.get()
-    // もう一つロックをかける
-    latch.lock(true)
-    Thread.sleep(200)
-    val c1 = counter.get()
-    // 一つロックを解除してロックが外れないこと
-    latch.lock(false)
-    Thread.sleep(200)
-    val c2 = counter.get()
-    // 最後のロックを解除して全て実行される
-    latch.lock(false)
-    wait(5)
+
+    val result = {
+      // 2 つの処理を起動
+      threads.execute(exec)
+      threads.execute(exec)
+      wait(2)
+      (latch.getPendings === 0) and (counter.get() === 2)
+    } and {
+      // ロックをかけて 3 つの処理を起動
+      latch.lock()
+      threads.execute(exec)
+      threads.execute(exec)
+      threads.execute(exec)
+      Thread.sleep(200)
+      (latch.getPendings === 3) and (counter.get() === 2)
+    } and {
+      // もう一つロックをかけても状況は変わらない
+      latch.lock()
+      Thread.sleep(200)
+      (latch.getPendings === 3) and (counter.get() === 2)
+    } and {
+      // 複数回ロックがかけられても一回の解除で再開されること
+      latch.open()
+      Thread.sleep(200)
+      (latch.getPendings === 0) and (counter.get() === 5)
+    } and {
+      // ロックの解除が複数回行われても例外が発生しない
+      latch.open()
+      wait(5)
+      (latch.getPendings === 0) and (counter.get() === 5)
+    }
     // 終了
     threads.shutdownNow()
-    (c0 === 2) and (c1 === 2) and (c2 === 2)
+    result
   }
 }

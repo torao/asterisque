@@ -115,7 +115,7 @@ public class NettyBridge implements Bridge {
 
   @Override
   public void close() {
-    logger.trace("close()");
+    logger.trace("lock()");
     if (closing.compareAndSet(false, true)) {
       worker.shutdownGracefully();
     }

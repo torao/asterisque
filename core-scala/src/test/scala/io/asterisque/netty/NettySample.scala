@@ -9,18 +9,18 @@ import java.util
 
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.buffer.ByteBuf
-import io.netty.channel.{ChannelHandlerContext, ChannelInitializer, ChannelOption}
-import io.netty.channel.nio.{NioEventLoopGroup, NioEventLoop}
+import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
+import io.netty.channel.{ChannelHandlerContext, ChannelInitializer, ChannelOption}
 import io.netty.handler.codec.ByteToMessageDecoder
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // NettySample
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
- * @author Takami Torao
- */
+  * @author Takami Torao
+  */
 object NettySample {
   def main(args:Array[String]):Unit = {
     val master = new NioEventLoopGroup()

@@ -492,7 +492,7 @@ private class PipeInputStream private[asterisk](signature:String) extends InputS
 
   override def close():Unit = {
     closed = true
-    PipeInputStream.logger.trace(s"$signature: close()")
+    PipeInputStream.logger.trace(s"$signature: lock()")
   }
 
   private[this] def processingBuffer:Option[ByteBuffer] = {
@@ -590,7 +590,7 @@ private class PipeOutputStream private[asterisk](pipe:Pipe, bufferSize:Int) exte
     flush()
     pipe.sink.sendEOF()
     osClosed = true
-    PipeOutputStream.logger.trace(s"${pipe.signature}: close()")
+    PipeOutputStream.logger.trace(s"${pipe.signature}: lock()")
   }
   def emergencyClose():Unit = {
     osClosed = true

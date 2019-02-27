@@ -1,7 +1,7 @@
 package io.asterisque.core.msg;
 
 import io.asterisque.Priority;
-import io.asterisque.core.Debug;
+import io.asterisque.utils.Debug;
 import io.asterisque.core.codec.VariableCodec;
 
 import javax.annotation.Nonnull;

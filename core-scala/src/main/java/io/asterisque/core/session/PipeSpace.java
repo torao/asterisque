@@ -1,7 +1,7 @@
 package io.asterisque.core.session;
 
 import io.asterisque.Asterisque;
-import io.asterisque.core.ProtocolException;
+import io.asterisque.wire.ProtocolException;
 import io.asterisque.core.msg.Abort;
 import io.asterisque.core.msg.Open;
 import org.slf4j.Logger;

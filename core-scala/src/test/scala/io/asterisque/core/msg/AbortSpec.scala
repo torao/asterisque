@@ -9,8 +9,7 @@ class AbortSpec extends Specification {
     s2"""
 Abort is declared as final. ${Modifier.isFinal(classOf[Abort].getModifiers) must beTrue}
 Abort has properties that specified in constructor. $e0
-Abort throws IllegalArgumentException when message is null. ${
-      new Abort(100, null) must throwA[IllegalArgumentException]}
+Abort throws IllegalArgumentException when message is null. ${new Abort(100, null) must throwA[NullPointerException]}
 equals. $equals
 """
 

@@ -1,6 +1,6 @@
 package io.asterisque.core.wire.netty;
 
-import io.asterisque.core.Debug;
+import io.asterisque.utils.Debug;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;

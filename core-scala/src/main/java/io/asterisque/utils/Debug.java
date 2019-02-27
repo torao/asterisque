@@ -1,4 +1,4 @@
-package io.asterisque.core;
+package io.asterisque.utils;
 
 import org.slf4j.Logger;
 

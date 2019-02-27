@@ -1,6 +1,6 @@
 package io.asterisque.core.session;
 
-import io.asterisque.core.ProtocolException;
+import io.asterisque.wire.ProtocolException;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

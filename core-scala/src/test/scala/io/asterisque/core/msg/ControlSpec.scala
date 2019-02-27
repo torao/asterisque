@@ -7,7 +7,7 @@ class ControlSpec extends AbstractMessageSpec {
     s2"""
 Control should declare as final class. ${Modifier.isFinal(classOf[Control].getModifiers) must beTrue}
 have properties these are specified in constructor. $e0
-throw IllegalArgumentException if data is null. ${new Control(Control.Close, null) must throwA[IllegalArgumentException]}
+throw NullPointerException if data is null. ${new Control(Control.Close, null) must throwA[NullPointerException]}
 """
 
   private[this] def e0 = {
@@ -16,7 +16,7 @@ throw IllegalArgumentException if data is null. ${new Control(Control.Close, nul
     (c1.code === Control.SyncSession) and (c1.data.length === 0) and (c2.code === Control.Close) and (c2.data.length === 256)
   }
 
-  protected def newMessages = Seq(
+  protected def newMessages:Seq[Control] = Seq(
     new Control(Control.SyncSession),
     new Control(Control.Close, new Array[Byte](256))
   )

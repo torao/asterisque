@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicReference
 import java.util.{Base64, Random}
 
 import io.asterisque.Scala._
+import io.asterisque.core.wire.netty.WebSocket
 import io.asterisque.core.wire.netty.WebSocket.Servant
 import io.netty.buffer.Unpooled
 import io.netty.channel.nio.NioEventLoopGroup

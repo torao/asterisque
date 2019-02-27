@@ -26,11 +26,11 @@ create unexpected error. $closeError
 Open should:
 declare as final class. ${Modifier.isFinal(classOf[Open].getModifiers) must beTrue}
 have properties these are specified in constructor. $openProperties
-throw NullPointerException if data is null. ${new Open(1, 8, 12, null) must throwA[IllegalArgumentException]}
+throw NullPointerException if data is null. ${new Open(1, 8, 12, null) must throwA[NullPointerException]}
 """
 
   private[this] def blockConstructor = {
-    (new Block(1, null, 0, 0) must throwA[IllegalArgumentException]) and
+    (new Block(1, null, 0, 0) must throwA[NullPointerException]) and
       (new Block(1, new Array[Byte](0), 0, 1) must throwA[IllegalArgumentException]) and
       (new Block(1, new Array[Byte](0), 1, 1) must throwA[IllegalArgumentException]) and
       (new Block(1, new Array[Byte](10), -1, 1) must throwA[IllegalArgumentException]) and

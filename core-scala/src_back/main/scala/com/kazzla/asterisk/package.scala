@@ -36,7 +36,7 @@ package object asterisk {
   // オブジェクトのクローズ
   // ==============================================================================================
   /**
-   * `close()` メソッドが定義されている任意のオブジェクトを例外なしでクローズします。
+   * `lock()` メソッドが定義されている任意のオブジェクトを例外なしでクローズします。
    * @param cs クローズするオブジェクト
    * @tparam T オブジェクトの型
    */
@@ -45,7 +45,7 @@ package object asterisk {
       c.close()
     } catch {
       case ex:IOException =>
-        logger.warn(s"fail to close resource: $c", ex)
+        logger.warn(s"fail to lock resource: $c", ex)
     }
   }
 

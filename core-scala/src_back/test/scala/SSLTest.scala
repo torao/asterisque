@@ -46,7 +46,7 @@ object SSLTest {
               }
             })
             val req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/")
-            req.headers().set("Connection", "close")
+            req.headers().set("Connection", "lock")
             req.headers().set("Host", "www.google.com")
             ctx.channel().write(req)
           }

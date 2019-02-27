@@ -11,6 +11,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -44,6 +45,7 @@ public class MessageQueue implements AutoCloseable {
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
   public MessageQueue(@Nonnull String name, int cooperativeLimit) {
+    Objects.requireNonNull(name);
     if (cooperativeLimit <= 0) {
       throw new IllegalArgumentException("incorrect queue size: " + cooperativeLimit);
     }
@@ -98,7 +100,7 @@ public class MessageQueue implements AutoCloseable {
    */
   @Nullable
   public Message poll(long timeout, @Nonnull TimeUnit unit) throws InterruptedException {
-    // close() が呼び出されていても正常に受理した分は取り出しは可能としている
+    // lock() が呼び出されていても正常に受理した分は取り出しは可能としている
     Message message;
     int queueSize;
     synchronized (queue) {
@@ -222,7 +224,7 @@ public class MessageQueue implements AutoCloseable {
     synchronized (queue) {
       if (closed.compareAndSet(false, true)) {
         int queueSize = offerAndNotify(Control.EOM);
-        logger.trace("close(), {} messages remain", queueSize - 1);
+        logger.trace("lock(), {} messages remain", queueSize - 1);
       }
     }
   }

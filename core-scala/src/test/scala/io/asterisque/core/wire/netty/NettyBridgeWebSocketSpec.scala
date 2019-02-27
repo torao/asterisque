@@ -6,9 +6,12 @@ import java.util.concurrent.TimeUnit
 import io.asterisque.Scala._
 import io.asterisque.core.msg.Open
 import io.asterisque.core.wire.netty.WebSocket.Servant
-import io.asterisque.core.wire.{Bridge, BridgeSpec, MessageQueue, Wire}
-import io.asterisque.core.{Debug, ProtocolException}
+import io.asterisque.core.wire.{Bridge, BridgeSpec, Wire}
+import io.asterisque.core.ProtocolException
+import io.asterisque.core.wire.{Bridge, MessageQueue, Wire}
+import io.asterisque.core.wire.netty.{NettyBridge, WebSocket}
 import io.asterisque.test._
+import io.asterisque.utils.Debug
 import io.netty.buffer.Unpooled
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.{Channel, ChannelHandlerContext}
@@ -199,8 +202,8 @@ class NettyBridgeWebSocketSpec extends BridgeSpec {
         wire
       }
     }
-    val wire = Await.result(future, Duration.Inf)
-    val ex = Await.result(promise.future, Duration.Inf)
+    val wire = Await.result(future, Duration(1, TimeUnit.MINUTES))
+    val ex = Await.result(promise.future, Duration(1, TimeUnit.MINUTES))
     server.destroy()
     wire.close()
     eventLoop.shutdownGracefully()

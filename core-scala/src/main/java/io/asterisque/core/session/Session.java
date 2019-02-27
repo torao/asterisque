@@ -1,8 +1,7 @@
 package io.asterisque.core.session;
 
 import io.asterisque.Asterisque;
-import io.asterisque.core.Debug;
-import io.asterisque.core.ProtocolException;
+import io.asterisque.utils.Debug;
 import io.asterisque.core.codec.VariableCodec;
 import io.asterisque.core.msg.*;
 import io.asterisque.core.service.Export;
@@ -116,7 +115,7 @@ public class Session {
         if (offerable) {
           outboundLatch.open();
         } else {
-          outboundLatch.close();
+          outboundLatch.lock();
         }
       }
     });
@@ -206,7 +205,7 @@ public class Session {
   }
 
   /**
-   * このセッションを graceful にクローズします。このメソッドは {@code close(true)} と等価です。
+   * このセッションを graceful にクローズします。このメソッドは {@code lock(true)} と等価です。
    */
   public void close() {
     close(true);
@@ -230,7 +229,7 @@ public class Session {
       }
 
       // 以降のメッセージ送信をすべて例外に変更して送信を終了
-      // ※Pipe#close() で Session#post() が呼び出されるためすべてのパイプに Close を投げた後に行う
+      // ※Pipe#lock() で Session#post() が呼び出されるためすべてのパイプに Close を投げた後に行う
 
       // Wire のクローズ
       wire.close();

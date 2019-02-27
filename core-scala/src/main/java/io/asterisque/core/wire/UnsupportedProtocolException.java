@@ -1,6 +1,6 @@
 package io.asterisque.core.wire;
 
-import io.asterisque.core.ProtocolException;
+import io.asterisque.wire.ProtocolException;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -10,7 +10,7 @@ import javax.annotation.Nullable;
  */
 public class UnsupportedProtocolException extends ProtocolException {
   public UnsupportedProtocolException(@Nonnull String message) {
-    super(message);
+    super(message, null);
   }
 
   public UnsupportedProtocolException(@Nonnull String message, @Nullable Throwable ex) {

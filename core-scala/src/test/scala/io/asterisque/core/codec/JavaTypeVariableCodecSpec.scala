@@ -48,7 +48,10 @@ class JavaTypeVariableCodecSpec extends Specification {
       (JBoolean.TYPE, JBoolean.valueOf(true))
     ).map { case (ptype, value) =>
       val obj = codec.transferableToNative(value, ptype)
-      obj === value
+      (ptype, value, obj) match {
+        case (JChar.TYPE, x:String, obj:JChar) => x.charAt(0) === obj
+        case _ => obj === value
+      }
     }.reduceLeft(_ and _)
   }
 

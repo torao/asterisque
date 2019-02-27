@@ -1,6 +1,7 @@
 package io.asterisque.core.util;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * メッセージの同期ブロックを行うためのラッチ機構です。
@@ -22,17 +23,24 @@ public final class Latch {
    */
   private final AtomicBoolean locked = new AtomicBoolean(false);
 
+  private final AtomicInteger pendings = new AtomicInteger(0);
+
   /**
    * コンストラクタは何も行いません。
    */
   public Latch() {
   }
 
+  public int getPendings(){
+    return pendings.get();
+  }
+
   /**
    * このラッチをオープンし従属する処理のブロッキングを解除します。
+   * すでにオープンされている場合は何も行いません。
    */
   public void open() {
-    if (locked.compareAndSet(false, true)) {
+    if (locked.compareAndSet(true, false)) {
       synchronized (signal) {
         signal.notifyAll();
       }
@@ -42,9 +50,9 @@ public final class Latch {
   /**
    * このラッチをクローズし従属する処理をブロッキングします。
    *
-   * @return 個の呼び出しによりロックがかけられたとき true、すでにロックがかかっていた場合 false
+   * @return この呼び出しによりロックがかけられたとき true、すでにロックがかかっていた場合 false
    */
-  public boolean close() {
+  public boolean lock() {
     return this.locked.compareAndSet(false, true);
   }
 
@@ -57,7 +65,12 @@ public final class Latch {
   public void exec(Runnable exec) throws InterruptedException {
     synchronized (signal) {
       while (locked.get()) {
-        signal.wait();
+        pendings.incrementAndGet();
+        try {
+          signal.wait();
+        } finally {
+          pendings.decrementAndGet();
+        }
       }
     }
     exec.run();

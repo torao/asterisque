@@ -25,7 +25,7 @@ Data size must be constant value. $verifyDataSize
     val version = r.nextInt().toShort
     val nodeId = UUID.randomUUID()
     val sessionId = UUID.randomUUID()
-    val serviceId = r.nextString(0xFF)
+    val serviceId = r.nextASCIIString(0xFF)
     val utcTime = r.nextLong()
     val ping = r.nextInt()
     val sessionTimeout = r.nextInt()
@@ -54,4 +54,12 @@ Data size must be constant value. $verifyDataSize
     val control = new SyncSession(UUID.randomUUID(), UUID.randomUUID(), "", 0, 0, 0).toControl
     control.data.length === SyncSession.MinLength
   }
+
+  implicit class _Random(random:Random) {
+    def nextASCIIString(length:Int):String = {
+      val s = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+      (0 until length).map(_ => s(random.nextInt(s.length))).mkString
+    }
+  }
+
 }

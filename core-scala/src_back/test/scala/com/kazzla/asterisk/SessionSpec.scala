@@ -22,7 +22,7 @@ import scala.concurrent.duration.Duration
 class SessionSpec extends Specification { def is = s2"""
 Session should:
 bw able to call function with no parameters: $s01
-callback close event when peer wire is wsClosed: $s02
+callback lock event when peer wire is wsClosed: $s02
 """
 
   def s01 = {

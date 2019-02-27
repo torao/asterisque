@@ -2,8 +2,8 @@ package io.asterisque.core.msg;
 
 import io.asterisque.Asterisque;
 import io.asterisque.ProtocolViolationException;
-import io.asterisque.core.Debug;
-import io.asterisque.core.ProtocolException;
+import io.asterisque.utils.Debug;
+import io.asterisque.wire.ProtocolException;
 import io.asterisque.core.codec.MessageFieldCodec;
 
 import javax.annotation.Nonnull;

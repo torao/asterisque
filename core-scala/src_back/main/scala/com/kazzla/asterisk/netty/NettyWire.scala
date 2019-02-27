@@ -54,7 +54,7 @@ private[netty] case class NettyWire(address:SocketAddress, override val isServer
   }
 
   override def close():Unit = if(! isClosed){
-    logger.trace(s"$sym: close()")
+    logger.trace(s"$sym: lock()")
     context.channel().close()
     super.close()
   }

@@ -36,7 +36,7 @@ public class HTTP {
         .add("Content-Type", "text/plain; charset=UTF-8")
         .add("Pragma", "no-cache")
         .add("Cache-Control", "no-cache,no-store")
-        .add("Connection", "close");
+        .add("Connection", "lock");
     return response;
   }
 }

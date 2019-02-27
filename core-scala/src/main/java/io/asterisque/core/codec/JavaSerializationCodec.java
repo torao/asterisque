@@ -1,6 +1,6 @@
 package io.asterisque.core.codec;
 
-import io.asterisque.core.Debug;
+import io.asterisque.utils.Debug;
 import io.asterisque.core.msg.Message;
 
 import javax.annotation.Nonnull;

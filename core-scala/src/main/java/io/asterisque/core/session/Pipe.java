@@ -1,6 +1,6 @@
 package io.asterisque.core.session;
 
-import io.asterisque.core.Debug;
+import io.asterisque.utils.Debug;
 import io.asterisque.core.codec.VariableCodec;
 import io.asterisque.core.msg.*;
 import io.asterisque.core.wire.Wire;
@@ -264,10 +264,10 @@ public class Pipe {
   void closePassively(Close close) {
     if (closed.compareAndSet(false, true)) {
       if (close.abort != null) {
-        logger.trace("{}: close({}): aborted: {}", this, close, close.abort);
+        logger.trace("{}: lock({}): aborted: {}", this, close, close.abort);
         future.completeExceptionally(close.abort);
       } else {
-        logger.trace("{}: close({}): success: {}", this, close, Debug.toString(close.result));
+        logger.trace("{}: lock({}): success: {}", this, close, Debug.toString(close.result));
         future.complete(close.result);
       }
       stub.closed(this);

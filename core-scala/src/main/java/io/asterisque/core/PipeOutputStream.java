@@ -102,7 +102,7 @@ class PipeOutputStream extends OutputStream {
       flush();
 //      pipe.sink.sendEOF();
       closed = true;
-      logger.trace(pipe + ": close()");
+      logger.trace(pipe + ": lock()");
     }
   }
   public void emergencyClose() {

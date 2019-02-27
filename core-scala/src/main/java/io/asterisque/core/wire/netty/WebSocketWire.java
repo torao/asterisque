@@ -1,7 +1,7 @@
 package io.asterisque.core.wire.netty;
 
-import io.asterisque.core.Debug;
-import io.asterisque.core.ProtocolException;
+import io.asterisque.utils.Debug;
+import io.asterisque.wire.ProtocolException;
 import io.asterisque.core.codec.MessageCodec;
 import io.asterisque.core.msg.Message;
 import io.asterisque.core.wire.MessageQueue;

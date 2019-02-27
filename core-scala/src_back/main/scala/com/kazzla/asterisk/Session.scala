@@ -226,7 +226,7 @@ class Session private[asterisk](val node:Node, val name:String, defaultService:S
    * 実行中のすべてのパイプはクローズされ、以後のメッセージ配信は行われなくなります。
    */
   def close():Unit = if(closed.compareAndSet(false, true)){
-    logger.trace(s"close():$name")
+    logger.trace(s"lock():$name")
 
     // 残っているすべてのパイプに Close メッセージを送信
     pipes.get().values.foreach{ p =>
@@ -236,7 +236,7 @@ class Session private[asterisk](val node:Node, val name:String, defaultService:S
     }
 
     // 以降のメッセージ送信をすべて例外に変更して送信を終了
-    // ※Pipe#close() で Session#post() が呼び出されるためすべてのパイプに Close を投げた後に行う
+    // ※Pipe#lock() で Session#post() が呼び出されるためすべてのパイプに Close を投げた後に行う
     post = { (_) => throw new IOException(s"session $name wsClosed") }
 
     // Wire のクローズ

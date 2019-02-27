@@ -1,7 +1,7 @@
 package io.asterisque.core.msg;
 
 import io.asterisque.Asterisque;
-import io.asterisque.core.Debug;
+import io.asterisque.utils.Debug;
 
 import javax.annotation.Nonnull;
 import java.util.Arrays;

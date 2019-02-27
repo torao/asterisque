@@ -1,7 +1,7 @@
 package io.asterisque.core.session;
 
 import io.asterisque.Asterisque;
-import io.asterisque.core.Debug;
+import io.asterisque.utils.Debug;
 import io.asterisque.core.codec.VariableCodec;
 import io.asterisque.core.msg.Control;
 import io.asterisque.core.msg.Message;
@@ -14,9 +14,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLSession;
 import java.util.Arrays;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;

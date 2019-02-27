@@ -110,7 +110,7 @@ class PipeInputStream extends InputStream implements Consumer<Block> {
   @Override
   public void close(){
     closed = true;
-    logger.trace(signature + ": close()");
+    logger.trace(signature + ": lock()");
   }
 
   private Optional<ByteBuffer> processingBuffer() throws IOException {
