@@ -1,7 +1,6 @@
 package io.asterisque.wire.gateway.netty
 
 import java.net.{InetSocketAddress, SocketAddress, URI}
-import java.util.function.Function
 
 import io.asterisque.core.wire.netty.HTTP
 import io.asterisque.utils.Debug
@@ -36,7 +35,7 @@ object WebSocket {
       }
 
       override def wsServerCaughtException(@Nullable ctx:ChannelHandlerContext, @Nonnull ex:Throwable):Unit = {
-        logger.trace("wsServerCaughtException({},{})", ctx, ex)
+        logger.trace(s"wsServerCaughtException($ctx, $ex)")
       }
     }
 
@@ -49,7 +48,7 @@ object WebSocket {
     /**
       * WebSocket サーバが接続を受け付けたときにチャネルの初期化を行います。
       */
-    private[Server] class Initializer private(val subprotocol:String, val path:String, val sslContext:SslContext, val onAccept:Function[Channel, WebSocket.Servant]) extends ChannelInitializer[Channel] {
+    private[Server] class Initializer(val subprotocol:String, val path:String, val sslContext:SslContext, val onAccept:Channel => WebSocket.Servant) extends ChannelInitializer[Channel] {
       override protected def initChannel(@Nonnull ch:Channel):Unit = {
         logger.trace("initChannel({})", ch)
         val servant = onAccept.apply(ch)
@@ -115,7 +114,7 @@ object WebSocket {
         .handler(new ChannelInitializer[Channel]() {
           override protected def initChannel(ch:Channel):Unit = {
             listener.wsServerReady(ch)
-            super.initChannel(ch)
+            // super.initChannel(ch)    // abstract method
           }
 
           override def exceptionCaught(ctx:ChannelHandlerContext, cause:Throwable):Unit = {
@@ -151,7 +150,7 @@ object WebSocket {
     /**
       * WebSocket サーバと接続したときにチャネルの初期化を行います。
       */
-    private[Client] class Initializer private(val uri:URI, val subprotocol:String, val servant:WebSocket.Servant, val sslContext:SslContext) extends ChannelInitializer[Channel] {
+    private[Client] class Initializer(val uri:URI, val subprotocol:String, val servant:WebSocket.Servant, val sslContext:SslContext) extends ChannelInitializer[Channel] {
       override protected def initChannel(@Nonnull ch:Channel):Unit = {
         logger.trace("initChannel({})", ch)
         val subprotocol = s"$SUBPROTOCOL, ${this.subprotocol}"
@@ -245,7 +244,7 @@ object WebSocket {
     private val logger = LoggerFactory.getLogger(classOf[WebSocket.WebSocketFrameHandler])
   }
 
-  private class WebSocketFrameHandler private(val servant:WebSocket.Servant) extends SimpleChannelInboundHandler[WebSocketFrame] {
+  private class WebSocketFrameHandler(val servant:WebSocket.Servant) extends SimpleChannelInboundHandler[WebSocketFrame] {
     private var handshakeState:ClientHandshakeStateEvent = _
 
     @throws[Exception]
@@ -266,7 +265,7 @@ object WebSocket {
 
     @throws[Exception]
     override def exceptionCaught(ctx:ChannelHandlerContext, cause:Throwable):Unit = {
-      WebSocketFrameHandler.logger.trace("exceptionCaught({},{})", ctx, cause)
+      WebSocketFrameHandler.logger.trace(s"exceptionCaught($ctx, $cause)")
       servant.wsCaughtException(ctx, cause)
       super.exceptionCaught(ctx, cause)
     }
@@ -294,7 +293,7 @@ object WebSocket {
     }
 
     override protected def channelRead0(@Nonnull ctx:ChannelHandlerContext, @Nonnull msg:WebSocketFrame):Unit = {
-      WebSocketFrameHandler.logger.trace("channelRead0({},{})", ctx, msg)
+      WebSocketFrameHandler.logger.trace(s"channelRead0($ctx, $msg)")
       if(WebSocketFrameHandler.logger.isTraceEnabled) {
         msg match {
           case frame:TextWebSocketFrame =>
@@ -312,12 +311,12 @@ object WebSocket {
     * WebSocket ハンドシェイクの前段階で WebSocket 用の HTTP リクエストパスのみを許可するハンドラ。ハンドシェイク後は
     * パイプラインから取り除かれる。
     */
-  private class HttpRequestHandler private(val path:String) extends SimpleChannelInboundHandler[FullHttpRequest] {
+  private class HttpRequestHandler(val path:String) extends SimpleChannelInboundHandler[FullHttpRequest] {
     override def channelRead0(@Nonnull ctx:ChannelHandlerContext, @Nonnull request:FullHttpRequest):Unit = {
       if(path.equalsIgnoreCase(request.uri)) {
         ctx.fireChannelRead(request.retain)
       } else {
-        val msg = "asterisque WebSocket bridge doesn't work for the specified URI: " + request.uri
+        val msg = s"asterisque WebSocket bridge doesn't work for the specified URI: " + request.uri
         ctx.writeAndFlush(HTTP.newErrorResponse(HttpResponseStatus.FORBIDDEN, msg)).addListener((_:Future[_ >: Void]) => ctx.disconnect)
       }
     }
@@ -332,7 +331,7 @@ object WebSocket {
   @Nonnull
   private def channelFutureToFuture(@Nonnull cf:ChannelFuture):Future[Channel] = {
     val promise = Promise[Channel]()
-    cf.addListener { _ =>
+    cf.addListener { _:Future[Void] =>
       if(cf.isSuccess) {
         promise.success(cf.channel)
       } else {

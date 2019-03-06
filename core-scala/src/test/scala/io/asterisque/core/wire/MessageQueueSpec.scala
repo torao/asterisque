@@ -4,7 +4,6 @@ import java.util.Random
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
-import io.asterisque.core.wire.MessageQueue
 import io.asterisque.core.msg.{Control, Open}
 import org.slf4j.LoggerFactory
 import org.specs2.Specification

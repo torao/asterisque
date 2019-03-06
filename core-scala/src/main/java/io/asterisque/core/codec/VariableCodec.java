@@ -169,6 +169,8 @@ public final class VariableCodec {
         || value instanceof Float
         || value instanceof Double
         || value instanceof String
+        || value instanceof java.math.BigInteger
+        || value instanceof java.math.BigDecimal
         || value instanceof UUID) {
       return true;
     }

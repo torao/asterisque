@@ -1,4 +1,4 @@
-package io.asterisque.wire
+package io.asterisque.wire.message
 
 import java.io.Serializable
 import java.nio.ByteBuffer
@@ -9,26 +9,25 @@ import io.asterisque.core.Pipe
 import io.asterisque.core.codec.VariableCodec
 import io.asterisque.utils.Debug
 import io.asterisque.{Asterisque, Priority}
-import javax.annotation.Nonnull
+import javax.annotation.{Nonnull, Nullable}
 import org.apache.commons.codec.binary.Hex
 
 import scala.util.{Failure, Success, Try}
 
-package object message {
-
+/**
+  * asterisque のワイヤープロトコルで使用するメッセージです。
+  *
+  * @author Takami Torao
+  */
+sealed trait Message extends Serializable {
 
   /**
-    * asterisque のワイヤープロトコルで使用するメッセージです。
-    *
-    * @author Takami Torao
+    * メッセージの宛先となるパイプ ID
     */
-  sealed trait Message extends Serializable {
+  val pipeId:Short
+}
 
-    /**
-      * メッセージの宛先となるパイプ ID
-      */
-    val pipeId:Short
-  }
+object Message {
 
   /**
     * 特定のファンクションに対してパイプのオープンを要求するメッセージです。
@@ -41,9 +40,11 @@ package object message {
     * @author Takami Torao
     */
   final case class Open(pipeId:Short, priority:Byte, functionId:Short, @Nonnull params:Array[Any]) extends Message {
-
     Objects.requireNonNull(params, "params shouldn't be null")
     assert(VariableCodec.isTransferable(java.util.Arrays.asList(params)), Debug.toString(params))
+  }
+
+  object Open {
 
     /**
       * デフォルトの優先度を持つ Open メッセージを構築します。
@@ -52,9 +53,7 @@ package object message {
       * @param functionId オープンを要求するファンクション ID
       * @param params     ファンクションの呼び出しパラメータ
       */
-    def this(pipeId:Short, functionId:Short, @Nonnull params:Array[AnyRef]) {
-      this(pipeId, Priority.Normal, functionId, params)
-    }
+    def apply(pipeId:Short, functionId:Short, @Nonnull params:Array[Any]):Open = Open(pipeId, Priority.Normal, functionId, params)
   }
 
   /**
@@ -64,7 +63,7 @@ package object message {
     * @param pipeId パイプ ID
     * @param result 処理結果
     */
-  final case class Close[T] private[Close](pipeId:Short, @Nonnull result:Try[T]) extends Message
+  final case class Close(pipeId:Short, @Nonnull result:Try[Any]) extends Message
 
   object Close {
 
@@ -74,8 +73,7 @@ package object message {
       * @param pipeId 宛先のパイプ ID
       * @param result 成功として渡される結果
       */
-    def withSuccessful[T](pipeId:Short, @Nonnull result:T):Close[T] = {
-      Objects.requireNonNull(result)
+    def withSuccessful[T](pipeId:Short, @Nullable result:T):Close = {
       assert(VariableCodec.isTransferable(result), Debug.toString(result))
       Close(pipeId, Success(result))
     }
@@ -87,7 +85,7 @@ package object message {
       * @param abort  中断メッセージ
       * @return 予期しない状況による処理中断を表すクローズメッセージ
       */
-    def withFailure[T](pipeId:Short, @Nonnull abort:Abort):Close[T] = {
+    def withFailure(pipeId:Short, @Nonnull abort:Abort):Close = {
       Objects.requireNonNull(abort, "abort shouldn't be null")
       Close(pipeId, Failure(abort))
     }
@@ -101,7 +99,7 @@ package object message {
       * @return エラーによる処理中断を表すクローズメッセージ
       */
     @Nonnull
-    def withFailure(pipeId:Short, code:Int, @Nonnull msg:String) = new Close(pipeId, Failure(Abort(code, msg)))
+    def withFailure(pipeId:Short, code:Int, @Nonnull msg:String):Close = Close(pipeId, Failure(Abort(code, msg)))
   }
 
   /**
@@ -128,8 +126,11 @@ package object message {
     if(offset < 0 || length < 0) {
       throw new IllegalArgumentException("negative value: offset=" + offset + ", length=" + length)
     }
+    if(length == 0) {
+      throw new IllegalArgumentException(s"zero payload")
+    }
     if(length > Block.MaxPayloadSize) {
-      throw new IllegalArgumentException("too long payload: " + length + ", max=" + Block.MaxPayloadSize)
+      throw new IllegalArgumentException(s"too long payload: $length, max=${Block.MaxPayloadSize}")
     }
     if(loss < 0) {
       throw new IllegalArgumentException("invalid loss-rate: " + loss)
@@ -218,14 +219,13 @@ package object message {
 
   /**
     * Control はフレームワークによって他のメッセージより優先して送信される制御メッセージを表します。
-    * {@link Message#pipeId} は無視されます。
+    * [[Message.pipeId]] は無視されます。
     *
-    * @param code 制御コード
-    * @param data コード値に依存するバイナリデータ
+    * @param data 制御メッセージのデータ
     * @author Takami Torao
     */
-  final case class Control(code:Byte, @Nonnull data:Array[Byte] = Array.empty) extends Message {
-    Objects.requireNonNull(data, "data is null")
+  final case class Control(@Nonnull data:Control.Fields) extends Message {
+    Objects.requireNonNull(data, "fields is null")
 
     override val pipeId:Short = 0
   }
@@ -244,16 +244,12 @@ package object message {
       */
     val Close:Byte = 'C'
 
-    /**
-      * メッセージストリームの終了を表す制御コードです。予約のみで実際の通信上では使用していません。
-      */
-    private val EndOfMessage:Byte = ']'
+    trait Fields
 
-    /**
-      * メッセージストリーム上でメッセージの終端を表すために使用することのできるインスタンス。
-      */
-    lazy val EOM:Message = new Control(Control.EndOfMessage)
+    case object CloseField extends Fields
+
+    val CloseMessage:Control = Control(CloseField)
+
   }
-
 
 }

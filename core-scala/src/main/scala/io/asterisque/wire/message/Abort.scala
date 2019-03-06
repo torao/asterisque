@@ -48,4 +48,11 @@ object Abort {
     * ブロックを受信できない function にブロックが送信されたことを示すコード。
     */
   val FunctionCannotReceiveBlock = 103
+
+  /**
+    * 宛先のパイプが存在しない事を示すコード。
+    */
+  val DestinationPipeUnreachable = 104
+
+  def apply(@Nonnull message:String):Abort = Abort(Unexpected, message)
 }

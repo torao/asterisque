@@ -26,12 +26,12 @@ abstract class Wire protected(@Nonnull val name:String, val inboundQueueSize:Int
   /**
     * 受信メッセージのキュー。
     */
-  protected val inbound = new MessageQueue(name + ":IN", inboundQueueSize)
+  val inbound = new MessageQueue(name + ":IN", inboundQueueSize)
 
   /**
     * 送信メッセージのキュー。
     */
-  protected val outbound = new MessageQueue(name + ":OUT", outboundQueueSize)
+  val outbound = new MessageQueue(name + ":OUT", outboundQueueSize)
 
   /**
     * このワイヤーのリスナ。

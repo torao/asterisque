@@ -2,7 +2,6 @@ package io.asterisque.wire.gateway
 
 import java.net.URI
 import java.util.ServiceLoader
-import java.util.function.Consumer
 
 import javax.annotation.{Nonnull, Nullable}
 import javax.net.ssl.SSLContext
@@ -45,10 +44,10 @@ trait Bridge extends AutoCloseable {
     * @param sslContext  Secure ソケットを示す URI スキーマが指定された場合 (例えば { @code wss://}) に使用する SSL コンテキスト
     * @param onAccept    サーバが接続を受け付けたときのコールバック
     */
-  def newServer(@Nonnull uri:URI, @Nonnull subprotocol:String, inboundQueueSize:Int, outboundQueueSize:Int, @Nullable sslContext:SSLContext, @Nonnull onAccept:Consumer[Future[Wire]]):Future[Server]
+  def newServer(@Nonnull uri:URI, @Nonnull subprotocol:String, inboundQueueSize:Int, outboundQueueSize:Int, @Nullable sslContext:SSLContext, @Nonnull onAccept:Future[Wire] => Unit):Future[Server]
 }
 
-object Bridge extends Bridge {
+object Bridge {
   private[this] val logger = LoggerFactory.getLogger(classOf[Bridge])
 
   private[this] val bridges = ServiceLoader.load(classOf[Bridge]).iterator().asScala.flatMap { bridge =>
@@ -82,13 +81,13 @@ object Bridge extends Bridge {
     * @param sslContext  Secure ソケットを示す URI スキーマが指定された場合 (例えば { @code wss://}) に使用する SSL コンテキスト
     * @param onAccept    サーバが接続を受け付けたときのコールバック
     */
-  def newServer(@Nonnull uri:URI, @Nonnull subprotocol:String, inboundQueueSize:Int, outboundQueueSize:Int, @Nullable sslContext:SSLContext, @Nonnull onAccept:Consumer[Future[Wire]]):Future[Server] = {
+  def newServer(@Nonnull uri:URI, @Nonnull subprotocol:String, inboundQueueSize:Int, outboundQueueSize:Int, @Nullable sslContext:SSLContext, @Nonnull onAccept:Future[Wire] => Unit):Future[Server] = {
     find(uri)
       .map(_.newServer(uri, subprotocol, inboundQueueSize, outboundQueueSize, sslContext, onAccept))
       .getOrElse(Future.failed(new UnsupportedProtocolException(s"unsupported uri scheme: $uri")))
   }
 
-  def newServer(@Nonnull uri:URI, @Nonnull subprotocol:String, @Nullable sslContext:SSLContext, @Nonnull onAccept:Consumer[Future[Wire]]):Future[Server] = newServer(uri, subprotocol, Short.MaxValue, Short.MaxValue, sslContext, onAccept)
+  def newServer(@Nonnull uri:URI, @Nonnull subprotocol:String, @Nullable sslContext:SSLContext, @Nonnull onAccept:Future[Wire] => Unit):Future[Server] = newServer(uri, subprotocol, Short.MaxValue, Short.MaxValue, sslContext, onAccept)
 
   private[this] def find(uri:URI):Option[Bridge] = {
     if(uri.getScheme == null) {

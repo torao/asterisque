@@ -22,14 +22,15 @@ import scala.annotation.tailrec
 import scala.concurrent.Promise
 
 private[netty] class WebSocketWire(@Nonnull name:String, primary:Boolean, inboundQueueSize:Int, outboundQueueSize:Int) extends Wire(name, inboundQueueSize, outboundQueueSize) {
-  super.inbound.addListener(new WebSocketWire#InboundListener())
-  super.outbound.addListener(new WebSocketWire#OutboundListener())
   private[this] val promise = Promise[Wire]()
   private[netty] val future = promise.future
-  private[this] val context = new AtomicReference[ChannelHandlerContext]
-  private[this] val messagePollable = new AtomicBoolean
-  private[netty] val servant = new WebSocketWire#WSServant
-  private[this] val closed = new AtomicBoolean
+  private[this] val context = new AtomicReference[ChannelHandlerContext]()
+  private[this] val messagePollable = new AtomicBoolean()
+  private[netty] val servant = new WSServant()
+  private[this] val closed = new AtomicBoolean()
+
+  inbound.addListener(new InboundListener())
+  outbound.addListener(new OutboundListener())
 
   @Nullable
   override def local:SocketAddress = Option(context.get).map(_.channel.localAddress).orNull
@@ -66,7 +67,7 @@ private[netty] class WebSocketWire(@Nonnull name:String, primary:Boolean, inboun
 
     @tailrec
     def _pumpUp(channel:Channel):Unit = if(channel.isOpen && channel.isWritable && messagePollable.get()) {
-      val msg = super.outbound.poll()
+      val msg = outbound.poll()
       if(msg != null) {
         logger.debug("{} >> {}: {}", local, remote, msg)
         channel.writeAndFlush(messageToFrame(msg))
@@ -118,7 +119,7 @@ private[netty] class WebSocketWire(@Nonnull name:String, primary:Boolean, inboun
   /**
     * Netty との WebSocket フレーム送受信を行うためのクラス。
     */
-  private class WSServant extends WebSocket.Servant {
+  private[netty] class WSServant extends WebSocket.Servant {
     override def wsReady(@Nonnull ctx:ChannelHandlerContext):Unit = {
       if(closed.get) ctx.close
       else {

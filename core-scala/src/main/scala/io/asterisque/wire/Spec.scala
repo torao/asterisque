@@ -4,6 +4,7 @@ import java.nio.ByteOrder
 import java.nio.charset.{Charset, StandardCharsets}
 
 import io.asterisque.utils.Version
+import org.slf4j.LoggerFactory
 
 /**
   * asterisque プロトコルの仕様となる定数や変換処理などを定義します。
@@ -14,11 +15,19 @@ sealed abstract class Spec(
                             val endian:ByteOrder,
                             val maxServiceId:Int
                           ) {
-
 }
 
 object Spec {
-  val Version:Version = new Version(getClass.getPackage.getImplementationVersion)
+  private[this] val logger = LoggerFactory.getLogger(classOf[Spec])
+
+  val VERSION:Version = {
+    val num:String = Option(getClass.getPackage.getImplementationVersion)
+      .getOrElse {
+        logger.warn("version is not specified, assume 0.0.0")
+        "0.0.0"
+      }
+    Version(num)
+  }
 
   val Std:Spec = V1
 

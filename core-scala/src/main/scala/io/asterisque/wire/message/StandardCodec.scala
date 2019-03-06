@@ -87,6 +87,7 @@ private[message] class StandardCodec extends Codec[Any] {
     case s:java.lang.String => encodeString(packer, s)
     case i:java.math.BigInteger => encodeBinary(packer, i.toByteArray)
     case i:java.math.BigDecimal => encodeString(packer, i.toString)
+    case dt:java.util.Date => encodeInt(packer, dt.getTime)
     case m:java.util.Map[_, _] =>
       packer.write(Tag.List)
       Codec.writeMap(packer, m.asScala)

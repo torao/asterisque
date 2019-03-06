@@ -4,14 +4,13 @@ import java.net.SocketAddress
 import java.util.concurrent.atomic.AtomicBoolean
 
 import io.asterisque.wire.gateway.Server
-import io.asterisque.wire.gateway.netty.WebSocket.Server
 import io.asterisque.wire.gateway.netty.WebSocketServer.logger
 import io.netty.channel.{Channel, ChannelHandlerContext}
 import javax.annotation.{Nonnull, Nullable}
 import org.slf4j.LoggerFactory
 
 
-private[netty] class WebSocketServer extends Server with Server.Listener {
+private[netty] class WebSocketServer extends Server with WebSocket.Server.Listener {
   final private var channel:Channel = _
   final private val closed = new AtomicBoolean(false)
 
@@ -26,7 +25,7 @@ private[netty] class WebSocketServer extends Server with Server.Listener {
   }
 
   override def wsServerCaughtException(@Nullable ctx:ChannelHandlerContext, @Nonnull ex:Throwable):Unit = {
-    logger.error("WebSocketServer.wsServerCaughtException({}, {})", ctx, ex)
+    logger.error(s"WebSocketServer.wsServerCaughtException($ctx, $ex)")
     if(ctx != null) {
       ctx.close()
     }

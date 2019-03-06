@@ -1,18 +1,32 @@
 package io.asterisque.utils
 
+import javax.annotation.Nonnull
+
 import scala.util.{Failure, Success, Try}
 
 /**
-  * [Semantic Versioning](https://semver.org/) に基づくバージョン表現クラスです。
+  * `[major:UINT8][minor:UINT8][patch:UINT16]` で表される数値でバージョンを構築します。
   *
-  * @param version バージョン文字列
+  * @param version バージョン
   */
-case class Version(version:String) {
+case class Version(version:Int) extends AnyVal {
+  override def toString:String = {
+    val major = (version >>> 24) & 0xFF
+    val minor = (version >>> 16) & 0xFF
+    val patch = version & 0xFFFF
+    s"$major.$minor.$patch"
+  }
+}
+
+object Version {
 
   /**
-    * このバージョンの数値表現を参照します。
+    * [Semantic Versioning](https://semver.org/) に基づくバージョン表現文字列からインスタンスを構築します。
+    *
+    * @param version バージョン文字列
+    * @return バージョン
     */
-  val toInt:Int = Try {
+  def apply(@Nonnull version:String):Version = Version(Try {
     version.split("\\.", 4).toList.take(3).map(_.trim().toInt)
   }.recoverWith { case ex =>
     Failure(new IllegalArgumentException(s"illegal version format: $version", ex))
@@ -25,23 +39,5 @@ case class Version(version:String) {
       Failure(new IllegalArgumentException(s"patch number is out-of-range: $version"))
     case major :: minor :: patch :: Nil =>
       Success(((major & 0xFF) << 24) | ((minor & 0xFF) << 16) | (patch & 0xFFFF))
-  }.get
-
-  override def toString:String = version
-}
-
-object Version {
-
-  /**
-    * 指定された数値表現のバージョンからインスタンスを構築します。
-    *
-    * @param version 数値表現のバージョン
-    * @return バージョン
-    */
-  def apply(version:Int):Version = {
-    val major = (version >> 24) & 0xFF
-    val minor = (version >> 16) & 0xFF
-    val patch = version & 0xFFFF
-    Version(s"$major.$minor.$patch")
-  }
+  }.get)
 }

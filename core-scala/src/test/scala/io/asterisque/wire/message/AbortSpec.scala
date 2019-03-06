@@ -1,4 +1,4 @@
-package io.asterisque.core.msg
+package io.asterisque.wire.message
 
 import java.lang.reflect.Modifier
 

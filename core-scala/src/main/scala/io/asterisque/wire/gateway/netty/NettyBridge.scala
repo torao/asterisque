@@ -61,17 +61,19 @@ class NettyBridge() extends Bridge {
     * @return Server の Future
     */
   @Nonnull
-  override def newServer(@Nonnull uri:URI, @Nonnull subprotocol:String, inboundQueueSize:Int, outboundQueueSize:Int, @Nullable sslContext:SSLContext, @Nonnull onAccept:Consumer[Future[Wire]]):Future[Server] = getScheme(uri) match {
+  override def newServer(@Nonnull uri:URI, @Nonnull subprotocol:String, inboundQueueSize:Int, outboundQueueSize:Int, @Nullable sslContext:SSLContext, @Nonnull onAccept:Future[Wire]=>Unit):Future[Server] = getScheme(uri) match {
     case Right(secure) =>
-      val server = new WebSocketServer
+      val server = new WebSocketServer()
       val ssl = if(secure) {
-        Option(sslContext).map(ctx => new JdkSslContext(ctx, false, ClientAuth.NONE).asInstanceOf[SslContext]).getOrElse(throw new NullPointerException("ssl context isn't specified"))
+        Option(sslContext)
+          .map(ctx => new JdkSslContext(ctx, false, ClientAuth.NONE).asInstanceOf[SslContext])
+          .getOrElse(throw new NullPointerException("ssl context isn't specified"))
       } else null
       val path = Option(uri.getPath).filter((p:String) => p.length != 0).getOrElse("/")
       val driver = new WebSocket.Server(worker, subprotocol, path, server, ssl)
       driver.bind(uriToSocketAddress(uri), { _ =>
         val wire = new WebSocketWire("S:" + uri, true, inboundQueueSize, outboundQueueSize)
-        onAccept.accept(wire.future)
+        onAccept(wire.future)
         wire.servant
       }).map(_ => server)
     case Left(ex) => Future.failed(ex)

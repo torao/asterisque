@@ -1,12 +1,16 @@
 package io.asterisque.wire.message
 
+import java.io.ByteArrayOutputStream
+import java.nio.ByteBuffer
 import java.security.cert.X509Certificate
 import java.util.ServiceLoader
 
 import io.asterisque.auth.{Algorithms, Certificate}
+import io.asterisque.core.codec.Unsatisfied
 import io.asterisque.core.session.ProtocolViolationException
 import io.asterisque.utils.{Debug, Version}
-import io.asterisque.wire.{Envelope, RemoteException}
+import io.asterisque.wire.message.Message.{Block, Close, Control, Open}
+import io.asterisque.wire.{Envelope, RemoteException, Spec}
 import javax.annotation.{Nonnull, Nullable}
 import org.msgpack.MessagePack
 import org.msgpack.packer.Packer
@@ -95,7 +99,7 @@ object Codec {
         logger.warn(s"unexpected exception: ${Debug.toString(value)}", ex)
         false
     }
-  }.getOrElse {
+  }.orElse {
     throw new CodecException(s"unsupported value type: ${Debug.toString(value)}")
   }
 
@@ -121,94 +125,149 @@ object Codec {
     val Block:Byte = '#'
   }
 
-  implicit object MESSAGE extends Codec[Message] {
-    override def encode(packer:Packer, msg:Message):Unit = msg match {
-      case open:Open =>
-        packer.write(Msg.Open)
-        packer.write(open.pipeId)
-        packer.write(open.priority)
-        packer.write(open.functionId)
-        writeArray(packer, open.params)
-      case close:Close[_] =>
-        packer.write(Msg.Close)
-        packer.write(close.pipeId)
-        close.result match {
-          case Success(x) =>
-            packer.write(true)
-            Codec.encode(packer, x)
-          case Failure(ex) =>
-            packer.write(false)
-            ex match {
-              case Abort(code, message) =>
-                packer.write(code)
-                packer.write(message)
-              case _ =>
-                packer.write(Abort.Unexpected)
-                packer.write(ex.toString)
-            }
-        }
-      case block:Block =>
-        assert(block.loss >= 0)
-        assert(block.length <= Block.MaxPayloadSize, f"block payload length too large: ${block.length}%d / ${Block.MaxPayloadSize}%d")
-        packer.write(Msg.Block)
-        val status = ((if(block.eof) 1 << 7 else 0) | (block.loss & 0x7F)).toByte
-        packer.write(block.pipeId)
-        packer.write(status)
-        packer.write(block.payload, block.offset, block.length)
-      case control:Control =>
-        packer.write(Msg.Control)
-        packer.write(control.code)
-        packer.write(control.data)
+  private[this] val MESSAGE_PACK = new MessagePack()
+
+  object MESSAGE {
+    /** message_type:UINT8 + message_length:UINT16 */
+    private[this] val Padding = new Array[Byte](3)
+
+    @Nonnull
+    def encode(@Nonnull msg:Message):Array[Byte] = {
+      val out = new ByteArrayOutputStream()
+      out.write(Padding)
+      val packer = MESSAGE_PACK.createPacker(out)
+      val msgType = msg match {
+        case open:Open =>
+          packer.write(open.pipeId)
+          packer.write(open.priority)
+          packer.write(open.functionId)
+          writeArray(packer, open.params)
+          Msg.Open
+        case close:Close =>
+          packer.write(close.pipeId)
+          close.result match {
+            case Success(x) =>
+              val bits:Byte = 1
+              packer.write(bits)
+              Codec.encode(packer, x)
+            case Failure(ex) =>
+              val bits:Byte = 0
+              packer.write(bits)
+              ex match {
+                case Abort(code, message) =>
+                  packer.write(code)
+                  packer.write(message)
+                case _ =>
+                  packer.write(Abort.Unexpected)
+                  packer.write(ex.toString)
+              }
+          }
+          Msg.Close
+        case block:Block =>
+          assert(block.loss >= 0 && block.loss <= 0x7F)
+          assert(block.length <= Block.MaxPayloadSize, f"block payload length too large: ${block.length}%d / ${Block.MaxPayloadSize}%d")
+          val bits = ((if(block.eof) 1 << 7 else 0) | (block.loss & 0x7F)).toByte
+          packer.write(block.pipeId)
+          packer.write(bits)
+          packer.write(block.payload, block.offset, block.length)
+          Msg.Block
+        case control:Control =>
+          control.data match {
+            case syncSession:SyncSession =>
+              out.write(Control.SyncSession)
+              SYNC_SESSION.encode(packer, syncSession)
+            case Control.CloseField =>
+              out.write(Control.Close)
+          }
+          Msg.Control
+      }
+      val buffer = out.toByteArray
+
+      // Set message type and length
+      if(buffer.length > 0xFFFF) {
+        throw new CodecException(f"serialized size too large: ${buffer.length}%,d bytes: $msg")
+      }
+      val buf = ByteBuffer.wrap(buffer, 0, Padding.length)
+      buf.order(Spec.Std.endian)
+      buf.put(msgType)
+      buf.putShort(buffer.length.toShort)
+      buffer
     }
 
-    override def decode(unpacker:Unpacker):Message = unpacker.readByte() match {
-      case Msg.Open =>
-        val pipeId = unpacker.readShort()
-        val priority = unpacker.readByte()
-        val functionId = unpacker.readShort()
-        val params = readArray(unpacker).toArray
-        unpacker.readArrayEnd(true)
-        Open(pipeId, priority, functionId, params)
-      case Msg.Close =>
-        val pipeId = unpacker.readShort()
-        val success = unpacker.readBoolean()
-        if(success) {
-          val result = Codec.decode(unpacker)
-          Close(pipeId, Success(result))
-        } else {
-          val msg = unpacker.readString()
-          Close(pipeId, Failure(new RemoteException(msg)))
+    @throws[CodecException]
+    @Nonnull
+    def decode(@Nonnull binary:Array[Byte]):Message = {
+      assert(binary.length >= Padding.length)
+
+      // Get message type and length
+      val buf = ByteBuffer.wrap(binary, 0, Padding.length)
+      buf.order(Spec.Std.endian)
+      val msgType = buf.get()
+      val length = buf.getShort & 0xFFFF
+      assert(binary.length == length)
+
+      val unpacker = MESSAGE_PACK.createBufferUnpacker(binary, Padding.length, length - Padding.length)
+      try {
+        msgType match {
+          case Msg.Open =>
+            val pipeId = unpacker.readShort()
+            val priority = unpacker.readByte()
+            val functionId = unpacker.readShort()
+            val params = readArray(unpacker).toArray
+            Open(pipeId, priority, functionId, params)
+          case Msg.Close =>
+            val pipeId = unpacker.readShort()
+            val bits = unpacker.readByte()
+            val success = (bits & 1) != 0
+            if(success) {
+              val result = Codec.decode(unpacker)
+              Close(pipeId, Success(result))
+            } else {
+              val msg = unpacker.readString()
+              Close(pipeId, Failure(new RemoteException(msg)))
+            }
+          case Msg.Block =>
+            val pipeId = unpacker.readShort()
+            val status = unpacker.readByte()
+            val eof = ((1 << 7) & status) != 0
+            val loss = (status & 0x7F).toByte
+            val payload = unpacker.readByteArray()
+            Block(pipeId, loss, payload, 0, payload.length, eof)
+          case Msg.Control =>
+            if(binary.length <= 1) {
+              throw new Unsatisfied()
+            }
+            binary(1) match {
+              case Control.SyncSession =>
+                Control(SYNC_SESSION.decode(unpacker))
+              case Control.Close =>
+                Control(Control.CloseField)
+            }
         }
-      case Msg.Block =>
-        val pipeId = unpacker.readShort()
-        val status = unpacker.readByte()
-        val eof = ((1 << 7) & status) != 0
-        val loss = (status & 0x7F).toByte
-        val payload = unpacker.readByteArray()
-        Block(pipeId, loss, payload, 0, payload.length, eof)
-      case Msg.Control =>
-        val code = unpacker.readByte()
-        val data = unpacker.readByteArray()
-        Control(code, data)
+      } catch {
+        case ex:Exception =>
+          val pos = unpacker.getReadByteCount + Padding.length
+          throw new CodecException(f"message restoration failed; type=0x${msgType & 0xFF}%02X ('${msgType.toChar}%s'), length=$length%,d; $pos @ ${Debug.toString(binary)}", ex)
+      }
     }
   }
 
   implicit object SYNC_SESSION extends Codec[SyncSession] {
     override def encode(packer:Packer, sync:SyncSession):Unit = {
-      packer.write(sync.version.toInt)
-      CERTIFICATE.encode(packer, sync.cert)
-      packer.write(sync.serviceId).write(sync.utcTime)
+      packer.write(sync.version.version)
+      ENVELOPE.encode(packer, sync.sealedCertificate)
+      packer.write(sync.serviceId)
+        .write(sync.utcTime)
       MAP_STRING.encode(packer, sync.config)
     }
 
     override def decode(unpacker:Unpacker):SyncSession = {
       val version = Version(unpacker.readInt())
-      val cert = CERTIFICATE.decode(unpacker)
-      val sessionId = unpacker.readLong()
+      val envelope = ENVELOPE.decode(unpacker)
       val serviceId = unpacker.readString()
       val utcTime = unpacker.readLong()
       val attr = MAP_STRING.decode(unpacker)
-      SyncSession(version, cert, sessionId, serviceId, utcTime, attr)
+      SyncSession(version, envelope, serviceId, utcTime, attr)
     }
   }
 
