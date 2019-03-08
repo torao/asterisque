@@ -9,7 +9,7 @@ import io.asterisque.utils.Debug
 import io.asterisque.wire.ProtocolException
 import io.asterisque.wire.gateway.netty.WebSocketWire.logger
 import io.asterisque.wire.gateway.{MessageQueue, Wire}
-import io.asterisque.wire.message.{Codec, CodecException, Message}
+import io.asterisque.wire.message.{CodecException, Message, ObjectMapper}
 import io.netty.buffer.{ByteBufUtil, Unpooled}
 import io.netty.channel.{Channel, ChannelHandlerContext}
 import io.netty.handler.codec.http.websocketx.{BinaryWebSocketFrame, WebSocketFrame}
@@ -86,7 +86,7 @@ private[netty] class WebSocketWire(@Nonnull name:String, primary:Boolean, inboun
     */
   @Nonnull
   private def messageToFrame(@Nonnull msg:Message):WebSocketFrame = {
-    val buffer = Codec.MESSAGE.encode(msg)
+    val buffer = ObjectMapper.MESSAGE.encode(msg)
     val buf = Unpooled.wrappedBuffer(buffer)
     new BinaryWebSocketFrame(buf)
   }
@@ -108,10 +108,10 @@ private[netty] class WebSocketWire(@Nonnull name:String, primary:Boolean, inboun
       ByteBuffer.wrap(bytes)
     }
     try {
-      Some(Codec.MESSAGE.decode(buffer.array()))
+      Some(ObjectMapper.MESSAGE.decode(buffer.array()))
     } catch {
       case ex:CodecException =>
-        logger.warn(s"unsupported websocket frame: ${Debug.toString(buffer.array())}")
+        logger.warn(s"unsupported websocket frame: ${Debug.toString(buffer.array())}; $ex")
         None
     }
   }
@@ -121,8 +121,10 @@ private[netty] class WebSocketWire(@Nonnull name:String, primary:Boolean, inboun
     */
   private[netty] class WSServant extends WebSocket.Servant {
     override def wsReady(@Nonnull ctx:ChannelHandlerContext):Unit = {
-      if(closed.get) ctx.close
-      else {
+      if(closed.get()) {
+        ctx.close()
+        ()
+      } else {
         context.set(ctx)
         val channel = ctx.channel
         channel.config.setAutoRead(true)

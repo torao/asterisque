@@ -8,7 +8,7 @@ import io.asterisque.utils.EventDispatcher
 import io.asterisque.wire.ProtocolException
 import io.asterisque.wire.gateway.{MessageQueue, Wire}
 import io.asterisque.wire.message.Message.{Block, Close, Control, Open}
-import io.asterisque.wire.message.{Abort, Message, SyncSession}
+import io.asterisque.wire.message.{Abort, Codec, Message, SyncSession}
 import io.asterisque.wire.rpc.Session._
 import javax.annotation.Nonnull
 import org.slf4j.LoggerFactory
@@ -36,7 +36,7 @@ import scala.util.{Failure, Success}
   * @param sync このセッションを生成するために Wire に対して送受信した状態同期メッセージ
   * @author Takami Torao
   */
-class Session private[rpc](val id:Long, dispatcher:Dispatcher, wire:Wire, sync:SyncSession.Pair) extends EventDispatcher[Session.Listener] {
+class Session private[rpc](val id:Long, dispatcher:Dispatcher, wire:Wire, codec:Codec, sync:SyncSession.Pair) extends EventDispatcher[Session.Listener] {
 
   if(wire.remote == null) {
     throw new IllegalStateException(s"remote address of wire has not been confirmed: $wire")
@@ -154,13 +154,13 @@ class Session private[rpc](val id:Long, dispatcher:Dispatcher, wire:Wire, sync:S
     * @param onTransferComplete 呼び出し先とのパイプが生成されたときに実行される処理
     * @return オープンしたパイプでの処理の実行結果を通知する Future
     */
-  def open(priority:Byte, function:Short, @Nonnull params:Array[Any], @Nonnull onTransferComplete:Pipe => Future[Any]):Future[Any] = {
+  def open(priority:Byte, function:Short, @Nonnull params:Array[Byte], @Nonnull onTransferComplete:Pipe => Future[Any]):Future[Any] = {
     val pipe = pipes.create(priority, function)
     pipe.open(params)
     onTransferComplete.apply(pipe)
   }
 
-  def open(priority:Byte, function:Short, @Nonnull params:Array[Any]):Future[Any] = {
+  def open(priority:Byte, function:Short, @Nonnull params:Array[Byte]):Future[Any] = {
     open(priority, function, params, _.future)
   }
 
@@ -264,7 +264,7 @@ class Session private[rpc](val id:Long, dispatcher:Dispatcher, wire:Wire, sync:S
     * @return リモートインターフェース
     */
   def bind[T](clazz:Class[T], loader:ClassLoader):T = {
-    val skeleton = new Skeleton(logId, clazz, open)
+    val skeleton = new Skeleton(logId, clazz, codec, open)
     clazz.cast(java.lang.reflect.Proxy.newProxyInstance(loader, Array[Class[_]](clazz), skeleton))
   }
 

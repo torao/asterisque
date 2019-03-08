@@ -6,6 +6,7 @@ import io.asterisque.Asterisque
 import io.asterisque.wire.message.Message.{Block, Close, Open}
 import org.specs2.execute.Result
 import org.specs2.specification.core.SpecStructure
+import io.asterisque.test.randomByteArray
 
 import scala.util.{Failure, Random, Success}
 
@@ -92,18 +93,16 @@ throw NullPointerException if data is null. ${Open(1, 8, 12, null) must throwA[N
   }
 
   private[this] def openProperties = {
-    val args:Array[Any] = Array("A", Integer.valueOf(2))
-    val o = Open(1, 8, 12, args)
-    (o.pipeId === 1) and (o.priority === 8) and (o.functionId === 12) and o.params.zip(args).map { case (a, b) => a === b }.reduce {
-      _ and _
-    }
+    val params = randomByteArray(73840, 256)
+    val o = Open(1, 8, 12, params)
+    (o.pipeId === 1) and (o.priority === 8) and (o.functionId === 12) and (o.params === params)
   }
 
   protected override def newMessages:Seq[Message] = Seq(
     Block(0, 0, Asterisque.Empty.Bytes, 0, 0, eof = false),
     Block(1, 1, (0 to 0xFF).map(_.toByte).toArray, 0, 0x100, eof = false),
     Block(2, 2, (0 to Block.MaxPayloadSize).map(_.toByte).toArray, 0, Block.MaxPayloadSize, eof = false),
-    Open(0.toShort, 0.toShort, Array[Any]("A", Integer.valueOf(100), new java.util.Date())),
+    Open(0.toShort, 0.toShort, randomByteArray(738729, 256)),
     Close(0.toShort, Success("foo")),
     Close(1, Failure(new Exception("bar")))
   )

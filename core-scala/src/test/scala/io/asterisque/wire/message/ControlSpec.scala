@@ -28,7 +28,7 @@ The pipe-id must be zero. ${Control.CloseMessage.pipeId === 0}
     val r = new Random(78287435L)
     val version = Version(r.nextInt().toShort)
     val (privateKey, cert) = NODE_CERTS.head
-    val envelope = Envelope.seal(Codec.X509CERTIFICATE.encode(cert), cert, privateKey)
+    val envelope = Envelope.seal(ObjectMapper.X509CERTIFICATE.encode(cert), cert, privateKey)
     val serviceId = "io.asterisque.TestService"
     val utcTime = r.nextLong()
     val ping = r.nextInt()

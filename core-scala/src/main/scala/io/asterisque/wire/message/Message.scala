@@ -39,7 +39,7 @@ object Message {
     * @param params     ファンクションの呼び出しパラメータ
     * @author Takami Torao
     */
-  final case class Open(pipeId:Short, priority:Byte, functionId:Short, @Nonnull params:Array[Any]) extends Message {
+  final case class Open(pipeId:Short, priority:Byte, functionId:Short, @Nonnull params:Array[Byte]) extends Message {
     Objects.requireNonNull(params, "params shouldn't be null")
     assert(VariableCodec.isTransferable(java.util.Arrays.asList(params)), Debug.toString(params))
   }
@@ -53,7 +53,7 @@ object Message {
       * @param functionId オープンを要求するファンクション ID
       * @param params     ファンクションの呼び出しパラメータ
       */
-    def apply(pipeId:Short, functionId:Short, @Nonnull params:Array[Any]):Open = Open(pipeId, Priority.Normal, functionId, params)
+    def apply(pipeId:Short, functionId:Short, @Nonnull params:Array[Byte]):Open = Open(pipeId, Priority.Normal, functionId, params)
   }
 
   /**

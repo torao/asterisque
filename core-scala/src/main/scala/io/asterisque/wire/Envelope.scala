@@ -7,7 +7,7 @@ import java.security.{PrivateKey, Signature}
 import io.asterisque.auth.Algorithms
 import io.asterisque.carillon._
 import io.asterisque.wire.Envelope.BreakageException
-import io.asterisque.wire.message.Codec
+import io.asterisque.wire.message.ObjectMapper
 import org.msgpack.MessagePack
 
 /**
@@ -42,7 +42,7 @@ final case class Envelope(payload:Array[Byte], signType:Envelope.Type, sign:Arra
     * @tparam T 復元するオブジェクトの型
     * @return 復元したオブジェクト
     */
-  def unseal[T]()(implicit _pack:Codec[T]):T = {
+  def unseal[T]()(implicit _pack:ObjectMapper[T]):T = {
     _pack.decode(new MessagePack().createBufferUnpacker(payload))
   }
 
@@ -77,7 +77,7 @@ object Envelope {
     * @tparam T オブジェクトの型
     * @return 署名付き転送データ
     */
-  def seal[T](payload:T, signerCert:X509Certificate, signerKey:PrivateKey)(implicit _pack:Codec[T]):Envelope = {
+  def seal[T](payload:T, signerCert:X509Certificate, signerKey:PrivateKey)(implicit _pack:ObjectMapper[T]):Envelope = {
     val packer = new MessagePack().createBufferPacker()
     _pack.encode(packer, payload)
     seal(packer.toByteArray, signerCert, signerKey)

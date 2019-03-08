@@ -7,7 +7,7 @@ import java.security.cert.X509Certificate
 import io.asterisque.auth.Certificate
 import io.asterisque.carillon.using
 import io.asterisque.wire.Envelope
-import io.asterisque.wire.message.Codec
+import io.asterisque.wire.message.ObjectMapper
 import org.slf4j.LoggerFactory
 
 package object test {
@@ -15,6 +15,13 @@ package object test {
   def randomString(seed:Int, length:Int):String = {
     val random = new scala.util.Random(seed)
     random.nextString(length)
+  }
+
+  def randomByteArray(seed:Int, length:Int):Array[Byte] = {
+    val random = new scala.util.Random(seed)
+    val bytes = new Array[Byte](length)
+    random.nextBytes(bytes)
+    bytes
   }
 
   object fs {
@@ -80,7 +87,7 @@ package object test {
     val (privateKey, publicKey) = NODE_CERTS.head
     NODE_CERTS.drop(1).map { case (_, x509) =>
       val cert = Certificate(x509, Map("" -> ""))
-      Envelope.seal(Codec.CERTIFICATE.encode(cert), publicKey, privateKey)
+      Envelope.seal(ObjectMapper.CERTIFICATE.encode(cert), publicKey, privateKey)
     }
   }
 

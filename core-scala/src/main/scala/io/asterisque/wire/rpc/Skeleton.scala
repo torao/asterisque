@@ -1,9 +1,11 @@
 package io.asterisque.wire.rpc
 
+import java.io.ByteArrayOutputStream
 import java.lang.reflect.{InvocationHandler, InvocationTargetException, Method}
 import java.util.concurrent.{CompletableFuture, ConcurrentHashMap}
 
 import io.asterisque.utils.Debug
+import io.asterisque.wire.message.Codec
 import io.asterisque.wire.rpc.Skeleton._
 import org.slf4j.LoggerFactory
 
@@ -14,7 +16,7 @@ import scala.concurrent.Future
 /**
   * リモート呼び出し先の function を @Export 定義されたメソッドとして扱うための動的プロキシ用ハンドラ。
   */
-private[rpc] class Skeleton(logId:String, clazz:Class[_], open:(Byte, Short, Array[Any]) => Future[Any]) extends InvocationHandler {
+private[rpc] class Skeleton(logId:String, clazz:Class[_], codec:Codec, open:(Byte, Short, Array[Byte]) => Future[Any]) extends InvocationHandler {
 
   verifyServiceInterface(clazz)
 
@@ -36,10 +38,14 @@ private[rpc] class Skeleton(logId:String, clazz:Class[_], open:(Byte, Short, Arr
       method.invoke(this, args)
     } else {
       // there is no way to receive block in interface binding
+      val out = new ByteArrayOutputStream()
+      codec.encode(out, method, isParams = true, if(args == null) Array.empty else args)
+      val params = out.toByteArray
+
       logger.debug(s"$logId: calling remote method: ${Debug.getSimpleName(method)}")
       val priority = export.priority
       val function = export.value
-      open(priority, function, if(args == null) Array.empty else args.map(_.asInstanceOf[Any]))
+      open(priority, function, params)
     }
   }
 }

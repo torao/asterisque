@@ -1,13 +1,30 @@
 package io.asterisque.wire.message
 
+import java.io.{InputStream, OutputStream}
+import java.lang.reflect.Method
 import java.util.UUID
 
-import io.asterisque.wire.message.StandardCodec.Tag
-import scala.collection.JavaConverters._
+import io.asterisque.wire.message.MessagePackCodec.Tag
+import javax.annotation.{Nonnull, Nullable}
+import org.msgpack.MessagePack
 import org.msgpack.packer.Packer
 import org.msgpack.unpacker.Unpacker
 
-private[message] class StandardCodec extends Codec[Any] {
+import scala.collection.JavaConverters._
+
+class MessagePackCodec extends Codec {
+  private[this] val msgpack = new MessagePack()
+
+  def encode(@Nonnull out:OutputStream, @Nonnull method:Method, isParams:Boolean, @Nullable value:Object):Unit = {
+    val packer = msgpack.createPacker(out)
+    encode(packer, value)
+    packer.flush()
+  }
+
+  def decode(@Nonnull in:InputStream, @Nonnull method:Method, isParams:Boolean):Object = {
+    val unpacker = msgpack.createUnpacker(in)
+    decode(unpacker)
+  }
 
   private[this] def encodeInt(packer:Packer, value:Long):Unit = if(value >= Byte.MinValue && value <= Byte.MaxValue) {
     packer.write(Tag.Int8).write(value.toByte)
@@ -28,18 +45,18 @@ private[message] class StandardCodec extends Codec[Any] {
   }
 
   /**
-    * asterisque がサポートする任意のデータを [[StandardCodec.Tag]] 付きで書き込みます。
+    * asterisque がサポートする任意のデータを [[MessagePackCodec.Tag]] 付きで書き込みます。
     *
     * @param _value 転送可能型の値
     * @throws CodecException 指定された値のエンコードに対応していない場合
     */
   @throws[CodecException]
-  override def encode(packer:Packer, _value:Any):Unit = _value match {
+  private[this] def encode(packer:Packer, _value:Any):Unit = _value match {
     case null | () => packer.write(Tag.Null)
     case b:Boolean => packer.write(if(b) Tag.True else Tag.False)
-    case i:Byte => encodeInt(packer, i)
-    case i:Short => encodeInt(packer, i)
-    case i:Int => encodeInt(packer, i)
+    case i:Byte => encodeInt(packer, i.toLong)
+    case i:Short => encodeInt(packer, i.toLong)
+    case i:Int => encodeInt(packer, i.toLong)
     case i:Long => encodeInt(packer, i)
     case f:Float =>
       packer.write(Tag.Float32)
@@ -60,16 +77,16 @@ private[message] class StandardCodec extends Codec[Any] {
       encodeInt(packer, d.getTime)
     case m:Map[_, _] =>
       packer.write(Tag.Map)
-      Codec.writeMap(packer, m)
+      ObjectMapper.writeMap(packer, m)
     case l:Iterable[_] =>
       packer.write(Tag.List)
-      Codec.writeArray(packer, l)
+      ObjectMapper.writeArray(packer, l)
     case l:Array[_] =>
       packer.write(Tag.List)
-      Codec.writeArray(packer, l)
+      ObjectMapper.writeArray(packer, l)
     case t:Product =>
       packer.write(Tag.List)
-      Codec.writeArray(packer, (0 until t.productArity).map(i => t.productElement(i)))
+      ObjectMapper.writeArray(packer, (0 until t.productArity).map(i => t.productElement(i)))
 
     // Java プリミティブ型と標準コレクション型
     case b:java.lang.Boolean => packer.write(if(b.booleanValue()) Tag.True else Tag.False)
@@ -90,10 +107,10 @@ private[message] class StandardCodec extends Codec[Any] {
     case dt:java.util.Date => encodeInt(packer, dt.getTime)
     case m:java.util.Map[_, _] =>
       packer.write(Tag.List)
-      Codec.writeMap(packer, m.asScala)
+      ObjectMapper.writeMap(packer, m.asScala)
     case l:java.util.Collection[_] =>
       packer.write(Tag.List)
-      Codec.writeArray(packer, l.asScala)
+      ObjectMapper.writeArray(packer, l.asScala)
     case unsupported =>
       throw new CodecException(s"marshal not supported for data type: ${unsupported.getClass.getCanonicalName}: $unsupported")
   }
@@ -105,16 +122,17 @@ private[message] class StandardCodec extends Codec[Any] {
     * @return 復元したオブジェクト
     * @throws CodecException オブジェクトの復元に失敗した場合
     */
-  override def decode(unpacker:Unpacker):Any = unpacker.readByte() match {
+  @throws[CodecException]
+  private[this] def decode(unpacker:Unpacker):Object = unpacker.readByte() match {
     case Tag.Null => null
-    case Tag.True => true
-    case Tag.False => false
-    case Tag.Int8 => unpacker.readByte()
-    case Tag.Int16 => unpacker.readShort()
-    case Tag.Int32 => unpacker.readInt()
-    case Tag.Int64 => unpacker.readLong()
-    case Tag.Float32 => unpacker.readFloat()
-    case Tag.Float64 => unpacker.readDouble()
+    case Tag.True => java.lang.Boolean.TRUE
+    case Tag.False => java.lang.Boolean.FALSE
+    case Tag.Int8 => java.lang.Byte.valueOf(unpacker.readByte())
+    case Tag.Int16 => java.lang.Short.valueOf(unpacker.readShort())
+    case Tag.Int32 => java.lang.Integer.valueOf(unpacker.readInt())
+    case Tag.Int64 => java.lang.Long.valueOf(unpacker.readLong())
+    case Tag.Float32 => java.lang.Float.valueOf(unpacker.readFloat())
+    case Tag.Float64 => java.lang.Double.valueOf(unpacker.readDouble())
     case Tag.String => unpacker.readString()
     case Tag.UUID =>
       val mostSignificantBits = unpacker.readLong()
@@ -123,13 +141,13 @@ private[message] class StandardCodec extends Codec[Any] {
     case Tag.Map =>
       val size = unpacker.readMapBegin()
       val map = (0 until size).map { _ =>
-        (Codec.decode(unpacker), Codec.decode(unpacker))
+        (ObjectMapper.decode(unpacker), ObjectMapper.decode(unpacker))
       }.toMap
       unpacker.readMapEnd(true)
       map
     case Tag.List =>
       val size = unpacker.readArrayBegin()
-      val list = (0 until size).map(_ => Codec.decode(unpacker))
+      val list = (0 until size).map(_ => ObjectMapper.decode(unpacker))
       unpacker.readArrayEnd(true)
       list
     case unsupported =>
@@ -137,7 +155,7 @@ private[message] class StandardCodec extends Codec[Any] {
   }
 }
 
-object StandardCodec {
+object MessagePackCodec {
 
   object Tag {
     val Null:Byte = 0

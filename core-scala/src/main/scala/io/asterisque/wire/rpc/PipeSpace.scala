@@ -1,5 +1,6 @@
 package io.asterisque.wire.rpc
 
+import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 
@@ -132,5 +133,5 @@ private[rpc] class PipeSpace(session:Session) {
 }
 
 object PipeSpace {
-  private val logger = LoggerFactory.getLogger(classOf[PipeSpace])
+  private[PipeSpace] val logger = LoggerFactory.getLogger(classOf[PipeSpace])
 }

@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicLong
 import io.asterisque.auth.Authority
 import io.asterisque.wire.gateway.{MessageQueue, Wire}
 import io.asterisque.wire.message.Message.Control
-import io.asterisque.wire.message.SyncSession
+import io.asterisque.wire.message.{Codec, SyncSession}
 import io.asterisque.wire.rpc.Dispatcher._
 import io.asterisque.wire.{AuthenticationException, Envelope, ProtocolException}
 import javax.annotation.{Nonnull, Nullable}
@@ -26,7 +26,7 @@ import scala.util.Random
   * @param context     ディスパッチャーがリクエストを処理するためのスレッドプール
   * @param tlsPeerAuth TLS レイヤーで交換した証明書の検証を行う場合 true
   */
-class Dispatcher private[rpc](auth:Authority, sealedCert:Envelope, val context:ExecutionContext, tlsPeerAuth:Boolean = true) {
+class Dispatcher private[rpc](auth:Authority, sealedCert:Envelope, val context:ExecutionContext, codec:Codec, tlsPeerAuth:Boolean = true) {
 
   /**
     * このディスパッチャー上でサービスの処理を行っているセッション。
@@ -133,7 +133,7 @@ class Dispatcher private[rpc](auth:Authority, sealedCert:Envelope, val context:E
       val sessionId = sessionIdSequence.getAndIncrement()
       val oldSession = sessions.computeIfAbsent(sessionId, { _:Long =>
         val pair = if(hs.wire.isPrimary) SyncSession.Pair(hs.sent, received) else SyncSession.Pair(received, hs.sent)
-        val session = new Session(sessionId, this, hs.wire, pair)
+        val session = new Session(sessionId, this, hs.wire, codec, pair)
         session.addListener { _:Session =>
           logger.debug("{}: session closed: {}", session.logId, sessionId)
           sessions.remove(sessionId)
@@ -163,7 +163,7 @@ class Dispatcher private[rpc](auth:Authority, sealedCert:Envelope, val context:E
       logger.debug(s"$logId: $msg")
       Future.failed(new ProtocolException(msg))
     } else {
-      service(pipe, context)
+      service.apply(codec, pipe, context)
     }
   }
 

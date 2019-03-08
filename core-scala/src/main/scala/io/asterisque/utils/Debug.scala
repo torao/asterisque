@@ -1,6 +1,6 @@
 package io.asterisque.utils
 
-import java.lang.reflect.Method
+import java.lang.reflect.{Constructor, Method}
 import java.net.{InetAddress, InetSocketAddress}
 import java.nio.ByteBuffer
 import java.security.cert.{Certificate, X509Certificate}
@@ -125,6 +125,8 @@ object Debug {
     * @return メソッドを識別する文字列
     */
   def getSimpleName(m:Method):String = s"${m.getDeclaringClass.getSimpleName}.${m.getName}(${m.getParameterTypes.map(_.getSimpleName).mkString(",")}):${m.getReturnType.getSimpleName}"
+
+  def getSimpleName(m:Constructor[_]):String = s"${m.getDeclaringClass.getSimpleName}.${m.getName}(${m.getParameterTypes.map(_.getSimpleName).mkString(",")}"
 
   def dumpCertificate(logger:Logger, prefix:String, cs:Certificate):Unit = if(logger.isTraceEnabled) {
     cs match {

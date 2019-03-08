@@ -25,7 +25,7 @@ Data size must be constant value. $verifyDataSize
     val r = new Random(7498374)
     val version = Version(r.nextInt())
     val envelope = CERT_ENVELOPES.head
-    val cert = Codec.CERTIFICATE.decode(envelope.payload)
+    val cert = ObjectMapper.CERTIFICATE.decode(envelope.payload)
     val serviceId = r.nextASCIIString(0xFF)
     val utcTime = r.nextLong()
     val ping = r.nextInt()
@@ -34,19 +34,19 @@ Data size must be constant value. $verifyDataSize
     val config = Map("ping" -> ping.toString, "sessionTimeout" -> sessionTimeout.toString)
     val sc1 = SyncSession(version, envelope, serviceId, utcTime, config)
     val packer = new MessagePack().createBufferPacker()
-    Codec.SYNC_SESSION.encode(packer, sc1)
-    val sc2 = Codec.SYNC_SESSION.decode(new MessagePack().createBufferUnpacker(packer.toByteArray))
+    ObjectMapper.SYNC_SESSION.encode(packer, sc1)
+    val sc2 = ObjectMapper.SYNC_SESSION.decode(new MessagePack().createBufferUnpacker(packer.toByteArray))
     (sc2.version === version) and (sc2.cert === cert) and
       (sc2.serviceId === serviceId) and (sc2.utcTime === utcTime) and
       (sc2.config === config)
   }
 
   private[this] def throwExceptionIfBinaryIsBroken = {
-    Codec.SYNC_SESSION.decode(new MessagePack().createBufferUnpacker(Array[Byte](0, 0, 0, 0))) must throwA[CodecException]
+    ObjectMapper.SYNC_SESSION.decode(new MessagePack().createBufferUnpacker(Array[Byte](0, 0, 0, 0))) must throwA[CodecException]
   }
 
   private[this] def throwExceptionIfEmptyBinary = {
-    Codec.SYNC_SESSION.decode(new MessagePack().createBufferUnpacker(Array.empty[Byte])) must throwA[CodecException]
+    ObjectMapper.SYNC_SESSION.decode(new MessagePack().createBufferUnpacker(Array.empty[Byte])) must throwA[CodecException]
   }
 
   private[this] def allConstructorsTest = {
@@ -59,7 +59,7 @@ Data size must be constant value. $verifyDataSize
   private[this] def verifyDataSize = {
     val envelope = CERT_ENVELOPES.head
     val packer = new MessagePack().createBufferPacker()
-    Codec.SYNC_SESSION.encode(packer, SyncSession(envelope, "", 0, Map.empty))
+    ObjectMapper.SYNC_SESSION.encode(packer, SyncSession(envelope, "", 0, Map.empty))
     val data = packer.toByteArray
     data.length must lessThan(0xFFFF)
   }

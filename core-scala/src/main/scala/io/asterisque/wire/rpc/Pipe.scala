@@ -27,7 +27,7 @@ import scala.util.{Failure, Success}
   *
   * @param open このパイプを作成するときに使用した [[io.asterisque.wire.message.Message.Open]] メッセージ
   */
-class Pipe private[rpc](@Nonnull open:Open, @Nonnull stub:Pipe.Stub) {
+class Pipe private[rpc](@Nonnull val open:Open, @Nonnull stub:Pipe.Stub) {
 
   /**
     * このパイプがクローズされているかどうかを表すフラグ。
@@ -68,7 +68,7 @@ class Pipe private[rpc](@Nonnull open:Open, @Nonnull stub:Pipe.Stub) {
     *
     * @param params function 呼び出し時の引数
     */
-  private[rpc] def open(params:Array[Any]):Unit = {
+  private[rpc] def open(params:Array[Byte]):Unit = {
     logger.trace("{}: sending open", this)
     val open = Open(id, priority, function, params)
     stub.post(open)

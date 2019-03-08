@@ -4,7 +4,7 @@ import java.util.Objects
 
 import io.asterisque.auth.Certificate
 import io.asterisque.utils.Version
-import io.asterisque.wire.message.Codec.CERTIFICATE
+import io.asterisque.wire.message.ObjectMapper.CERTIFICATE
 import io.asterisque.wire.{Envelope, Spec}
 import javax.annotation.Nonnull
 
