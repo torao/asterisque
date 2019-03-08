@@ -1,6 +1,6 @@
 package io.asterisque.wire.rpc
 
-import java.io.ByteArrayInputStream
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.lang.reflect.Method
 import java.util.concurrent.ConcurrentHashMap
 
@@ -15,11 +15,13 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait Service extends ((Codec, Pipe, ExecutionContext) => Future[Any]) {
 
-  def apply(@Nonnull codec:Codec, @Nonnull pipe:Pipe, @Nonnull executor:ExecutionContext):Future[Any] = {
-    execute(this, codec, pipe, executor)
-
-    val msg = f"function not found: ${pipe.function & 0xFFFF}%d"
-    Future.failed(new NoSuchFunctionException(msg))
+  def apply(@Nonnull codec:Codec, @Nonnull pipe:Pipe, @Nonnull executor:ExecutionContext):Future[Array[Byte]] = {
+    execute(this, codec, pipe, executor) match {
+      case Some(future) => future
+      case None =>
+        val msg = f"function not found: ${pipe.function & 0xFFFF}%d"
+        Future.failed(new NoSuchFunctionException(msg))
+    }
   }
 }
 
@@ -28,7 +30,7 @@ object Service {
 
   private[this] val METHODS = new ConcurrentHashMap[Class[_], Map[Short, Method]]()
 
-  private[Service] def execute(obj:Service, codec:Codec, pipe:Pipe, executor:ExecutionContext):Option[Future[Any]] = {
+  private[Service] def execute(obj:Service, codec:Codec, pipe:Pipe, executor:ExecutionContext):Option[Future[Array[Byte]]] = {
     METHODS.computeIfAbsent(obj.getClass, { clazz:Class[_] =>
       Option(clazz.getMethods)
         .getOrElse(Array.empty)
@@ -43,7 +45,7 @@ object Service {
     }
   }
 
-  private[this] def call(obj:Service, codec:Codec, pipe:Pipe, method:Method):Any = {
+  private[this] def call(obj:Service, codec:Codec, pipe:Pipe, method:Method):Array[Byte] = {
 
     // retrieve parameters
     val in = new ByteArrayInputStream(pipe.open.params)
@@ -59,7 +61,11 @@ object Service {
     val args:Array[Object] = method.getParameterTypes.zip(params).map { case (clazz, param) =>
       Transformer.anyToObject(Transformer.transform(clazz, param))
     }
-    method.invoke(obj, args:_*)
-    // TODO ここで返値をバイト配列に変換
+    val result = method.invoke(obj, args:_*)
+
+    //
+    val out = new ByteArrayOutputStream()
+    codec.encode(out, method, isParams = false, result)
+    out.toByteArray
   }
 }

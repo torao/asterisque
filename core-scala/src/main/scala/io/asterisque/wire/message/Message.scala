@@ -63,7 +63,7 @@ object Message {
     * @param pipeId パイプ ID
     * @param result 処理結果
     */
-  final case class Close(pipeId:Short, @Nonnull result:Try[Any]) extends Message
+  final case class Close(pipeId:Short, @Nonnull result:Try[Array[Byte]]) extends Message
 
   object Close {
 
@@ -73,7 +73,7 @@ object Message {
       * @param pipeId 宛先のパイプ ID
       * @param result 成功として渡される結果
       */
-    def withSuccessful[T](pipeId:Short, @Nullable result:T):Close = {
+    def withSuccessful(pipeId:Short, @Nullable result:Array[Byte]):Close = {
       assert(VariableCodec.isTransferable(result), Debug.toString(result))
       Close(pipeId, Success(result))
     }
@@ -125,9 +125,6 @@ object Message {
     }
     if(offset < 0 || length < 0) {
       throw new IllegalArgumentException("negative value: offset=" + offset + ", length=" + length)
-    }
-    if(length == 0) {
-      throw new IllegalArgumentException(s"zero payload")
     }
     if(length > Block.MaxPayloadSize) {
       throw new IllegalArgumentException(s"too long payload: $length, max=${Block.MaxPayloadSize}")

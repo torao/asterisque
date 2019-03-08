@@ -3,10 +3,10 @@ package io.asterisque.wire.message
 import java.lang.reflect.Modifier
 
 import io.asterisque.Asterisque
+import io.asterisque.test.randomByteArray
 import io.asterisque.wire.message.Message.{Block, Close, Open}
 import org.specs2.execute.Result
 import org.specs2.specification.core.SpecStructure
-import io.asterisque.test.randomByteArray
 
 import scala.util.{Failure, Random, Success}
 
@@ -73,10 +73,11 @@ throw NullPointerException if data is null. ${Open(1, 8, 12, null) must throwA[N
   }
 
   private[this] def closeProperties = {
-    val c0 = Close(1.toShort, Success("hoge"))
+    val result = "hoge".getBytes
+    val c0 = Close(1.toShort, Success(result))
     val c1 = Close(2.toShort, Failure(Abort(300, "foo")))
     (c0.pipeId === 1) and (c0.result match {
-      case Success("hoge") => success
+      case Success(x) if x sameElements result => success
       case _ => failure
     }) and (c1.pipeId === 1) and (c1.result match {
       case Failure(ex:Abort) => (ex.code === 300) and (ex.message === "foo")
@@ -103,7 +104,7 @@ throw NullPointerException if data is null. ${Open(1, 8, 12, null) must throwA[N
     Block(1, 1, (0 to 0xFF).map(_.toByte).toArray, 0, 0x100, eof = false),
     Block(2, 2, (0 to Block.MaxPayloadSize).map(_.toByte).toArray, 0, Block.MaxPayloadSize, eof = false),
     Open(0.toShort, 0.toShort, randomByteArray(738729, 256)),
-    Close(0.toShort, Success("foo")),
+    Close(0.toShort, Success("foo".getBytes)),
     Close(1, Failure(new Exception("bar")))
   )
 

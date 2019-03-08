@@ -13,6 +13,7 @@ import io.asterisque.wire.message.Message.{Block, Close, Control, Open}
 import io.asterisque.wire.{Envelope, RemoteException, Spec}
 import javax.annotation.{Nonnull, Nullable}
 import org.msgpack.MessagePack
+import org.msgpack.io.EndOfBufferException
 import org.msgpack.packer.Packer
 import org.msgpack.unpacker.Unpacker
 import org.slf4j.LoggerFactory
@@ -63,9 +64,12 @@ trait ObjectMapper[T] {
 
   @Nullable
   @throws[CodecException]
-  def decode(@Nonnull binary:Array[Byte]):T = {
+  def decode(@Nonnull binary:Array[Byte]):T = try {
     val unpacker = new MessagePack().createBufferUnpacker(binary)
     decode(unpacker)
+  } catch {
+    case ex:EndOfBufferException =>
+      throw new CodecException(binary.map(x => f"$x%02X").mkString, ex)
   }
 }
 
@@ -220,7 +224,7 @@ object ObjectMapper {
             val bits = unpacker.readByte()
             val success = (bits & 1) != 0
             if(success) {
-              val result = ObjectMapper.decode(unpacker)
+              val result = unpacker.readByteArray()
               Close(pipeId, Success(result))
             } else {
               val msg = unpacker.readString()

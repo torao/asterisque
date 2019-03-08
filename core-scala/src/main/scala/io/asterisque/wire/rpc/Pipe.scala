@@ -79,7 +79,7 @@ class Pipe private[rpc](@Nonnull val open:Open, @Nonnull stub:Pipe.Stub) {
     *
     * @param result Close に付加する結果
     */
-  private[rpc] def closeWithSuccess(result:Any):Unit = {
+  private[rpc] def closeWithSuccess(result:Array[Byte]):Unit = {
     close(Close(id, Success(result)))
   }
 

@@ -9,4 +9,4 @@ import java.security.cert.X509Certificate
   * @param cert  X.509 certificate
   * @param attrs certificate attribute
   */
-case class Certificate(cert:X509Certificate, attrs:Map[String, String])
+case class Certificate(cert:X509Certificate, attrs:Map[String, String] = Map.empty)

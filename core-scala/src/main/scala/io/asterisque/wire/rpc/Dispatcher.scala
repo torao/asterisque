@@ -156,7 +156,7 @@ class Dispatcher private[rpc](auth:Authority, sealedCert:Envelope, val context:E
     * @param logId     ログ出力用の文字列
     * @return サービスの呼び出し結果
     */
-  private[rpc] def dispatch(serviceId:String, @Nonnull pipe:Pipe, @Nonnull logId:String):Future[Any] = {
+  private[rpc] def dispatch(serviceId:String, @Nonnull pipe:Pipe, @Nonnull logId:String):Future[Array[Byte]] = {
     val service = services.get(serviceId)
     if(service == null) {
       val msg = s"no such service: $serviceId"
