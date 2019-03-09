@@ -3,14 +3,12 @@ package io.asterisque.wire.message
 import java.lang.reflect.Modifier
 
 import io.asterisque.Asterisque
-import io.asterisque.test.randomByteArray
-import io.asterisque.wire.message.Message.{Block, Close, Open}
-import org.specs2.execute.Result
+import io.asterisque.wire.message.Message.Block
 import org.specs2.specification.core.SpecStructure
 
-import scala.util.{Failure, Random, Success}
+import scala.util.Random
 
-class BlockCloseOpenSpec extends AbstractMessageSpec {
+class BlockSpec extends AbstractMessageSpec {
   override def is:SpecStructure = super.is append
     s2"""
 Block should:
@@ -20,16 +18,6 @@ be eof of block of Block.eof(). ${(Block.eof(1).eof must beTrue) and (Block.eof(
 return byte-array as same as specified to constructor. $blockRetrievePayload
 return text as string. $blockGetTextString
 equals. $blockEquals
-
-Close should:
-declare as final. ${Modifier.isFinal(classOf[Close].getModifiers) must beTrue}
-have properties that specified in constructor. $closeProperties
-create unexpected error. $closeError
-
-Open should:
-declare as final class. ${Modifier.isFinal(classOf[Open].getModifiers) must beTrue}
-have properties these are specified in constructor. $openProperties
-throw NullPointerException if data is null. ${Open(1, 8, 12, null) must throwA[NullPointerException]}
 """
 
   private[this] def blockConstructor = (Block(1, null, 0, 0) must throwA[NullPointerException]) and
@@ -72,40 +60,10 @@ throw NullPointerException if data is null. ${Open(1, 8, 12, null) must throwA[N
       (base.equals(Block(0, buffer, 1, 10)) must beFalse)
   }
 
-  private[this] def closeProperties = {
-    val result = "hoge".getBytes
-    val c0 = Close(1.toShort, Success(result))
-    val c1 = Close(2.toShort, Failure(Abort(300, "foo")))
-    (c0.pipeId === 1) and (c0.result match {
-      case Success(x) if x sameElements result => success
-      case _ => failure
-    }) and (c1.pipeId === 1) and (c1.result match {
-      case Failure(ex:Abort) => (ex.code === 300) and (ex.message === "foo")
-      case _ => failure
-    })
-  }
-
-  private[this] def closeError = {
-    val c = Close(1, Failure(Abort("error")))
-    (c.pipeId === 1) and ((c.result match {
-      case Failure(Abort(code, msg)) => (code === Abort.Unexpected) and (msg === "error")
-      case _ => failure
-    }):Result)
-  }
-
-  private[this] def openProperties = {
-    val params = randomByteArray(73840, 256)
-    val o = Open(1, 8, 12, params)
-    (o.pipeId === 1) and (o.priority === 8) and (o.functionId === 12) and (o.params === params)
-  }
-
   protected override def newMessages:Seq[Message] = Seq(
     Block(0, 0, Asterisque.Empty.Bytes, 0, 0, eof = false),
     Block(1, 1, (0 to 0xFF).map(_.toByte).toArray, 0, 0x100, eof = false),
-    Block(2, 2, (0 to Block.MaxPayloadSize).map(_.toByte).toArray, 0, Block.MaxPayloadSize, eof = false),
-    Open(0.toShort, 0.toShort, randomByteArray(738729, 256)),
-    Close(0.toShort, Success("foo".getBytes)),
-    Close(1, Failure(new Exception("bar")))
+    Block(2, 2, (0 to Block.MaxPayloadSize).map(_.toByte).toArray, 0, Block.MaxPayloadSize, eof = false)
   )
 
 }

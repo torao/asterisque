@@ -5,17 +5,16 @@ import java.nio.ByteBuffer
 import java.security.cert.X509Certificate
 import java.util.ServiceLoader
 
+import io.asterisque.ProtocolViolationException
 import io.asterisque.auth.{Algorithms, Certificate}
-import io.asterisque.core.codec.Unsatisfied
-import io.asterisque.core.session.ProtocolViolationException
 import io.asterisque.utils.{Debug, Version}
 import io.asterisque.wire.message.Message.{Block, Close, Control, Open}
 import io.asterisque.wire.{Envelope, RemoteException, Spec}
 import javax.annotation.{Nonnull, Nullable}
-import org.msgpack.MessagePack
 import org.msgpack.io.EndOfBufferException
 import org.msgpack.packer.Packer
 import org.msgpack.unpacker.Unpacker
+import org.msgpack.{MessagePack, MessageTypeException}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -265,13 +264,17 @@ object ObjectMapper {
       MAP_STRING.encode(packer, sync.config)
     }
 
-    override def decode(unpacker:Unpacker):SyncSession = {
+    override def decode(unpacker:Unpacker):SyncSession = try {
       val version = Version(unpacker.readInt())
       val envelope = ENVELOPE.decode(unpacker)
       val serviceId = unpacker.readString()
       val utcTime = unpacker.readLong()
       val attr = MAP_STRING.decode(unpacker)
       SyncSession(version, envelope, serviceId, utcTime, attr)
+    } catch {
+      case ex:EndOfBufferException => throw new Unsatisfied()
+      case ex:MessageTypeException =>
+        throw new CodecException(s"broken message", ex)
     }
   }
 

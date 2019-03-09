@@ -6,6 +6,7 @@ import java.security.{PrivateKey, Signature}
 
 import io.asterisque.auth.Algorithms
 import io.asterisque.carillon._
+import io.asterisque.utils.Debug
 import io.asterisque.wire.Envelope.BreakageException
 import io.asterisque.wire.message.ObjectMapper
 import org.msgpack.MessagePack
@@ -44,6 +45,10 @@ final case class Envelope(payload:Array[Byte], signType:Envelope.Type, sign:Arra
     */
   def unseal[T]()(implicit _pack:ObjectMapper[T]):T = {
     _pack.decode(new MessagePack().createBufferUnpacker(payload))
+  }
+
+  override def toString:String = {
+    s"Envelope(${Debug.toString(payload)},$signType,${Debug.toString(sign)},$signer)"
   }
 
 }
@@ -97,7 +102,7 @@ object Envelope {
     * @param length    署名の長さ
     * @param algorithm 署名アルゴリズム
     */
-  sealed abstract class Type(val id:Byte, val length:Int, val algorithm:String)
+  sealed abstract class Type(val id:Byte, val length:Int, val algorithm:String) extends Serializable
 
   object Type {
 

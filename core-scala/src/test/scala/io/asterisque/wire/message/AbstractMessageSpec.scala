@@ -24,7 +24,8 @@ Message returns false if compare with null or other object. $falseIfCompareWithN
     val bais = new ByteArrayInputStream(baos.toByteArray)
     val in = new ObjectInputStream(bais)
     val actual = in.readObject()
-    (expected.hashCode() === actual.hashCode()) and (expected === actual)
+    (expected.hashCode() === actual.hashCode()).setMessage(s"$expected != $actual") and
+      (expected === actual).setMessage(s"$expected != $actual")
   }.reduceLeft(_ and _)
 
   private[this] def falseIfCompareWithNullOrElse = newMessages.map { msg =>
@@ -33,5 +34,8 @@ Message returns false if compare with null or other object. $falseIfCompareWithN
       (msg.equals("foo".asInstanceOf[Object]) must beFalse)
   }.reduceLeft(_ and _)
 
+  /**
+    * 共通テストに使用する典型的なメッセージをサブクラスによって作成する。
+    */
   protected def newMessages:Iterable[Message]
 }

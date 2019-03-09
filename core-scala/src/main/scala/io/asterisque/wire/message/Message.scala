@@ -3,12 +3,10 @@ package io.asterisque.wire.message
 import java.io.Serializable
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
+import java.util
 import java.util.Objects
 
-import io.asterisque.core.Pipe
-import io.asterisque.core.codec.VariableCodec
-import io.asterisque.utils.Debug
-import io.asterisque.{Asterisque, Priority}
+import io.asterisque.Asterisque
 import javax.annotation.{Nonnull, Nullable}
 import org.apache.commons.codec.binary.Hex
 
@@ -25,6 +23,24 @@ sealed trait Message extends Serializable {
     * メッセージの宛先となるパイプ ID
     */
   val pipeId:Short
+
+  /**
+    * 指定されたオブジェクトとこのインスタンスが等しい場合 true を返します。
+    *
+    * @param obj 比較するオブジェクト
+    * @return 等しい場合 true
+    */
+  override def equals(obj:Any):Boolean = obj match {
+    case other:Message => this.pipeId == other.pipeId
+    case _ => false
+  }
+
+  /**
+    * このインスタンスのハッシュ値を参照します。
+    *
+    * @return ハッシュ値
+    */
+  override def hashCode():Int = pipeId
 }
 
 object Message {
@@ -41,7 +57,29 @@ object Message {
     */
   final case class Open(pipeId:Short, priority:Byte, functionId:Short, @Nonnull params:Array[Byte]) extends Message {
     Objects.requireNonNull(params, "params shouldn't be null")
-    assert(VariableCodec.isTransferable(java.util.Arrays.asList(params)), Debug.toString(params))
+
+    /**
+      * 指定されたオブジェクトとこのインスタンスが等しい場合 true を返します。
+      *
+      * @param obj 比較するオブジェクト
+      * @return 等しい場合 true
+      */
+    override def equals(obj:Any):Boolean = super.equals(obj) && (obj match {
+      case other:Open =>
+        this.priority == other.priority &&
+          this.functionId == other.functionId &&
+          util.Arrays.equals(this.params, other.params)
+      case _ => false
+    })
+
+    /**
+      * このインスタンスのハッシュ値を参照します。
+      *
+      * @return ハッシュ値
+      */
+    override def hashCode():Int = {
+      Message.hashCode(super.hashCode(), priority, functionId, Message.hashCode(params, 0, params.length))
+    }
   }
 
   object Open {
@@ -53,7 +91,7 @@ object Message {
       * @param functionId オープンを要求するファンクション ID
       * @param params     ファンクションの呼び出しパラメータ
       */
-    def apply(pipeId:Short, functionId:Short, @Nonnull params:Array[Byte]):Open = Open(pipeId, Priority.Normal, functionId, params)
+    def apply(pipeId:Short, functionId:Short, @Nonnull params:Array[Byte]):Open = Open(pipeId, 0, functionId, params)
   }
 
   /**
@@ -63,7 +101,39 @@ object Message {
     * @param pipeId パイプ ID
     * @param result 処理結果
     */
-  final case class Close(pipeId:Short, @Nonnull result:Try[Array[Byte]]) extends Message
+  final case class Close(pipeId:Short, @Nonnull result:Try[Array[Byte]]) extends Message {
+    Objects.requireNonNull(result)
+    result match {
+      case Success(s) => Objects.requireNonNull(s)
+      case Failure(e) => Objects.requireNonNull(e)
+    }
+
+    /**
+      * 指定されたオブジェクトとこのインスタンスが等しい場合 true を返します。
+      *
+      * @param obj 比較するオブジェクト
+      * @return 等しい場合 true
+      */
+    override def equals(obj:Any):Boolean = super.equals(obj) && (obj match {
+      case other:Close =>
+        (this.result, other.result) match {
+          case (Success(x), Success(y)) => util.Arrays.equals(x, y)
+          case (Failure(x), Failure(y)) => x == y
+          case _ => false
+        }
+      case _ => false
+    })
+
+    /**
+      * このインスタンスのハッシュ値を参照します。
+      *
+      * @return ハッシュ値
+      */
+    override def hashCode():Int = Message.hashCode(super.hashCode(), if(result.isSuccess) 1 else 0, result match {
+      case Success(array) => util.Arrays.hashCode(array)
+      case Failure(ex) => ex.hashCode()
+    })
+  }
 
   object Close {
 
@@ -74,7 +144,7 @@ object Message {
       * @param result 成功として渡される結果
       */
     def withSuccessful(pipeId:Short, @Nullable result:Array[Byte]):Close = {
-      assert(VariableCodec.isTransferable(result), Debug.toString(result))
+      Objects.requireNonNull(result)
       Close(pipeId, Success(result))
     }
 
@@ -103,7 +173,7 @@ object Message {
   }
 
   /**
-    * [[Pipe]] を経由して双方向で交換可能なメッセージです。パイプ間での双方向ストリーミングのために使用されます。
+    * [[io.asterisque.wire.rpc.Pipe]] を経由して双方向で交換可能なメッセージです。パイプ間での双方向ストリーミングのために使用されます。
     * Block メッセージを構築します。`MaxPayloadSize` より大きいペイロードを指定すると例外が発生します。
     *
     * * 損失率はこのブロックが過負荷などによって消失しても良い確率を表す 0〜127 までの値です。0 はこのブロックが消失しないことを
@@ -166,6 +236,29 @@ object Message {
     override def toString:String = {
       s"Block($pipeId,0x${Hex.encodeHexString(ByteBuffer.wrap(payload, offset, length))},$loss${if(eof) ",EOF" else ""})"
     }
+
+    /**
+      * 指定されたオブジェクトとこのインスタンスが等しい場合 true を返します。
+      *
+      * @param obj 比較するオブジェクト
+      * @return 等しい場合 true
+      */
+    override def equals(obj:Any):Boolean = super.equals(obj) && (obj match {
+      case other:Block =>
+        this.loss == other.loss &&
+          util.Arrays.equals(this.payload, this.offset, this.offset + this.length, other.payload, other.offset, other.offset + other.length) &&
+          this.eof == other.eof
+      case _ => false
+    })
+
+    /**
+      * このインスタンスのハッシュ値を参照します。
+      *
+      * @return ハッシュ値
+      */
+    override def hashCode():Int = {
+      Message.hashCode(super.hashCode(), loss, Message.hashCode(payload, offset, length), if(eof) 1 else 0)
+    }
   }
 
   object Block {
@@ -225,14 +318,33 @@ object Message {
     Objects.requireNonNull(data, "fields is null")
 
     override val pipeId:Short = 0
+
+    /**
+      * 指定されたオブジェクトとこのインスタンスが等しい場合 true を返します。
+      *
+      * @param obj 比較するオブジェクト
+      * @return 等しい場合 true
+      */
+    override def equals(obj:Any):Boolean = super.equals(obj) && (obj match {
+      case other:Control => this.data == other.data
+      case _ => false
+    })
+
+    /**
+      * このインスタンスのハッシュ値を参照します。
+      *
+      * @return ハッシュ値
+      */
+    override def hashCode():Int = {
+      Message.hashCode(super.hashCode(), data.hashCode())
+    }
   }
 
   object Control {
+
     /**
-      * 通信を開始したときにピア間の設定を同期するための制御コードです。バイナリストリームの先頭で `*Q` として出現するように
-      * [[io.asterisque.core.codec.MessageFieldCodec.Msg#Control]] が `*`、`SyncSession` が `Q` の値を取ります。
-      * SyncSession を持つ制御メッセージのバイナリフィールドはヘルパークラス
-      * [[SyncSession]] 経由で参照することができます。
+      * 通信を開始したときにピア間の設定を同期するための制御コードです。SyncSession を持つ制御メッセージのバイナリフィールドは
+      * ヘルパークラス [[SyncSession]] 経由で参照することができます。
       */
     val SyncSession:Byte = 'Q'
 
@@ -241,12 +353,40 @@ object Message {
       */
     val Close:Byte = 'C'
 
-    trait Fields
+    trait Fields {
+      def equals(obj:Any):Boolean
+
+      def hashCode():Int
+    }
 
     case object CloseField extends Fields
 
     val CloseMessage:Control = Control(CloseField)
 
+  }
+
+  /**
+    * payload のハッシュ値を算出。[[util.Arrays.hashCode()]] では offset と length を指定できないため。
+    *
+    * @param payload バイト配列
+    * @param offset  開始位置
+    * @param length  長さ
+    * @return
+    */
+  private def hashCode(payload:Array[Byte], offset:Int, length:Int):Int = {
+    var result = 1
+    for(i <- offset until (offset + length)) {
+      result = 31 * result + payload(i)
+    }
+    result
+  }
+
+  private[message] def hashCode(values:Int*):Int = {
+    var result = 1
+    for(i <- values) {
+      result = 31 * result + i
+    }
+    result
   }
 
 }
