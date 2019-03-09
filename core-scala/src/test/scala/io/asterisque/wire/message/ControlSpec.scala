@@ -7,6 +7,7 @@ import io.asterisque.test.NODE_CERTS
 import io.asterisque.utils.Version
 import io.asterisque.wire.Envelope
 import io.asterisque.wire.message.Message.Control
+import io.asterisque.wire.rpc.ObjectMapper
 
 import scala.util.Random
 

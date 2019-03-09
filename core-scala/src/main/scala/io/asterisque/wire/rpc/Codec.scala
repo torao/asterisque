@@ -1,4 +1,4 @@
-package io.asterisque.wire.message
+package io.asterisque.wire.rpc
 
 import java.io.{InputStream, OutputStream}
 import java.lang.reflect.Method

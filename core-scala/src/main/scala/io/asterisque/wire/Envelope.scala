@@ -3,12 +3,13 @@ package io.asterisque.wire
 import java.nio.{ByteBuffer, ByteOrder}
 import java.security.cert.X509Certificate
 import java.security.{PrivateKey, Signature}
+import java.util
 
 import io.asterisque.auth.Algorithms
 import io.asterisque.carillon._
 import io.asterisque.utils.Debug
 import io.asterisque.wire.Envelope.BreakageException
-import io.asterisque.wire.message.ObjectMapper
+import io.asterisque.wire.rpc.ObjectMapper
 import org.msgpack.MessagePack
 
 /**
@@ -50,6 +51,22 @@ final case class Envelope(payload:Array[Byte], signType:Envelope.Type, sign:Arra
   override def toString:String = {
     s"Envelope(${Debug.toString(payload)},$signType,${Debug.toString(sign)},$signer)"
   }
+
+  override def equals(obj:Any):Boolean = obj match {
+    case other:Envelope =>
+      util.Arrays.equals(this.payload, other.payload) &&
+        this.signType.id == other.signType.id &&
+        util.Arrays.equals(this.sign, other.sign) &&
+        this.signer == other.signer
+    case _ => false
+  }
+
+  override def hashCode():Int = util.Arrays.hashCode(Array[Int](
+    util.Arrays.hashCode(payload),
+    signType.id,
+    util.Arrays.hashCode(sign),
+    util.Arrays.hashCode(signer.getEncoded)
+  ))
 
 }
 

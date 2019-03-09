@@ -4,7 +4,7 @@ import java.util.Objects
 
 import io.asterisque.auth.Certificate
 import io.asterisque.utils.Version
-import io.asterisque.wire.message.ObjectMapper.CERTIFICATE
+import io.asterisque.wire.rpc.ObjectMapper.CERTIFICATE
 import io.asterisque.wire.{Envelope, Spec}
 import javax.annotation.Nonnull
 
@@ -21,12 +21,11 @@ import javax.annotation.Nonnull
   * @author Takami Torao
   */
 final case class SyncSession(@Nonnull version:Version, @Nonnull sealedCertificate:Envelope, @Nonnull serviceId:String, utcTime:Long, config:Map[String, String]) extends Message.Control.Fields {
-  // TODO ping, sessionTimeout の入力値チェックとテストケース作成
   Objects.requireNonNull(version)
   Objects.requireNonNull(sealedCertificate)
   Objects.requireNonNull(serviceId)
-  if(serviceId.getBytes(Spec.Std.charset).length > Spec.Std.maxServiceId) {
-    throw new IllegalArgumentException(s"service id too long: $serviceId must be less than or equal ${Spec.Std.maxServiceId}")
+  if(serviceId.getBytes(Spec.Std.charset).length > Spec.Std.MAX_SERVICE_ID_BYTES) {
+    throw new IllegalArgumentException(s"service id too long: $serviceId must be less than or equal ${Spec.Std.MAX_SERVICE_ID_BYTES}")
   }
 
   /**

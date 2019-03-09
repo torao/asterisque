@@ -8,7 +8,7 @@ import io.asterisque.utils.EventDispatcher
 import io.asterisque.wire.ProtocolException
 import io.asterisque.wire.gateway.{MessageQueue, Wire}
 import io.asterisque.wire.message.Message.{Block, Close, Control, Open}
-import io.asterisque.wire.message.{Abort, Codec, Message, SyncSession}
+import io.asterisque.wire.message.{Message, SyncSession}
 import io.asterisque.wire.rpc.Session._
 import javax.annotation.Nonnull
 import org.slf4j.LoggerFactory
@@ -177,15 +177,13 @@ class Session private[rpc](val id:Long, dispatcher:Dispatcher, wire:Wire, codec:
         val pipe = pipes.create(open)
         dispatcher.dispatch(localServiceId, pipe, logId).onComplete {
           case Success(result) =>
-            post(Close.withSuccessful(pipe.id, result))
-          case Failure(ex:Abort) =>
-            post(Close.withFailure(pipe.id, ex))
+            post(Close(pipe.id, result))
           case Failure(ex:NoSuchServiceException) =>
-            post(Close.withFailure(pipe.id, Abort.ServiceUndefined, ex.getMessage))
+            post(Close.withFailure(pipe.id, Close.Code.SERVICE_UNDEFINED, ex.getMessage))
           case Failure(ex:NoSuchFunctionException) =>
-            post(Close.withFailure(pipe.id, Abort.FunctionUndefined, ex.getMessage))
+            post(Close.withFailure(pipe.id, Close.Code.FUNCTION_UNDEFINED, ex.getMessage))
           case Failure(ex) =>
-            post(Close.withFailure(pipe.id, Abort.Unexpected, ex.getMessage))
+            post(Close.withFailure(pipe.id, Close.Code.UNEXPECTED, ex.getMessage))
         }
       case close:Close =>
         pipes.get(msg.pipeId) match {
@@ -219,7 +217,8 @@ class Session private[rpc](val id:Long, dispatcher:Dispatcher, wire:Wire, codec:
             pipe.closeWithError(Abort.FunctionCannotReceiveBlock, f"function ${pipe.function}%d does not allow block transmission")
           case None =>
             logger.debug(s"$logId: unknown pipe-id: $msg")
-            post(Close.withFailure(msg.pipeId, Abort(Abort.DestinationPipeUnreachable, f"unknown pipe-id specified: #${msg.pipeId & 0xFFFF}%04X")))
+            val message = f"unknown pipe-id specified: #${msg.pipeId & 0xFFFF}%04X"
+            post(Close.withFailure(msg.pipeId, Close.Code.DESTINATION_PIPE_UNREACHABLE, message))
         }
       // Control メッセージはディスパッチせずこのセッション内で処理する
       case Control(Control.CloseField) =>

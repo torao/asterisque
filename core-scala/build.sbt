@@ -11,7 +11,7 @@ resolvers ++= Seq(
 //  "Scalaz Bintray Repo" at "http://dl.bintray.com/scalaz/releases"   // scalaz-stream_0.5a
 )
 
-javaSource := baseDirectory.value / "generated"
+// javaSource := baseDirectory.value / "generated"
 
 scalacOptions ++= Seq(
   "-encoding", "UTF-8",

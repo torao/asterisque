@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicLong
 import io.asterisque.auth.Authority
 import io.asterisque.wire.gateway.{MessageQueue, Wire}
 import io.asterisque.wire.message.Message.Control
-import io.asterisque.wire.message.{Codec, SyncSession}
+import io.asterisque.wire.message.SyncSession
 import io.asterisque.wire.rpc.Dispatcher._
 import io.asterisque.wire.{AuthenticationException, Envelope, ProtocolException}
 import javax.annotation.{Nonnull, Nullable}

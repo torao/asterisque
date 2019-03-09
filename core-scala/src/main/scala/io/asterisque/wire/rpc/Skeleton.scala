@@ -5,7 +5,6 @@ import java.lang.reflect.{InvocationHandler, InvocationTargetException, Method}
 import java.util.concurrent.{CompletableFuture, ConcurrentHashMap}
 
 import io.asterisque.utils.Debug
-import io.asterisque.wire.message.Codec
 import io.asterisque.wire.rpc.Skeleton._
 import org.slf4j.LoggerFactory
 

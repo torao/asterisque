@@ -2,6 +2,7 @@ package io.asterisque.wire.message
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 
+import io.asterisque.wire.message.Message.{Close, Open}
 import org.specs2.Specification
 
 abstract class AbstractMessageSpec extends Specification {
@@ -31,6 +32,7 @@ Message returns false if compare with null or other object. $falseIfCompareWithN
   private[this] def falseIfCompareWithNullOrElse = newMessages.map { msg =>
     (msg.equals(null) must beFalse) and
       (msg.equals(new Object()) must beFalse) and
+      (msg.equals(if(msg.isInstanceOf[Open]) Close(0, Array.empty) else Open(0, 0, Array.empty)) must beFalse) and
       (msg.equals("foo".asInstanceOf[Object]) must beFalse)
   }.reduceLeft(_ and _)
 

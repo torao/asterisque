@@ -2,15 +2,13 @@ package io.asterisque.wire.message
 
 import java.io.Serializable
 import java.nio.ByteBuffer
-import java.nio.charset.Charset
+import java.nio.charset.{Charset, StandardCharsets}
 import java.util
 import java.util.Objects
 
 import io.asterisque.Asterisque
 import javax.annotation.{Nonnull, Nullable}
 import org.apache.commons.codec.binary.Hex
-
-import scala.util.{Failure, Success, Try}
 
 /**
   * asterisque のワイヤープロトコルで使用するメッセージです。
@@ -95,17 +93,25 @@ object Message {
   }
 
   /**
-    * パイプのクローズを示すメッセージです。`result` は処理が正常に終了した場合の結果を保持します。中断によって処理が
-    * 終了した場合 `Abort` が設定されます。
+    * パイプのクローズを示すメッセージです。`code == 0` は処理の成功を示しており ` result` は処理依存の結果がシリアライズ
+    * された形式で保存されています。`code` が 0 以外の値を示す場合はエラーによって処理が中断されたことを示しており
+    * `result` はエラー状況を示すメッセージの UTF-8 書式です。
     *
     * @param pipeId パイプ ID
-    * @param result 処理結果
+    * @param result Right(処理結果)、または Left(エラーメッセージ)
     */
-  final case class Close(pipeId:Short, @Nonnull result:Try[Array[Byte]]) extends Message {
+  final case class Close(pipeId:Short, code:Byte, @Nonnull result:Array[Byte]) extends Message {
     Objects.requireNonNull(result)
-    result match {
-      case Success(s) => Objects.requireNonNull(s)
-      case Failure(e) => Objects.requireNonNull(e)
+
+    /**
+      * この Close メッセージの結果を成功 `Right[Array[Byte]]` または失敗 `Left[(Byte,String)]` で参照します。
+      *
+      * @return 結果
+      */
+    def toEither:Either[(Byte, String), Array[Byte]] = if(code == Close.Code.SUCCESS) {
+      Right(result)
+    } else {
+      Left((code, new String(result, StandardCharsets.UTF_8)))
     }
 
     /**
@@ -116,11 +122,7 @@ object Message {
       */
     override def equals(obj:Any):Boolean = super.equals(obj) && (obj match {
       case other:Close =>
-        (this.result, other.result) match {
-          case (Success(x), Success(y)) => util.Arrays.equals(x, y)
-          case (Failure(x), Failure(y)) => x == y
-          case _ => false
-        }
+        this.code == other.code && util.Arrays.equals(this.result, other.result)
       case _ => false
     })
 
@@ -129,10 +131,7 @@ object Message {
       *
       * @return ハッシュ値
       */
-    override def hashCode():Int = Message.hashCode(super.hashCode(), if(result.isSuccess) 1 else 0, result match {
-      case Success(array) => util.Arrays.hashCode(array)
-      case Failure(ex) => ex.hashCode()
-    })
+    override def hashCode():Int = Message.hashCode(super.hashCode(), code, util.Arrays.hashCode(result))
   }
 
   object Close {
@@ -143,22 +142,19 @@ object Message {
       * @param pipeId 宛先のパイプ ID
       * @param result 成功として渡される結果
       */
-    def withSuccessful(pipeId:Short, @Nullable result:Array[Byte]):Close = {
+    def apply(pipeId:Short, @Nullable result:Array[Byte]):Close = {
       Objects.requireNonNull(result)
-      Close(pipeId, Success(result))
+      Close(pipeId, Code.SUCCESS, result)
     }
 
     /**
       * 予期しない状態によってパイプを終了するときのクローズメッセージを作成します。
       *
       * @param pipeId 宛先のパイプ ID
-      * @param abort  中断メッセージ
+      * @param msg    中断メッセージ
       * @return 予期しない状況による処理中断を表すクローズメッセージ
       */
-    def withFailure(pipeId:Short, @Nonnull abort:Abort):Close = {
-      Objects.requireNonNull(abort, "abort shouldn't be null")
-      Close(pipeId, Failure(abort))
-    }
+    def withFailure(pipeId:Short, @Nonnull msg:String):Close = withFailure(pipeId, Code.UNEXPECTED, msg)
 
     /**
       * 指定されたエラーコードによってパイプを終了するときのクローズメッセージを作成します。
@@ -169,7 +165,50 @@ object Message {
       * @return エラーによる処理中断を表すクローズメッセージ
       */
     @Nonnull
-    def withFailure(pipeId:Short, code:Int, @Nonnull msg:String):Close = Close(pipeId, Failure(Abort(code, msg)))
+    def withFailure(pipeId:Short, code:Byte, @Nonnull msg:String):Close = {
+      Objects.requireNonNull(msg)
+      if(code == Code.SUCCESS) {
+        throw new IllegalArgumentException(s"failure result with SUCCESS code: [$code] $msg")
+      }
+      Close(pipeId, code, msg.getBytes(StandardCharsets.UTF_8))
+    }
+
+    object Code {
+
+      /** 処理が成功したことを表すコード。 */
+      val SUCCESS:Byte = 0
+
+      /** 予期しない状況によって処理が中断したことを示すコード。 */
+      val UNEXPECTED:Byte = -1
+
+      /** セッションがクローズ処理に入ったため処理が中断されたことを示すコード。 */
+      val SESSION_CLOSING:Byte = -2
+
+      /** サービスが見つからない事を示すコード。 */
+      val SERVICE_UNDEFINED:Byte = 100
+
+      /**
+        * サービスに function id が定義されていないことを示すコード。
+        */
+      val FUNCTION_UNDEFINED:Byte = 101
+
+      /**
+        * function の実行に失敗したことを示すコード。
+        */
+      val FUNCTION_FAILED:Byte = 102
+
+      /**
+        * ブロックを受信できない function にブロックが送信されたことを示すコード。
+        */
+      val FUNCTION_CANNOT_RECEIVE_BLOCK:Byte = 103
+
+      /**
+        * 宛先のパイプが存在しない事を示すコード。
+        */
+      val DESTINATION_PIPE_UNREACHABLE:Byte = 104
+
+    }
+
   }
 
   /**

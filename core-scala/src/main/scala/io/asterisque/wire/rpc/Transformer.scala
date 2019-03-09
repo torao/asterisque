@@ -1,4 +1,4 @@
-package io.asterisque.wire.message
+package io.asterisque.wire.rpc
 
 import java.lang.reflect.{Constructor, Method}
 import java.util.ServiceLoader

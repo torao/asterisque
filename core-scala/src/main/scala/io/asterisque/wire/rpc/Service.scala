@@ -5,7 +5,6 @@ import java.lang.reflect.Method
 import java.util.concurrent.ConcurrentHashMap
 
 import io.asterisque.utils.Debug
-import io.asterisque.wire.message.{Codec, CodecException, Transformer}
 import io.asterisque.wire.rpc.Service._
 import javax.annotation.Nonnull
 import org.slf4j.LoggerFactory

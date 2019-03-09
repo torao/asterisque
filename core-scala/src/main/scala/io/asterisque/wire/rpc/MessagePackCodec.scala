@@ -1,10 +1,10 @@
-package io.asterisque.wire.message
+package io.asterisque.wire.rpc
 
 import java.io.{InputStream, OutputStream}
 import java.lang.reflect.Method
 import java.util.UUID
 
-import io.asterisque.wire.message.MessagePackCodec.Tag
+import io.asterisque.wire.rpc.MessagePackCodec.Tag
 import javax.annotation.{Nonnull, Nullable}
 import org.msgpack.MessagePack
 import org.msgpack.packer.Packer

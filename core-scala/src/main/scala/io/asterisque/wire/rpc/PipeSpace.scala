@@ -1,12 +1,10 @@
 package io.asterisque.wire.rpc
 
-import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 
 import io.asterisque.wire.ProtocolException
-import io.asterisque.wire.message.Abort
-import io.asterisque.wire.message.Message.Open
+import io.asterisque.wire.message.Message.{Close, Open}
 import io.asterisque.wire.rpc.PipeSpace._
 import javax.annotation.Nonnull
 import org.slf4j.LoggerFactory
@@ -126,7 +124,7 @@ private[rpc] class PipeSpace(session:Session) {
   def close(graceful:Boolean):Unit = if(closed.compareAndSet(false, true)) {
     if(graceful) {
       // 残っているすべてのパイプに Close メッセージを送信
-      pipes.values.forEach(_.closeWithError(Abort.SessionClosing, s"session ${session.id} is closing"))
+      pipes.values.forEach(_.closeWithError(Close.Code.SESSION_CLOSING, s"session ${session.id} is closing"))
     }
     pipes.clear()
   }

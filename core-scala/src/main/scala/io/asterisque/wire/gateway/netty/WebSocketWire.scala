@@ -9,7 +9,8 @@ import io.asterisque.utils.Debug
 import io.asterisque.wire.ProtocolException
 import io.asterisque.wire.gateway.netty.WebSocketWire.logger
 import io.asterisque.wire.gateway.{MessageQueue, Wire}
-import io.asterisque.wire.message.{CodecException, Message, ObjectMapper}
+import io.asterisque.wire.message.Message
+import io.asterisque.wire.rpc.{CodecException, ObjectMapper}
 import io.netty.buffer.{ByteBufUtil, Unpooled}
 import io.netty.channel.{Channel, ChannelHandlerContext}
 import io.netty.handler.codec.http.websocketx.{BinaryWebSocketFrame, WebSocketFrame}

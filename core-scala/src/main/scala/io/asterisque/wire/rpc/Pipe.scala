@@ -7,13 +7,12 @@ import java.util.concurrent.atomic.AtomicBoolean
 import io.asterisque.core.util.Latch
 import io.asterisque.utils.Debug
 import io.asterisque.wire.message.Message.{Block, Close, Open}
-import io.asterisque.wire.message.{Abort, Message}
+import io.asterisque.wire.message.Message
 import io.asterisque.wire.rpc.Pipe._
 import javax.annotation.Nonnull
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{Future, Promise}
-import scala.util.{Failure, Success}
 
 /**
   * function に対する呼び出し状態を表すクラスです。function の呼び出し開始から終了までのスコープを持ち、その呼び
@@ -75,27 +74,13 @@ class Pipe private[rpc](@Nonnull val open:Open, @Nonnull stub:Pipe.Stub) {
   }
 
   /**
-    * 指定された結果で Close メッセージを送信しパイプを閉じます。このメソッドは正常に結果が確定したときの動作です。
-    *
-    * @param result Close に付加する結果
-    */
-  private[rpc] def closeWithSuccess(result:Array[Byte]):Unit = {
-    close(Close(id, Success(result)))
-  }
-
-  /**
     * エラーメッセージ付きの Close を送信しパイプを閉じます。このメソッドはエラーが発生したときの動作です。
     *
-    * @param msg エラーメッセージ
+    * @param code エラーコード
+    * @param msg  エラーメッセージ
     */
-  private[rpc] def closeWithError(@Nonnull msg:String):Unit = closeWithError(Abort.Unexpected, msg)
-
-  private[rpc] def closeWithError(code:Int, @Nonnull msg:String):Unit = {
-    close(new Close(id, Failure(Abort(code, msg))))
-  }
-
-  private[rpc] def closeWithError(@Nonnull format:String, args:Any*):Unit = {
-    closeWithError(String.format(format, args))
+  private[rpc] def closeWithError(code:Byte, @Nonnull msg:String):Unit = {
+    close(Close.withFailure(id, code, msg))
   }
 
   /**
@@ -105,13 +90,13 @@ class Pipe private[rpc](@Nonnull val open:Open, @Nonnull stub:Pipe.Stub) {
     */
   private[this] def close(@Nonnull close:Close):Unit = if(closed.compareAndSet(false, true)) {
     stub.post(close)
-    close.result match {
-      case Success(value) =>
-        promise.success(value)
-        logger.trace(s"$this: pipe was closed successfully: ${Debug.toString(value)}")
-      case Failure(ex) =>
-        promise.failure(ex)
-        logger.trace(s"$this: pipe was closed with failure: $ex")
+    close.toEither match {
+      case Right(result) =>
+        promise.success(result)
+        logger.trace(s"$this: pipe was closed successfully: ${Debug.toString(result)}")
+      case Left((code, msg)) =>
+        promise.failure(new Abort(code, msg))
+        logger.trace(s"$this: pipe was closed with failure: [$code] $msg")
     }
     stub.closed(this)
   } else {
@@ -124,13 +109,13 @@ class Pipe private[rpc](@Nonnull val open:Open, @Nonnull stub:Pipe.Stub) {
     * @param close 受信した Close メッセージ
     */
   private[rpc] def closePassively(close:Close):Unit = if(closed.compareAndSet(false, true)) {
-    close.result match {
-      case Success(value) =>
-        logger.trace(s"$this: close($close): success: ${Debug.toString(value)}")
-        promise.success(value)
-      case Failure(ex) =>
-        logger.trace(s"$this: close($close): aborted: $ex")
-        promise.failure(ex)
+    close.toEither match {
+      case Right(result) =>
+        promise.success(result)
+        logger.trace(s"$this: closePassively($close): success: ${Debug.toString(result)}")
+      case Left((code, msg)) =>
+        promise.failure(new Abort(code, msg))
+        logger.trace(s"$this: closePassively($close): failure: [$code] $msg")
     }
     stub.closed(this)
     logger.trace(s"$this: pipe is closed by peer: $close")

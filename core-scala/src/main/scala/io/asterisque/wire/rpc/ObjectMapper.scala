@@ -1,4 +1,4 @@
-package io.asterisque.wire.message
+package io.asterisque.wire.rpc
 
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
@@ -9,7 +9,8 @@ import io.asterisque.ProtocolViolationException
 import io.asterisque.auth.{Algorithms, Certificate}
 import io.asterisque.utils.{Debug, Version}
 import io.asterisque.wire.message.Message.{Block, Close, Control, Open}
-import io.asterisque.wire.{Envelope, RemoteException, Spec}
+import io.asterisque.wire.message._
+import io.asterisque.wire.{Envelope, Spec}
 import javax.annotation.{Nonnull, Nullable}
 import org.msgpack.io.EndOfBufferException
 import org.msgpack.packer.Packer
@@ -18,7 +19,6 @@ import org.msgpack.{MessagePack, MessageTypeException}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
-import scala.util.{Failure, Success}
 
 /**
   * 特定の型に対して直列化と復元を実装します。
@@ -148,23 +148,8 @@ object ObjectMapper {
           Msg.Open
         case close:Close =>
           packer.write(close.pipeId)
-          close.result match {
-            case Success(x) =>
-              val bits:Byte = 1
-              packer.write(bits)
-              ObjectMapper.encode(packer, x)
-            case Failure(ex) =>
-              val bits:Byte = 0
-              packer.write(bits)
-              ex match {
-                case Abort(code, message) =>
-                  packer.write(code)
-                  packer.write(message)
-                case _ =>
-                  packer.write(Abort.Unexpected)
-                  packer.write(ex.toString)
-              }
-          }
+          packer.write(close.code)
+          packer.write(close.result)
           Msg.Close
         case block:Block =>
           assert(block.loss >= 0 && block.loss <= 0x7F)
@@ -220,15 +205,9 @@ object ObjectMapper {
             Open(pipeId, priority, functionId, params)
           case Msg.Close =>
             val pipeId = unpacker.readShort()
-            val bits = unpacker.readByte()
-            val success = (bits & 1) != 0
-            if(success) {
-              val result = unpacker.readByteArray()
-              Close(pipeId, Success(result))
-            } else {
-              val msg = unpacker.readString()
-              Close(pipeId, Failure(new RemoteException(msg)))
-            }
+            val code = unpacker.readByte()
+            val result = unpacker.readByteArray()
+            Close(pipeId, code, result)
           case Msg.Block =>
             val pipeId = unpacker.readShort()
             val status = unpacker.readByte()
@@ -351,7 +330,7 @@ object ObjectMapper {
     * @param packer packer
     * @param map    シリアライズする Map
     */
-  private[message] def writeMap(packer:Packer, map:scala.collection.Map[_, _]):Unit = {
+  private[rpc] def writeMap(packer:Packer, map:scala.collection.Map[_, _]):Unit = {
     assert(map.size <= 0xFFFF)
     packer.write(map.size.toShort)
     map.foreach { case (key, value) =>
@@ -366,7 +345,7 @@ object ObjectMapper {
     * @param unpacker unpacker
     * @return 復元したマップ
     */
-  private[message] def readMap(unpacker:Unpacker):Map[_, _] = {
+  private[rpc] def readMap(unpacker:Unpacker):Map[_, _] = {
     val size = unpacker.readShort() & 0xFFFF
     (0 until size).map { _ =>
       val key = ObjectMapper.decode(unpacker)
@@ -382,7 +361,7 @@ object ObjectMapper {
     * @param packer packer
     * @param array  シリアライズする Array
     */
-  private[message] def writeArray(packer:Packer, array:Iterable[_]):Unit = {
+  private[rpc] def writeArray(packer:Packer, array:Iterable[_]):Unit = {
     assert(array.size <= 0xFFFF)
     packer.write(array.size.toShort)
     array.foreach(value => ObjectMapper.encode(packer, value))
@@ -394,7 +373,7 @@ object ObjectMapper {
     * @param unpacker unpacker
     * @return 復元したアレイ
     */
-  private[message] def readArray(unpacker:Unpacker):Iterable[Any] = {
+  private[rpc] def readArray(unpacker:Unpacker):Iterable[Any] = {
     val size = unpacker.readShort() & 0xFFFF
     (0 until size).map(_ => ObjectMapper.decode(unpacker))
   }

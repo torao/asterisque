@@ -1,6 +1,5 @@
-package io.asterisque.wire.message
+package io.asterisque.wire.rpc
 
-import io.asterisque.wire.ProtocolException
 import javax.annotation.{Nonnull, Nullable}
 
 class Unsatisfied(@Nullable message:String, @Nullable ex:Throwable) extends CodecException(message, ex) {

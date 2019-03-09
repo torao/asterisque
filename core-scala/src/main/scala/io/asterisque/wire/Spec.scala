@@ -13,7 +13,7 @@ sealed abstract class Spec(
                             val version:Short,
                             val charset:Charset,
                             val endian:ByteOrder,
-                            val maxServiceId:Int
+                            val MAX_SERVICE_ID_BYTES:Int
                           ) {
 }
 
@@ -35,7 +35,7 @@ object Spec {
     version = 0x0100,
     charset = StandardCharsets.UTF_8,
     endian = ByteOrder.LITTLE_ENDIAN,
-    maxServiceId = 0xFF
+    MAX_SERVICE_ID_BYTES = 0xFF
   ) {}
 
 }

@@ -1,4 +1,4 @@
-package io.asterisque.wire.message
+package io.asterisque.wire.rpc
 
 import io.asterisque.wire.ProtocolException
 import javax.annotation.{Nonnull, Nullable}
