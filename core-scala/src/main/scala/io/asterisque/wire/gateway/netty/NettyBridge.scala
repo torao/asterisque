@@ -3,13 +3,13 @@ package io.asterisque.wire.gateway.netty
 import java.io.IOException
 import java.net.{InetSocketAddress, URI}
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.function.Consumer
 
+import io.asterisque.wire.gateway.Bridge.Config
 import io.asterisque.wire.gateway.{Bridge, Server, UnsupportedProtocolException, Wire}
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.handler.ssl.{ClientAuth, JdkSslContext, SslContext, SslContextBuilder}
-import javax.annotation.{Nonnull, Nullable}
-import javax.net.ssl.{SSLContext, SSLException}
+import javax.annotation.Nonnull
+import javax.net.ssl.SSLException
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -35,51 +35,50 @@ class NettyBridge() extends Bridge {
   private[this] val closing = new AtomicBoolean(false)
 
   /**
-    * @param uri         接続先の URI
-    * @param subprotocol asterisque 上で実装しているサブプロトコル
-    * @param sslContext  Secure ソケットを示す URI スキーマが指定された場合 (例えば { @code wss://}) に使用する SSL コンテキスト
+    * @param uri    接続先の URI
+    * @param config 接続設定
     * @return Wire の Future
     */
   @Nonnull
-  override def newWire(@Nonnull uri:URI, @Nonnull subprotocol:String, inboundQueueSize:Int, outboundQueueSize:Int, @Nullable sslContext:SSLContext):Future[Wire] = getScheme(uri) match {
+  override def newWire(@Nonnull uri:URI, @Nonnull config:Config):Future[Wire] = getScheme(uri) match {
     case Right(secure) =>
-      val wire = new WebSocketWire("C:" + uri, primary = false, inboundQueueSize, outboundQueueSize)
+      val wire = new WebSocketWire("C:" + uri, primary = false, config.inboundQueueSize, config.outboundQueueSize)
       val ssl:SslContext = if(secure) {
-        Option(sslContext).map(ctx => new JdkSslContext(ctx, true, ClientAuth.NONE).asInstanceOf[SslContext]).getOrElse(getDefaultClientSSL)
+        Option(config.sslContext)
+          .map(ctx => new JdkSslContext(ctx, true, ClientAuth.NONE).asInstanceOf[SslContext])
+          .getOrElse(getDefaultClientSSL)
       } else null
-      val driver = new WebSocket.Client(worker, subprotocol, wire.servant, ssl)
-      driver.connect(uri)
+      val driver = new WebSocket.Client(worker, config.subprotocol, ssl)
+      driver.connect(uri, _ => wire.servant)
       wire.future
     case Left(ex) => Future.failed(ex)
   }
 
   /**
-    * @param uri         接続先の URI
-    * @param subprotocol asterisque 上で実装しているサブプロトコル
-    * @param sslContext  Secure ソケットを示す URI スキーマが指定された場合 (例えば { @code wss://}) に使用する SSL コンテキスト
-    * @param onAccept    サーバが接続を受け付けたときのコールバック
+    * @param uri      接続先の URI
+    * @param config   接続設定
+    * @param onAccept サーバが接続を受け付けたときのコールバック
     * @return Server の Future
     */
   @Nonnull
-  override def newServer(@Nonnull uri:URI, @Nonnull subprotocol:String, inboundQueueSize:Int, outboundQueueSize:Int, @Nullable sslContext:SSLContext, @Nonnull onAccept:Future[Wire]=>Unit):Future[Server] = getScheme(uri) match {
+  override def newServer(@Nonnull uri:URI, @Nonnull config:Config, @Nonnull onAccept:Future[Wire] => Unit):Future[Server] = getScheme(uri) match {
     case Right(secure) =>
       val server = new WebSocketServer()
       val ssl = if(secure) {
-        Option(sslContext)
+        Option(config.sslContext)
           .map(ctx => new JdkSslContext(ctx, false, ClientAuth.NONE).asInstanceOf[SslContext])
           .getOrElse(throw new NullPointerException("ssl context isn't specified"))
       } else null
-      val path = Option(uri.getPath).filter((p:String) => p.length != 0).getOrElse("/")
-      val driver = new WebSocket.Server(worker, subprotocol, path, server, ssl)
-      driver.bind(uriToSocketAddress(uri), { _ =>
-        val wire = new WebSocketWire("S:" + uri, true, inboundQueueSize, outboundQueueSize)
+      val driver = new WebSocket.Server(worker, config.subprotocol, server, ssl)
+      driver.bind(uri, { _ =>
+        val wire = new WebSocketWire("S:" + uri, true, config.inboundQueueSize, config.outboundQueueSize)
         onAccept(wire.future)
         wire.servant
       }).map(_ => server)
     case Left(ex) => Future.failed(ex)
   }
 
-  override def close():Unit = if(closing.compareAndSet(false, true)) {
+  def close():Unit = if(closing.compareAndSet(false, true)) {
     NettyBridge.logger.trace("close()")
     worker.shutdownGracefully()
   }
@@ -88,11 +87,10 @@ class NettyBridge() extends Bridge {
   private def getScheme(@Nonnull uri:URI):Either[Throwable, Boolean] = if(closing.get) {
     Left(new IOException("bridge has been closed"))
   } else {
-    val scheme = uri.getScheme
-    scheme.toLowerCase match {
-      case null => Left(new IllegalArgumentException(s"uri scheme was not specified: $uri"))
-      case "ws" => Right(false)
-      case "wss" => Right(true)
+    Option(uri.getScheme).map(_.toLowerCase) match {
+      case Some("ws") => Right(false)
+      case Some("wss") => Right(true)
+      case None => Left(new IllegalArgumentException(s"uri scheme was not specified: $uri"))
       case _ => Left(new UnsupportedProtocolException(s"unsupported uri scheme: $uri"))
     }
   }

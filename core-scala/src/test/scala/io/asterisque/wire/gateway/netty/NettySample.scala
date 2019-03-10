@@ -1,23 +1,13 @@
-/*
- * Copyright (c) 2014 koiroha.org.
- * All sources and related resources are available under Apache License 2.0.
- * http://www.apache.org/licenses/LICENSE-2.0.html
-*/
-package io.asterisque.netty
-
-import java.util
+package io.asterisque.wire.gateway.netty
 
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.buffer.ByteBuf
+import io.netty.channel.{ChannelHandlerContext, ChannelInitializer, ChannelOption}
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
-import io.netty.channel.{ChannelHandlerContext, ChannelInitializer, ChannelOption}
 import io.netty.handler.codec.ByteToMessageDecoder
 
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// NettySample
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
   * @author Takami Torao
   */
@@ -37,7 +27,7 @@ object NettySample {
         override def initChannel(ch:SocketChannel):Unit = {
           val pipeline = ch.pipeline()
           pipeline.addLast("c", new ByteToMessageDecoder {
-            override def decode(ctx:ChannelHandlerContext, in:ByteBuf, out:util.List[AnyRef]):Unit = {
+            override def decode(ctx:ChannelHandlerContext, in:ByteBuf, out:java.util.List[AnyRef]):Unit = {
 
             }
           })

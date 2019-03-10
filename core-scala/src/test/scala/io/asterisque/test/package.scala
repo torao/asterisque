@@ -12,9 +12,16 @@ import org.slf4j.LoggerFactory
 
 package object test {
 
+  private[this] val ASCII_CHARS = (' ' to 0x7F).map(_.toChar).filter(c => Character.isDefined(c) && !Character.isISOControl(c) && !Character.isWhitespace(c)).toArray
+
   def randomString(seed:Int, length:Int):String = {
     val random = new scala.util.Random(seed)
     random.nextString(length)
+  }
+
+  def randomASCII(seed:Int, length:Int):String = {
+    val random = new scala.util.Random(seed)
+    (0 until length).map(_ => ASCII_CHARS(random.nextInt(ASCII_CHARS.length))).mkString
   }
 
   def randomByteArray(seed:Int, length:Int):Array[Byte] = {

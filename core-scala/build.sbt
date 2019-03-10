@@ -11,8 +11,6 @@ resolvers ++= Seq(
 //  "Scalaz Bintray Repo" at "http://dl.bintray.com/scalaz/releases"   // scalaz-stream_0.5a
 )
 
-// javaSource := baseDirectory.value / "generated"
-
 scalacOptions ++= Seq(
   "-encoding", "UTF-8",
   "-unchecked",
@@ -30,13 +28,11 @@ scalacOptions ++= Seq(
 javacOptions ++= Seq("-encoding", "UTF-8", "-Xlint:unchecked")
 
 libraryDependencies ++= Seq(
-  "io.netty"    %  "netty-all"     % "4.1.31.Final",
+  "io.netty"    %  "netty-all"     % "4.1.34.Final",
   "org.msgpack" %  "msgpack"       % "0.6.12",
-  "org.slf4j"   %  "slf4j-log4j12" % "1.7.+",
   "com.google.code.findbugs" % "jsr305" % "3.0.+",
 
   // from Carillon
-  "org.msgpack"        %  "msgpack"         % "0.6.12",
   "org.apache.commons" %  "commons-math3"   % "3.+",
   "commons-codec"      %  "commons-codec"   % "1.+",
   "net.i2p.crypto"     %  "eddsa"           % "0.+",
@@ -45,7 +41,7 @@ libraryDependencies ++= Seq(
   "org.rocksdb"        %  "rocksdbjni"      % "5.+",
   "ch.qos.logback"     %  "logback-classic" % "1.+",
   "org.specs2"         %% "specs2-core"     % "4.4.+" % Test
-
 )
 
-unmanagedSourceDirectories in Compile += baseDirectory.value / "src/main/generated"
+// javaSource := baseDirectory.value / "generated"
+// unmanagedSourceDirectories in Compile += baseDirectory.value / "src/main/generated"

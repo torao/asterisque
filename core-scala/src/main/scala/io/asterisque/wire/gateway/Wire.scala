@@ -3,7 +3,7 @@ package io.asterisque.wire.gateway
 import java.net.SocketAddress
 
 import javax.annotation.{Nonnull, Nullable}
-import javax.net.ssl.SSLSession
+import javax.net.ssl.{SSLContext, SSLSession}
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable

@@ -12,7 +12,6 @@ import java.util.concurrent.{CompletableFuture, Executors, TimeUnit}
 
 import io.asterisque._
 import io.asterisque.cluster.Repository
-import io.asterisque.core.codec.MessageCodec
 import org.slf4j.LoggerFactory
 import org.specs2.Specification
 import org.specs2.matcher.MatchResult
@@ -20,9 +19,6 @@ import org.specs2.matcher.MatchResult
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future, Promise}
 
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// NettySpec
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /**
   * @author Takami Torao
   */

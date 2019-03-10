@@ -3,7 +3,8 @@ package io.asterisque.wire.gateway
 import java.net.URI
 import java.util.ServiceLoader
 
-import javax.annotation.{Nonnull, Nullable}
+import io.asterisque.wire.gateway.Bridge.Config
+import javax.annotation.Nonnull
 import javax.net.ssl.SSLContext
 import org.slf4j.LoggerFactory
 
@@ -16,12 +17,14 @@ import scala.concurrent.Future
   *
   * @author Takami Torao
   */
-trait Bridge extends AutoCloseable {
+trait Bridge {
 
   /**
-    * この Bridge がサポートしている URI スキームを参照します。
+    * この Bridge がサポートしている URI スキームを参照します。[[io.asterisque.wire.gateway.Bridge.Builder.newWire()]] は
+    * SPI を使用して Bridge インスタンスをロードし、URI スキームに対応している Bridge を選択します。URI スキームの比較に
+    * 大文字小文字は区別されません。
     *
-    * @return URI スキーム
+    * @return この Bridge がサポートする URI スキーム
     */
   def supportedURISchemes:Set[String]
 
@@ -29,70 +32,120 @@ trait Bridge extends AutoCloseable {
     * 指定されたリモートノードに対して非同期接続を行い [[Wire]] の Future を返します。
     * ソケットオプションのようなプロトコル固有のオプションは URI のクエリーで指定することができます。
     *
-    * @param uri         接続先の URI
-    * @param subprotocol asterisque 上で実装しているサブプロトコル
-    * @param sslContext  Secure ソケットを示す URI スキーマが指定された場合 (例えば { @code wss://}) に使用する SSL コンテキスト
+    * @param uri    接続先の URI
+    * @param config Wire 通信設定
     * @return Wire の Future
     */
-  def newWire(@Nonnull uri:URI, @Nonnull subprotocol:String, inboundQueueSize:Int, outboundQueueSize:Int, @Nullable sslContext:SSLContext):Future[Wire]
+  def newWire(@Nonnull uri:URI, @Nonnull config:Config):Future[Wire]
 
   /**
     * 指定されたネットワークからの接続を非同期で受け付ける [[Server]] の Future を返します。
     *
-    * @param uri         接続先の URI
-    * @param subprotocol asterisque 上で実装しているサブプロトコル
-    * @param sslContext  Secure ソケットを示す URI スキーマが指定された場合 (例えば { @code wss://}) に使用する SSL コンテキスト
-    * @param onAccept    サーバが接続を受け付けたときのコールバック
+    * @param uri      接続先の URI
+    * @param config   Wire 通信設定
+    * @param onAccept サーバが接続を受け付けたとき (新規の [[Wire]] が発生したとき) のコールバック
     */
-  def newServer(@Nonnull uri:URI, @Nonnull subprotocol:String, inboundQueueSize:Int, outboundQueueSize:Int, @Nullable sslContext:SSLContext, @Nonnull onAccept:Future[Wire] => Unit):Future[Server]
+  def newServer(@Nonnull uri:URI, @Nonnull config:Config, @Nonnull onAccept:Future[Wire] => Unit):Future[Server]
 }
 
 object Bridge {
   private[this] val logger = LoggerFactory.getLogger(classOf[Bridge])
 
+  /**
+    * SPI を使用してロードした実行環境で利用できるブリッジ。
+    */
   private[this] val bridges = ServiceLoader.load(classOf[Bridge]).iterator().asScala.flatMap { bridge =>
     bridge.supportedURISchemes.map(scheme => (scheme.toLowerCase, bridge))
   }.toMap
 
   /**
-    * 指定されたリモートノードに対して非同期接続を行い [[Wire]] の Future を返します。
-    * ソケットオプションのようなプロトコル固有のオプションは URI のクエリーで指定することができます。
+    * 指定された URI に対応するブリッジを参照します。
     *
-    * @param uri         接続先の URI
-    * @param subprotocol asterisque 上で実装しているサブプロトコル
-    * @param sslContext  Secure ソケットを示す URI スキーマが指定された場合 (例えば { @code wss://}) に使用する SSL コンテキスト
-    * @return Wire の Future
+    * @param uri ブリッジを参照する URI
+    * @return 対応するブリッジ
     */
-  def newWire(@Nonnull uri:URI, @Nonnull subprotocol:String, inboundQueueSize:Int, outboundQueueSize:Int, @Nullable sslContext:SSLContext):Future[Wire] = {
-    find(uri)
-      .map(_.newWire(uri, subprotocol, inboundQueueSize, outboundQueueSize, sslContext))
-      .getOrElse(Future.failed(new UnsupportedProtocolException(s"unsupported uri scheme: $uri")))
-  }
-
-  def newWire(@Nonnull uri:URI, @Nonnull subprotocol:String, inboundQueueSize:Int, outboundQueueSize:Int):Future[Wire] = newWire(uri, subprotocol, inboundQueueSize, outboundQueueSize, null)
-
-  def newWire(@Nonnull uri:URI, @Nonnull subprotocol:String):Future[Wire] = newWire(uri, subprotocol, Short.MaxValue, Short.MaxValue, null)
+  private[this] def find(uri:URI):Option[Bridge] = if(uri.getScheme == null) {
+    throw new NullPointerException(s"scheme is not specified in uri: $uri")
+  } else bridges.get(uri.getScheme.toLowerCase)
 
   /**
-    * 指定されたネットワークからの接続を非同期で受け付ける [[Server]] の Future を返します。
+    * 新しい [[Wire]] または [[Server]] を構築するためのビルダーを作成します。
     *
-    * @param uri         接続先の URI
-    * @param subprotocol asterisque 上で実装しているサブプロトコル
-    * @param sslContext  Secure ソケットを示す URI スキーマが指定された場合 (例えば { @code wss://}) に使用する SSL コンテキスト
-    * @param onAccept    サーバが接続を受け付けたときのコールバック
+    * @return ビルダー
     */
-  def newServer(@Nonnull uri:URI, @Nonnull subprotocol:String, inboundQueueSize:Int, outboundQueueSize:Int, @Nullable sslContext:SSLContext, @Nonnull onAccept:Future[Wire] => Unit):Future[Server] = {
-    find(uri)
-      .map(_.newServer(uri, subprotocol, inboundQueueSize, outboundQueueSize, sslContext, onAccept))
-      .getOrElse(Future.failed(new UnsupportedProtocolException(s"unsupported uri scheme: $uri")))
-  }
+  def builder():Builder = new Builder()
 
-  def newServer(@Nonnull uri:URI, @Nonnull subprotocol:String, @Nullable sslContext:SSLContext, @Nonnull onAccept:Future[Wire] => Unit):Future[Server] = newServer(uri, subprotocol, Short.MaxValue, Short.MaxValue, sslContext, onAccept)
+  /**
+    * 新しい [[Wire]] または [[Server]] を生成するために [[Bridge]] 実装に渡される設定クラス。
+    *
+    * @param subprotocol       サブプロトコル
+    * @param inboundQueueSize  受信キューサイズ
+    * @param outboundQueueSize 送信キューサイズ
+    * @param sslContext        SSL/TLS 通信を行う場合に使用するコンテキスト
+    */
+  case class Config(
+                     subprotocol:String = "",
+                     inboundQueueSize:Int = Short.MaxValue,
+                     outboundQueueSize:Int = Short.MaxValue,
+                     sslContext:SSLContext = SSLContext.getInstance("TLS")
+                   )
 
-  private[this] def find(uri:URI):Option[Bridge] = {
-    if(uri.getScheme == null) {
-      throw new NullPointerException(s"scheme is not specified in uri: $uri")
+  /**
+    * 新しい [[Wire]] または [[Server]] を構築するためのヘルパークラス。
+    *
+    * @see [[Bridge.builder()]]
+    */
+  class Builder private[Bridge]() {
+    private[this] var config = Config()
+
+    /**
+      * @param subprotocol asterisque 上で実装しているサブプロトコル
+      */
+    def subprotocol(subprotocol:String):Builder = {
+      config = config.copy(subprotocol = subprotocol)
+      this
     }
-    bridges.get(uri.getScheme.toLowerCase)
+
+    def inboundQueueSize(inboundQueueSize:Int):Builder = {
+      config = config.copy(inboundQueueSize = inboundQueueSize)
+      this
+    }
+
+    def outboundQueueSize(outboundQueueSize:Int):Builder = {
+      config = config.copy(outboundQueueSize = outboundQueueSize)
+      this
+    }
+
+    /**
+      * @param sslContext Secure ソケットを示す URI スキーマが指定された場合 (例えば { @code wss://}) に使用する SSL コンテキスト
+      */
+    def sslContext(sslContext:SSLContext):Builder = {
+      config = config.copy(sslContext = sslContext)
+      this
+    }
+
+    /**
+      * 指定されたリモートノードに対して非同期接続を行い [[Wire]] の Future を返します。
+      * ソケットオプションのような Bridge 実装依存のオプションは URI のクエリーで指定することができます。
+      *
+      * @param uri 接続先の URI
+      * @return Wire の Future
+      */
+    def newWire(@Nonnull uri:URI):Future[Wire] = find(uri)
+      .map(_.newWire(uri, config))
+      .getOrElse(Future.failed(new UnsupportedProtocolException(s"unsupported uri scheme: $uri")))
+
+    /**
+      * 指定されたネットワークからの接続を非同期で受け付ける [[Server]] の Future を返します。
+      * ソケットオプションのような Bridge 実装依存のオプションは URI のクエリーで指定することができます。
+      *
+      * @param uri      接続先の URI
+      * @param onAccept サーバが接続を受け付けたときのコールバック
+      */
+    def newServer(@Nonnull uri:URI, @Nonnull onAccept:Future[Wire] => Unit):Future[Server] = find(uri)
+      .map(_.newServer(uri, config, onAccept))
+      .getOrElse(Future.failed(new UnsupportedProtocolException(s"unsupported uri scheme: $uri")))
+
   }
+
 }
