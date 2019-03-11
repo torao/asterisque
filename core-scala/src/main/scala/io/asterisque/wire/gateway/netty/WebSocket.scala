@@ -47,29 +47,6 @@ object WebSocket {
       }
     }
 
-    /**
-      * WebSocket サーバが接続を受け付けたときにチャネルの初期化を行います。
-      */
-    private[Server] class Initializer(val subprotocol:String, val uri:URI, val sslContext:SslContext, val onAccept:Channel => WebSocket.Servant) extends ChannelInitializer[Channel] {
-      override protected def initChannel(@Nonnull ch:Channel):Unit = {
-        logger.trace("initChannel({})", ch)
-
-        val path = Option(uri.getPath).filter(_.nonEmpty).getOrElse("/")
-        val subprotocol = SUBPROTOCOL + "," + this.subprotocol
-        if(validAndSecureScheme(uri)) {
-          val engine = sslContext.newEngine(ch.alloc)
-          ch.pipeline.addFirst("tls", new SslHandler(engine))
-        }
-        ch.pipeline
-          .addLast("http", new HttpServerCodec)
-          .addLast("http-chunked", new ChunkedWriteHandler)
-          .addLast("aggregator", new HttpObjectAggregator(64 * 1024))
-          .addLast("request", new WebSocket.HttpRequestHandler(path))
-          .addLast("websocket", new WebSocketServerProtocolHandler(path, subprotocol))
-          .addLast("io.asterisque.server", new WebSocket.WebSocketFrameHandler(onAccept(ch)))
-      }
-    }
-
   }
 
   /**
@@ -105,7 +82,7 @@ object WebSocket {
         throw new IllegalArgumentException(s"secure WebSocket specified but ssl context is null: $uri")
       }
 
-      val bootstrap = new ServerBootstrap()
+      new ServerBootstrap()
         .group(group)
         .channel(classOf[NioServerSocketChannel])
         .handler(new ChannelInitializer[Channel]() {
@@ -119,15 +96,34 @@ object WebSocket {
             super.exceptionCaught(ctx, cause)
           }
         })
-        .childHandler(new Server.Initializer(subprotocol, uri, sslContext, onAccept))
-
-      bootstrap.bind(address).toFuture.andThen {
+        .childHandler(new ChannelInitializer[Channel] {
+          override def initChannel(ch:Channel):Unit = {
+            logger.trace("initChannel({})", ch)
+            initClient(ch, s"$SUBPROTOCOL,$subprotocol", uri, sslContext, onAccept)
+          }
+        })
+        .bind(address).toFuture.andThen {
         case Success(ch) =>
           channel = ch
           logger.debug("the server has completed binding: {}", channel)
         case Failure(ex) =>
           listener.wsServerCaughtException(null, ex)
       }
+    }
+
+    private[this] def initClient(ch:Channel, subprotocol:String, uri:URI, sslContext:SslContext, onAccept:Channel => WebSocket.Servant):Unit = {
+      val path = Option(uri.getPath).filter(_.nonEmpty).getOrElse("/")
+      if(validAndSecureScheme(uri)) {
+        val engine = sslContext.newEngine(ch.alloc)
+        ch.pipeline.addFirst("tls", new SslHandler(engine))
+      }
+      ch.pipeline
+        .addLast("http", new HttpServerCodec)
+        .addLast("http-chunked", new ChunkedWriteHandler)
+        .addLast("aggregator", new HttpObjectAggregator(64 * 1024))
+        .addLast("request", new WebSocket.HttpRequestHandler(path))
+        .addLast("websocket", new WebSocketServerProtocolHandler(path, subprotocol))
+        .addLast("io.asterisque.server", new WebSocket.WebSocketFrameHandler(onAccept(ch)))
     }
 
     def destroy():Unit = {
@@ -142,31 +138,9 @@ object WebSocket {
     * WebSocket プロトコルを使用するクライアントクラス。
     */
   object Client {
-    private val logger = LoggerFactory.getLogger(classOf[WebSocket.Client])
+    private[Client] val logger = LoggerFactory.getLogger(classOf[WebSocket.Client])
 
-    private[this] val DEFAULT_SSL_CONTEXT = SslContextBuilder.forClient().build()
-
-    /**
-      * WebSocket サーバと接続したときにチャネルの初期化を行います。
-      */
-    private[Client] class Initializer(val uri:URI, val subprotocol:String, val servant:Channel => Servant, val sslContext:SslContext) extends ChannelInitializer[Channel] {
-      override protected def initChannel(@Nonnull ch:Channel):Unit = {
-        logger.trace("initChannel({})", ch)
-
-        val subprotocol = s"$SUBPROTOCOL, ${this.subprotocol}"
-        if(validAndSecureScheme(uri)) {
-          val engine = (if(sslContext != null) sslContext else DEFAULT_SSL_CONTEXT).newEngine(ch.alloc)
-          ch.pipeline.addFirst("tls", new SslHandler(engine))
-        }
-        ch.pipeline
-          .addLast("http", new HttpClientCodec)
-          .addLast("http-chunked", new ChunkedWriteHandler)
-          .addLast("aggregator", new HttpObjectAggregator(64 * 1024))
-          .addLast("websocket", new WebSocketClientProtocolHandler(uri, WebSocketVersion.V13, subprotocol, false, EmptyHttpHeaders.INSTANCE, 64 * 1024))
-          .addLast("io.asterisque.client", new WebSocket.WebSocketFrameHandler(servant(ch)))
-      }
-    }
-
+    private[Client] val DEFAULT_SSL_CONTEXT = SslContextBuilder.forClient().build()
   }
 
   /**
@@ -174,7 +148,7 @@ object WebSocket {
     * @param subprotocol asterisque 上で使用するサブプロトコル
     * @param sslContext  SSL/TLS を使用する場合は有効な { @link SslContext}、使用しない場合は null
     */
-  class Client(@Nonnull val group:EventLoopGroup, @Nonnull val subprotocol:String, @Nullable val sslContext:SslContext) {
+  class Client(@Nonnull group:EventLoopGroup, @Nonnull subprotocol:String, @Nullable sslContext:SslContext) extends AutoCloseable {
     private[this] val logger = Client.logger
     Objects.requireNonNull(group)
     Objects.requireNonNull(subprotocol)
@@ -188,18 +162,37 @@ object WebSocket {
       new Bootstrap()
         .group(group)
         .channel(classOf[NioSocketChannel])
-        .handler(new Client.Initializer(uri, subprotocol, servant, sslContext))
+        .handler(new ChannelInitializer[Channel] {
+          override protected def initChannel(@Nonnull ch:Channel):Unit = {
+            logger.trace("initChannel({})", ch)
+            init(ch, uri, s"$SUBPROTOCOL, $subprotocol", servant)
+          }
+        })
         .connect(new InetSocketAddress(uri.getHost, uri.getPort))
         .toFuture.andThen {
         case Success(ch) =>
           channel = ch
           logger.debug("the client has completed binding: {}", channel)
-        case Failure(_) => ()
+        case Failure(ex) =>
+          logger.debug(s"connection failed: $ex")
       }
     }
 
-    def destroy():Unit = {
-      Client.logger.trace("destroy()")
+    private[this] def init(ch:Channel, uri:URI, subprotocol:String, servant:Channel => Servant):Unit = {
+      if(validAndSecureScheme(uri)) {
+        val engine = (if(sslContext != null) sslContext else Client.DEFAULT_SSL_CONTEXT).newEngine(ch.alloc)
+        ch.pipeline.addFirst("tls", new SslHandler(engine))
+      }
+      ch.pipeline
+        .addLast("http", new HttpClientCodec)
+        .addLast("http-chunked", new ChunkedWriteHandler)
+        .addLast("aggregator", new HttpObjectAggregator(64 * 1024))
+        .addLast("websocket", new WebSocketClientProtocolHandler(uri, WebSocketVersion.V13, subprotocol, false, EmptyHttpHeaders.INSTANCE, 64 * 1024))
+        .addLast("io.asterisque.client", new WebSocket.WebSocketFrameHandler(servant(ch)))
+    }
+
+    def close():Unit = {
+      Client.logger.trace("close()")
       if(channel != null) {
         channel.close()
       }
@@ -250,7 +243,7 @@ object WebSocket {
     private val logger = LoggerFactory.getLogger(classOf[WebSocket.WebSocketFrameHandler])
   }
 
-  private class WebSocketFrameHandler(val servant:WebSocket.Servant) extends SimpleChannelInboundHandler[WebSocketFrame] {
+  private class WebSocketFrameHandler(@Nullable servant:WebSocket.Servant) extends SimpleChannelInboundHandler[WebSocketFrame] {
     private[this] val logger = WebSocketFrameHandler.logger
     private var handshakeState:ClientHandshakeStateEvent = _
 
@@ -264,9 +257,13 @@ object WebSocket {
     override def channelInactive(ctx:ChannelHandlerContext):Unit = {
       logger.trace("channelInactive({})", ctx)
       if(handshakeState == ClientHandshakeStateEvent.HANDSHAKE_ISSUED) {
-        servant.wsCaughtException(ctx, new WebSocket.HandshakeException("WebSocket handshake failure"))
+        if(servant != null) {
+          servant.wsCaughtException(ctx, new WebSocket.HandshakeException("WebSocket handshake failure"))
+        }
       }
-      servant.wsClosed(ctx)
+      if(servant != null) {
+        servant.wsClosed(ctx)
+      }
       super.channelInactive(ctx)
     }
 
@@ -318,7 +315,7 @@ object WebSocket {
     * WebSocket ハンドシェイクの前段階で WebSocket 用の HTTP リクエストパスのみを許可するハンドラ。ハンドシェイク後は
     * パイプラインから取り除かれる。
     */
-  private class HttpRequestHandler(val path:String) extends SimpleChannelInboundHandler[FullHttpRequest] {
+  private class HttpRequestHandler(path:String) extends SimpleChannelInboundHandler[FullHttpRequest] {
     private[this] val logger = LoggerFactory.getLogger(classOf[HttpRequestHandler])
 
     override def channelRead0(@Nonnull ctx:ChannelHandlerContext, @Nonnull request:FullHttpRequest):Unit = {

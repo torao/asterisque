@@ -61,7 +61,7 @@ It throws exception if uri schema is not for WebSocket. $specifyNotWSSSchemeURI
 
     clientChannel.closeFuture().await()
     server.destroy()
-    client.destroy()
+    client.close()
     group.shutdownGracefully()
     (Await.result(serverResult.future, SEC30) === serverChallenge) and
       (Await.result(clientResult.future, SEC30) === clientChallenge)
@@ -109,7 +109,7 @@ It throws exception if uri schema is not for WebSocket. $specifyNotWSSSchemeURI
 
     clientChannel.closeFuture().await()
     server.destroy()
-    client.destroy()
+    client.close()
     group.shutdownGracefully()
     (Await.result(serverResult.future, SEC30) must throwA[Throwable]) and
       (Await.result(clientResult.future, SEC30) must throwA[Throwable])
@@ -126,9 +126,12 @@ It throws exception if uri schema is not for WebSocket. $specifyNotWSSSchemeURI
 
     val clientURI = new URI(s"ws://localhost:$port/undefined")
     val client = new WebSocket.Client(group, subProtocol, null)
-    val channel = Await.result(client.connect(clientURI, { _ => null }), SEC30)
-    channel.closeFuture().await() // サーバ側から切断しても例外が発生しない?
-    channel.isOpen must beFalse
+    val clientResult = Promise[String]()
+    val channel = Await.result(client.connect(clientURI, { _ =>
+      new TestServant("", clientResult)
+    }), SEC30)
+    // io.netty.handler.codec.http.websocketx.WebSocketHandshakeException: Invalid handshake response getStatus: 403 Forbidden
+    Await.result(clientResult.future, SEC30) must throwA[Throwable]
   }
 
   private[this] def clientConnectionFailure = {
