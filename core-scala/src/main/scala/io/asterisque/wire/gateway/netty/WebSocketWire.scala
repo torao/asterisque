@@ -56,7 +56,7 @@ private[netty] class WebSocketWire(@Nonnull name:String, primary:Boolean, inboun
       if(!promise.isCompleted) {
         promise.failure(new IOException("the wire closed before connection was established"))
       }
-      fireWireEvent(_.wireClosed(this))
+      super.foreach(_.wireClosed(this))
     }
     super.close()
   }
@@ -144,28 +144,27 @@ private[netty] class WebSocketWire(@Nonnull name:String, primary:Boolean, inboun
             val binary = ByteBufUtil.getBytes(frame.content)
             val msg = s"websocket frame doesn't contain enough binaries to restore the message: ${Debug.toString(binary)} (${binary.length} bytes)"
             logger.warn(msg)
-            fireWireEvent((listener:Wire.Listener) => listener.wireError(WebSocketWire.this, new ProtocolException(msg)))
+            WebSocketWire.super.foreach(_.wireError(WebSocketWire.this, new ProtocolException(msg)))
         }
       case _ =>
         val msg = s"unsupported websocket frame: $frame"
         logger.warn(msg)
-        fireWireEvent((listener:Wire.Listener) => listener.wireError(WebSocketWire.this, new ProtocolException(msg)))
+        WebSocketWire.super.foreach((listener:Wire.Listener) => listener.wireError(WebSocketWire.this, new ProtocolException(msg)))
     }
 
     override def wsCaughtException(@Nonnull ctx:ChannelHandlerContext, @Nonnull ex:Throwable):Unit = {
-      logger.error("wsCaughtException callback: {}", ex)
-      fireWireEvent(_.wireError(WebSocketWire.this, ex))
-      ctx.channel.close
+      logger.error(s"wsCaughtException callback from: $ctx", ex)
       // 失敗を設定
-      if(promise.isCompleted) {
+      if(!promise.isCompleted) {
         promise.failure(ex)
       }
+      WebSocketWire.super.foreach(_.wireError(WebSocketWire.this, ex))
+      // チャネルをクローズ
+      ctx.channel.close
     }
 
-    override def wsClosed(@Nonnull ctx:ChannelHandlerContext):Unit = {
-      if(!promise.isCompleted) {
-        promise.failure(new IOException("wsClosed"))
-      }
+    override def wsClosed(@Nonnull ctx:ChannelHandlerContext):Unit = if(!promise.isCompleted) {
+      promise.failure(new IOException(s"socket closed without any result: $ctx"))
     }
   }
 

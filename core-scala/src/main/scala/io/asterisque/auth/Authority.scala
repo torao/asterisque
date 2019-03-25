@@ -1,12 +1,14 @@
 package io.asterisque.auth
 
 import java.io._
+import java.net.Socket
 import java.security.cert._
 
+import io.asterisque.auth.Authority.logger
 import io.asterisque.utils.KeyValueStore
+import javax.net.ssl.{SSLEngine, X509ExtendedTrustManager}
 import org.slf4j.LoggerFactory
 
-import Authority.logger
 import scala.util.Try
 
 class Authority(rootCertsDirectory:File, cache:KeyValueStore) {
@@ -52,6 +54,44 @@ class Authority(rootCertsDirectory:File, cache:KeyValueStore) {
   def install(from:String, iccs:Seq[CertPath], crls:Seq[X509CRL]):Unit = {
     trusted.install(from, iccs)
     blocked.install(from, crls)
+  }
+
+  /**
+    * Refers to `TrustManager` for performing SSL/TLS communication using a certificate managed by this certificate
+    * authority.
+    */
+  object trustManager extends X509ExtendedTrustManager {
+    override def checkClientTrusted(chain:Array[X509Certificate], authType:String, socket:Socket):Unit = {
+      checkTrusted(chain)
+    }
+
+    override def checkServerTrusted(chain:Array[X509Certificate], authType:String, socket:Socket):Unit = {
+      checkTrusted(chain)
+    }
+
+    override def checkClientTrusted(chain:Array[X509Certificate], authType:String, engine:SSLEngine):Unit = {
+      checkTrusted(chain)
+    }
+
+    override def checkServerTrusted(chain:Array[X509Certificate], authType:String, engine:SSLEngine):Unit = {
+      checkTrusted(chain)
+    }
+
+    override def checkClientTrusted(chain:Array[X509Certificate], authType:String):Unit = {
+      checkTrusted(chain)
+    }
+
+    override def checkServerTrusted(chain:Array[X509Certificate], authType:String):Unit = {
+      checkTrusted(chain)
+    }
+
+    private[this] def checkTrusted(chain:Array[X509Certificate]):Unit = {
+      if(chain.filter(cert => Try(cert.checkValidity()).isSuccess).flatMap(cert => findIssuer(cert)).isEmpty) {
+        throw new CertificateException("no valid certificate")
+      }
+    }
+
+    override def getAcceptedIssuers:Array[X509Certificate] = getCACertificates.toArray
   }
 
   reload()

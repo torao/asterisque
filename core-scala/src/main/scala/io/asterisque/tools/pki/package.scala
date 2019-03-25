@@ -1,7 +1,5 @@
 package io.asterisque.tools
 
-import io.asterisque.carillon.tools._
-
 package object pki {
 
   private[this] val cmd = "openssl"

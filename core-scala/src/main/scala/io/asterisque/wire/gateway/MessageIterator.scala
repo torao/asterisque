@@ -17,7 +17,7 @@ private[gateway] class MessageIterator(val queue:MessageQueue) extends Iterator[
     */
   override def hasNext:Boolean = {
     try {
-      _next = queue.poll(Long.MaxValue, TimeUnit.SECONDS)
+      _next = queue.take(Long.MaxValue, TimeUnit.SECONDS)
     } catch {
       case ex:InterruptedException =>
         throw new IllegalStateException("message polling is interrupted", ex)

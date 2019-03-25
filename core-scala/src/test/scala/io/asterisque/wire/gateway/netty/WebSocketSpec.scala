@@ -19,7 +19,7 @@ import scala.concurrent.{Await, Promise}
 class WebSocketSpec extends Specification {
   def is =
     s2"""
-The server and client should connect and communicate with locally. $simpleLocalConnection
+The server and client should connect and communicate with locally. $simpleClientServerConnection
 The server accept with SSL and client connect without SSL. $serverSSLHandshakeFailure
 The server callback to listener and throw exception when it fails to bind. $serverBindFailure
 The client connect to undefined URI path. $clientRequestsUndefinedURIPath
@@ -30,7 +30,7 @@ It throws exception if uri schema is not for WebSocket. $specifyNotWSSSchemeURI
 
   private[this] val logger = LoggerFactory.getLogger(classOf[WebSocketSpec])
 
-  private[this] def simpleLocalConnection = Seq("ws", "wss").map { scheme =>
+  private[this] def simpleClientServerConnection = Seq("ws", "wss").map { scheme =>
     val group = new NioEventLoopGroup()
     val subProtocol = "unit-test"
 

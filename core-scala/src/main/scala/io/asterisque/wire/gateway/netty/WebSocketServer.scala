@@ -1,6 +1,6 @@
 package io.asterisque.wire.gateway.netty
 
-import java.net.SocketAddress
+import java.net.{InetSocketAddress, SocketAddress, URI}
 import java.util.concurrent.atomic.AtomicBoolean
 
 import io.asterisque.wire.gateway.Server
@@ -10,7 +10,7 @@ import javax.annotation.{Nonnull, Nullable}
 import org.slf4j.LoggerFactory
 
 
-private[netty] class WebSocketServer extends Server with WebSocket.Server.Listener {
+private[netty] class WebSocketServer(uri:URI) extends Server with WebSocket.Server.Listener {
   final private var channel:Channel = _
   final private val closed = new AtomicBoolean(false)
 
@@ -31,8 +31,14 @@ private[netty] class WebSocketServer extends Server with WebSocket.Server.Listen
     }
   }
 
-  @Nullable
-  override def bindAddress:SocketAddress = Option(channel).map(_.localAddress()).orNull
+  @Nonnull
+  override def acceptURI:URI = if(uri.getPort <= 0) {
+    Option(channel).map(_.localAddress()) match {
+      case Some(addr:InetSocketAddress) =>
+        new URI(uri.getScheme, uri.getUserInfo, addr.getAddress.getHostName, addr.getPort, uri.getPath, uri.getQuery, uri.getFragment)
+      case _ => uri
+    }
+  } else uri
 
   override def close():Unit = {
     if(closed.compareAndSet(false, true)) {

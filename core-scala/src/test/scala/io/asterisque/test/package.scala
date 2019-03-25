@@ -98,5 +98,5 @@ package object test {
     }
   }
 
-
+  case class KeyCertPair(key:PrivateKey, certificate:X509Certificate)
 }

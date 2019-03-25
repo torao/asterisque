@@ -7,12 +7,13 @@ import java.security.PrivateKey
 import java.security.cert.X509Certificate
 
 import io.asterisque.auth.Algorithms
-import io.asterisque.carillon.tools._
 import io.asterisque.carillon.using
+import io.asterisque.tools._
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 
+@deprecated("use io.asterisque.tools.PKI.CA")
 class CA(val dir:File) {
   private[CA] val CONF = new File(dir, "openssl.cnf")
   private[CA] val CACERT = new File(dir, "cacert.pem")

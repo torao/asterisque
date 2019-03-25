@@ -57,7 +57,7 @@ object WebSocket {
     * @param listener    サーバイベントリスナ
     * @param sslContext  SSL/TLS を使用する場合は有効な { @link SslContext}、使用しない場合は null
     */
-  class Server(val group:EventLoopGroup, val subprotocol:String, val listener:Server.Listener, val sslContext:SslContext) {
+  class Server(@Nonnull group:EventLoopGroup, @Nonnull subprotocol:String, @Nonnull listener:Server.Listener, @Nullable sslContext:SslContext) {
     private[this] val logger = Server.logger
 
     private var channel:Channel = _
@@ -114,7 +114,9 @@ object WebSocket {
     private[this] def initClient(ch:Channel, subprotocol:String, uri:URI, sslContext:SslContext, onAccept:Channel => WebSocket.Servant):Unit = {
       val path = Option(uri.getPath).filter(_.nonEmpty).getOrElse("/")
       if(validAndSecureScheme(uri)) {
+        NettyBridge.dump(sslContext)
         val engine = sslContext.newEngine(ch.alloc)
+        NettyBridge.dump(engine)
         ch.pipeline.addFirst("tls", new SslHandler(engine))
       }
       ch.pipeline
@@ -155,6 +157,14 @@ object WebSocket {
 
     private var channel:Channel = _
 
+    /**
+      * 返値の Future はチャネルの生成が成功したかどうかを表しており、成功したとしても WebSocket のハンドシェイクが失敗する
+      * 可能性がある事に注意。そのようなケースでは servant にエラーが通知される。
+      *
+      * @param uri     接続先の WebSocket URI
+      * @param servant 接続時の servant 参照用ラムダ
+      * @return 接続したチャネル
+      */
     def connect(@Nonnull uri:URI, @Nonnull servant:Channel => Servant):Future[Channel] = {
       Objects.requireNonNull(uri)
       Objects.requireNonNull(servant)
@@ -180,7 +190,9 @@ object WebSocket {
 
     private[this] def init(ch:Channel, uri:URI, subprotocol:String, servant:Channel => Servant):Unit = {
       if(validAndSecureScheme(uri)) {
+        NettyBridge.dump(sslContext)
         val engine = (if(sslContext != null) sslContext else Client.DEFAULT_SSL_CONTEXT).newEngine(ch.alloc)
+        NettyBridge.dump(engine)
         ch.pipeline.addFirst("tls", new SslHandler(engine))
       }
       ch.pipeline

@@ -35,7 +35,7 @@ class MessageQueue(@Nonnull val name:String, val cooperativeLimit:Int) extends A
   }
 
   /**
-    * メッセージキュー。[[poll]] 時に queue のサイズ確認のための同期を行わないように、このメッセージを poll()
+    * メッセージキュー。[[take]] 時に queue のサイズ確認のための同期を行わないように、このメッセージを poll()
     * した後のサイズを併せて保存する (WAIT の発生する poll() を synchronized すると [[offer()]] と競合して
     * デッドロックする)。
     */
@@ -63,11 +63,11 @@ class MessageQueue(@Nonnull val name:String, val cooperativeLimit:Int) extends A
 
   /**
     * このキューからメッセージを取り出します。指定されたタイムアウトまでにキューにメッセージが到達しなかった場合は null を
-    * 返します。`timeout` に 0 以下の値をしてした場合は即座に処理を返します。
-    * <p>
+    * 返します。`timeout` に 0 以下の値をしてした場合は即座に結果を返します。
+    *
     * メソッドの呼び出しでキューの空を検知した場合 [[Listener]] 経由で pollable = false が通知されます。また
     * メッセージ数がキューのサイズを下回った場合 offerable = true が通知されます。
-    * <p>
+    *
     * すでにクローズされているキューに対する poll() や、メッセージ待機中に外部スレッドからクローズされた場合、この
     * メソッドは即時に null を返します。
     *
@@ -78,7 +78,7 @@ class MessageQueue(@Nonnull val name:String, val cooperativeLimit:Int) extends A
     */
   @Nullable
   @throws[InterruptedException]
-  def poll(timeout:Long, @Nonnull unit:TimeUnit):Message = {
+  def take(timeout:Long, @Nonnull unit:TimeUnit):Message = {
 
     // lock() が呼び出されていても正常に受理した分は取り出しは可能としている
     var message:Message = null
@@ -117,6 +117,22 @@ class MessageQueue(@Nonnull val name:String, val cooperativeLimit:Int) extends A
   }
 
   /**
+    * このキューにメッセージが到着するまで待機して取り出します。
+    *
+    * メソッドの呼び出しでキューの空を検知した場合 [[Listener]] 経由で pollable = false が通知されます。また
+    * メッセージ数がキューのサイズを下回った場合 offerable = true が通知されます。
+    *
+    * すでにクローズされているキューに対する poll() や、メッセージ待機中に外部スレッドからクローズされた場合、この
+    * メソッドは即時に null を返します。
+    *
+    * @return キューから取り出したメッセージ、または null
+    * @throws InterruptedException メッセージ待機中にスレッドが割り込まれた場合
+    */
+  @Nonnull
+  @throws[InterruptedException]
+  def take():Message = take(Long.MaxValue, TimeUnit.SECONDS)
+
+  /**
     * このキューからメッセージを取り出します。キューにメッセージが存在しない場合は即座に null を返します。
     *
     * メソッドの呼び出しでキューの空を検知した場合 [[Listener]] 経由で pollable = false が通知されます。また
@@ -126,7 +142,7 @@ class MessageQueue(@Nonnull val name:String, val cooperativeLimit:Int) extends A
     */
   @Nullable
   def poll():Message = try {
-    poll(0, TimeUnit.SECONDS)
+    take(0, TimeUnit.SECONDS)
   } catch {
     case ex:InterruptedException =>
       throw new IllegalStateException("BlockingQueue.poll() without timeout is interrupted", ex)
@@ -203,7 +219,7 @@ class MessageQueue(@Nonnull val name:String, val cooperativeLimit:Int) extends A
   }
 
   /**
-    * キューから取り出せるメッセージを同期処理で扱うための列挙 [[Iterator]] を参照します。このメソッドは [[poll()]]
+    * キューから取り出せるメッセージを同期処理で扱うための列挙 [[Iterator]] を参照します。このメソッドは [[take()]]
     * の同期版代替として利用することができます。
     *
     * @return メッセージの iterator
@@ -250,7 +266,7 @@ object MessageQueue {
   trait Listener {
 
     /**
-      * 指定された [[MessageQueue]] に [[MessageQueue.poll]] 可能なメッセージが準備できたときに true の引数で
+      * 指定された [[MessageQueue]] に [[MessageQueue.take]] 可能なメッセージが準備できたときに true の引数で
       * 呼び出されます。pollable = true で呼び出された直後に poll(0) したとしても、他のスレッドの poll() が
       * すでにメッセージを獲得している場合は null を返す可能性があります。
       *

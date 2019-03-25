@@ -1,4 +1,4 @@
-package io.asterisque.carillon
+package io.asterisque
 
 import java.io._
 import java.nio.file.Path
@@ -6,7 +6,6 @@ import java.nio.file.Path
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
-;
 
 package object tools {
 
@@ -17,13 +16,11 @@ package object tools {
     */
   implicit class _BashContext(val sc:StringContext) {
     def sh(args:Any*):Bash = new Bash(sc.parts.zip(args :+ "").map {
-      case (left, file:File) => left + unixPath(file)
-      case (left, file:String) if new File(file).exists() => left + unixPath(new File(file))
-      case (left, file:Path) => left + unixPath(file.toFile)
+      case (left, file:File) => left + Bash.unixPath(file)
+      case (left, file:String) if new File(file).exists() => left + Bash.unixPath(new File(file))
+      case (left, file:Path) => left + Bash.unixPath(file.toFile)
       case (left, value) => left + String.valueOf(value)
     }.mkString)
-
-    private[this] def unixPath(file:File):String = new File(".").getCanonicalFile.toURI.relativize(file.toURI).toString
 
   }
 
@@ -92,6 +89,17 @@ package object tools {
 
     override def toString:String = cmd
 
+  }
+
+  object Bash {
+
+    /**
+      * 指定されたファイルを Unix 形式のパスを示す文字列に変換します。返値はカレントディレクトリからの相対パスになります。
+      *
+      * @param file Unix 形式に変換するファイル
+      * @return Unix 形式のパス
+      */
+    def unixPath(file:File):String = new File(".").getCanonicalFile.toURI.relativize(file.toURI).toString
   }
 
 }

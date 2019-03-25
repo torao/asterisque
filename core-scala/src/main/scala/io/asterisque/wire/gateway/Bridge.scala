@@ -1,10 +1,10 @@
 package io.asterisque.wire.gateway
 
 import java.net.URI
-import java.util.ServiceLoader
+import java.util.{Objects, ServiceLoader}
 
 import io.asterisque.wire.gateway.Bridge.Config
-import javax.annotation.Nonnull
+import javax.annotation.{Nonnull, Nullable}
 import javax.net.ssl.SSLContext
 import org.slf4j.LoggerFactory
 
@@ -65,7 +65,7 @@ object Bridge {
     * @return 対応するブリッジ
     */
   private[this] def find(uri:URI):Option[Bridge] = if(uri.getScheme == null) {
-    throw new NullPointerException(s"scheme is not specified in uri: $uri")
+    throw new NullPointerException(s"uri scheme is not specified in uri: $uri")
   } else bridges.get(uri.getScheme.toLowerCase)
 
   /**
@@ -87,7 +87,7 @@ object Bridge {
                      subprotocol:String = "",
                      inboundQueueSize:Int = Short.MaxValue,
                      outboundQueueSize:Int = Short.MaxValue,
-                     sslContext:SSLContext = SSLContext.getInstance("TLS")
+                     sslContext:SSLContext = SSLContext.getDefault
                    )
 
   /**
@@ -101,17 +101,24 @@ object Bridge {
     /**
       * @param subprotocol asterisque 上で実装しているサブプロトコル
       */
-    def subprotocol(subprotocol:String):Builder = {
+    def subprotocol(@Nonnull subprotocol:String):Builder = {
+      Objects.requireNonNull(subprotocol)
       config = config.copy(subprotocol = subprotocol)
       this
     }
 
     def inboundQueueSize(inboundQueueSize:Int):Builder = {
+      if(inboundQueueSize <= 0) {
+        throw new IllegalArgumentException(s"invalid queue size: $inboundQueueSize")
+      }
       config = config.copy(inboundQueueSize = inboundQueueSize)
       this
     }
 
     def outboundQueueSize(outboundQueueSize:Int):Builder = {
+      if(outboundQueueSize <= 0) {
+        throw new IllegalArgumentException(s"invalid queue size: $outboundQueueSize")
+      }
       config = config.copy(outboundQueueSize = outboundQueueSize)
       this
     }
@@ -119,7 +126,7 @@ object Bridge {
     /**
       * @param sslContext Secure ソケットを示す URI スキーマが指定された場合 (例えば { @code wss://}) に使用する SSL コンテキスト
       */
-    def sslContext(sslContext:SSLContext):Builder = {
+    def sslContext(@Nullable sslContext:SSLContext):Builder = {
       config = config.copy(sslContext = sslContext)
       this
     }

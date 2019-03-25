@@ -1,7 +1,7 @@
 package io.asterisque.auth
 
-import java.io.{ByteArrayInputStream, File, FileInputStream}
-import java.nio.charset.StandardCharsets
+import java.io.{ByteArrayInputStream, File, FileInputStream, FileOutputStream}
+import java.nio.charset.StandardCharsets._
 import java.nio.file.Files
 import java.security.cert._
 import java.security.spec.PKCS8EncodedKeySpec
@@ -46,6 +46,10 @@ object Algorithms {
 
     def load(binary:Array[Byte]):X509Certificate = {
       X509Factory.generateCertificate(new ByteArrayInputStream(binary)).asInstanceOf[X509Certificate]
+    }
+
+    def store(file:File, cert:X509Certificate):Unit = using(new FileOutputStream(file)) { out =>
+      out.write(cert.getEncoded)
     }
   }
 
@@ -132,6 +136,19 @@ object Algorithms {
     }
 
     def load(file:File):PrivateKey = load(Files.readAllBytes(file.toPath))
+
+    def store(file:File, key:PrivateKey):Unit = using(new FileOutputStream(file)) { out =>
+      out.write(key.getEncoded)
+    }
+  }
+
+  object KeyStore {
+    def load(file:File, passphrase:String):java.security.KeyStore = {
+      val keyStore = java.security.KeyStore.getInstance("PKCS12")
+      val in = new FileInputStream(file)
+      keyStore.load(in, passphrase.toCharArray)
+      keyStore
+    }
   }
 
   object PEM {
@@ -158,19 +175,18 @@ object Algorithms {
       * @param bytes PEM format binary
       * @return entries that the PEM contains
       */
-    def parse(bytes:Array[Byte]):Seq[Entry] = ENTRY.findAllMatchIn(new String(bytes, StandardCharsets.UTF_8))
-      .flatMap { m =>
-        val begin = m.group(1).trim().toUpperCase
-        val end = m.group(3).trim().toUpperCase
-        val body = m.group(2)
-        if(begin == end) {
-          // TODO should extract attributes from body
-          Some(Entry(begin, Map.empty, Base64.getMimeDecoder.decode(body)))
-        } else {
-          logger.warn(s"PEM entry separators don't match: '$begin' != '$end'")
-          None
-        }
-      }.toSeq
+    def parse(bytes:Array[Byte]):Seq[Entry] = ENTRY.findAllMatchIn(new String(bytes, UTF_8)).flatMap { m =>
+      val begin = m.group(1).trim().toUpperCase
+      val end = m.group(3).trim().toUpperCase
+      val body = m.group(2)
+      if(begin == end) {
+        // TODO should extract attributes from body
+        Some(Entry(begin, Map.empty, Base64.getMimeDecoder.decode(body)))
+      } else {
+        logger.warn(s"PEM entry separators don't match: '$begin' != '$end'")
+        None
+      }
+    }.toSeq
   }
 
 }
