@@ -2,17 +2,16 @@ package io.asterisque.wire.message
 
 import java.lang.reflect.Modifier
 
-import io.asterisque.test.{CertificateAuthority, _}
+import io.asterisque.test._
 import io.asterisque.utils.Version
 import io.asterisque.wire.Spec
 import io.asterisque.wire.rpc.{CodecException, ObjectMapper}
 import org.msgpack.MessagePack
 import org.specs2.Specification
-import org.specs2.specification.BeforeAfterAll
 
 import scala.util.Random
 
-class SyncSessionSpec extends Specification with BeforeAfterAll {
+class SyncSessionSpec extends Specification {
   def is =
     s2"""
 It should be declared as final class. ${Modifier.isFinal(classOf[SyncSession].getModifiers)}
@@ -87,11 +86,5 @@ Data size must be constant value. $verifyDataSize
       (0 until length).map(_ => s(random.nextInt(s.length))).mkString
     }
   }
-
-  private[this] var ca:CertificateAuthority = _
-
-  override def beforeAll():Unit = ca = new CertificateAuthority()
-
-  override def afterAll():Unit = ca.close()
 
 }

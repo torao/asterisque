@@ -4,8 +4,9 @@ import java.io._
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
 
-import io.asterisque.auth.Certificate
+import io.asterisque.auth.{Algorithms, Certificate}
 import io.asterisque.carillon.using
+import io.asterisque.tools.PKI
 import io.asterisque.wire.Envelope
 import io.asterisque.wire.rpc.ObjectMapper
 import org.slf4j.LoggerFactory
@@ -85,9 +86,16 @@ package object test {
     }
   }
 
-  lazy val NODE_CERTS:Seq[(PrivateKey, X509Certificate)] = {
-    val ca = new CertificateAuthority()
-    (0 until 3).map(i => ca.newPrivateKeyAndCertificate(f"node$i%02d"))
+  lazy val NODE_CERTS:Seq[(PrivateKey, X509Certificate)] = fs.temp(this) { dir =>
+    val ca = PKI.CA.newRootCA(dir, "/C=JP/ST=Tokyo/L=Sumida/O=asterisque/CN=ca.asterisque.io")
+    (0 until 3).map { i =>
+      val pkcs12 = new File(dir, f"keystore$i%02d.p12")
+      ca.newPKCS12CertificateWithKey(pkcs12, "user", "****", f"/C=JP/ST=Tokyo/L=Sumida/O=asterisque/CN=node$i%02d.asterisque.io")
+      val keyStore = Algorithms.KeyStore.load(pkcs12, "****")
+      val key = keyStore.getKey("user", "****".toCharArray).asInstanceOf[PrivateKey]
+      val cert = keyStore.getCertificate("user").asInstanceOf[X509Certificate]
+      (key, cert)
+    }
   }
 
   lazy val CERT_ENVELOPES:Seq[Envelope] = {
@@ -99,4 +107,5 @@ package object test {
   }
 
   case class KeyCertPair(key:PrivateKey, certificate:X509Certificate)
+
 }

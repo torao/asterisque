@@ -10,6 +10,7 @@ import java.util
 import java.util.Base64
 
 import io.asterisque.carillon.using
+import io.asterisque.tools.PKI
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -107,9 +108,27 @@ object Algorithms {
   }
 
   object CRL {
-    def load(encoded:Array[Byte]):X509CRL = {
-      Algorithms.X509Factory.generateCRL(new ByteArrayInputStream(encoded)).asInstanceOf[X509CRL]
+
+    /**
+      * Restore CRLs from specified encoded binary that contains `PKCS7` or `X509 CRL` entries as PEM format.
+      *
+      * @param encoded
+      * @return
+      */
+    def loads(encoded:Array[Byte]):Seq[X509CRL] = {
+      val entries = PEM.parse(encoded)
+      if(entries.isEmpty) {
+        Seq(Algorithms.X509Factory.generateCRL(new ByteArrayInputStream(encoded)).asInstanceOf[X509CRL])
+      } else if(entries.size == 1 && entries.head.name == "PKCS7") {
+        loads(PKI.pkcs7ToPEM(encoded))
+      } else {
+        entries.filter(_.name.matches("X509\\s+CRL")).map { case PEM.Entry(_, _, pemEncoded) =>
+          Algorithms.X509Factory.generateCRL(new ByteArrayInputStream(pemEncoded)).asInstanceOf[X509CRL]
+        }
+      }
     }
+
+    def loads(file:File):Seq[X509CRL] = loads(Files.readAllBytes(file.toPath))
   }
 
   object PrivateKey {
