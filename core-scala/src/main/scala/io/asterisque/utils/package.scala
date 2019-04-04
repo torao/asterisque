@@ -1,6 +1,7 @@
 package io.asterisque
 
 import java.io.{File, FileOutputStream, InputStream, OutputStream}
+import java.nio.channels.FileChannel
 
 import org.slf4j.LoggerFactory
 
@@ -27,6 +28,20 @@ package object utils {
 
   object IO {
     private[this] val logger = LoggerFactory.getLogger(getClass.getName.dropRight(1))
+
+    /**
+      * 全ての出力を無視する OutputStream です。
+      */
+    object NullOutputStream extends OutputStream {
+      override def write(b:Int):Unit = None
+    }
+
+    /**
+      * 読み込みデータが存在しない (ストリーム先頭で EOF となる) InputStream です。
+      */
+    object NullInputStream extends InputStream {
+      override def read():Int = -1
+    }
 
     def touch(file:File):Unit = new FileOutputStream(file).close()
 
@@ -70,6 +85,35 @@ package object utils {
       }
 
       _copy(in, out, new Array[Byte](bufferSize), 0L)
+    }
+
+    /**
+      * 指定されたファイルの内容を別のファイルにコピーします。
+      *
+      * @param src コピー元ファイル
+      * @param dst コピー先ファイル
+      * @return コピーした長さ
+      */
+    def copy(src:File, dst:File):Long = copy(src, dst, append = false)
+
+    def append(src:File, dst:File):Long = copy(src, dst, append = true)
+
+    /**
+      * 指定されたファイルの内容を別のファイルにコピーします。
+      *
+      * @param src    コピー元ファイル
+      * @param dst    コピー先ファイル
+      * @param append コピー先ファイルの末尾に追加する場合
+      * @return コピーした長さ
+      */
+    private[this] def copy(src:File, dst:File, append:Boolean):Long = {
+      import java.nio.file.StandardOpenOption._
+      using(FileChannel.open(src.toPath, READ)) { in =>
+        val opts = Seq(WRITE, CREATE) :+ (if(append) APPEND else TRUNCATE_EXISTING)
+        using(FileChannel.open(dst.toPath, opts:_*)) { out =>
+          in.transferTo(0, in.size(), out)
+        }
+      }
     }
 
     /**

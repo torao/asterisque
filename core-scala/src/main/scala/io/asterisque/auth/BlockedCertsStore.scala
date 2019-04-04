@@ -16,6 +16,8 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
+import BlockedCertsStore._
+
 /**
   * ブロックリストや CRL によって無効化されている証明書を判定するクラス。
   *
@@ -23,8 +25,9 @@ import scala.util.{Failure, Success, Try}
   */
 private[auth] class BlockedCertsStore(auth:Authority, cache:KeyValueStore) {
 
-  import BlockedCertsStore._
-
+  /**
+    * ブロックされている証明書のハッシュ。
+    */
   private[this] val hashes = new AtomicReference[Set[BigInt]](Set.empty)
 
   /**
@@ -123,7 +126,7 @@ private[auth] class BlockedCertsStore(auth:Authority, cache:KeyValueStore) {
       lazy val hexKey = Hex.encodeHexString(key)
       lazy val hexValue = Hex.encodeHexString(value)
       try {
-        val crl = Algorithms.CRL.load(key)
+        val crl = Algorithms.CRL.loads(key).head
         acceptable(crl) match {
           case _:Success[_] =>
             crl.getRevokedCertificates.asScala.map(_.asInstanceOf[X509Certificate]).collect {
