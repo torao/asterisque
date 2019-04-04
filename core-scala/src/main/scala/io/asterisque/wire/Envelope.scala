@@ -3,11 +3,13 @@ package io.asterisque.wire
 import java.nio.{ByteBuffer, ByteOrder}
 import java.security.cert.X509Certificate
 import java.security.{PrivateKey, Signature}
+import java.util
 
 import io.asterisque.auth.Algorithms
 import io.asterisque.carillon._
+import io.asterisque.utils.Debug
 import io.asterisque.wire.Envelope.BreakageException
-import io.asterisque.wire.message.Codec
+import io.asterisque.wire.rpc.ObjectMapper
 import org.msgpack.MessagePack
 
 /**
@@ -42,9 +44,29 @@ final case class Envelope(payload:Array[Byte], signType:Envelope.Type, sign:Arra
     * @tparam T 復元するオブジェクトの型
     * @return 復元したオブジェクト
     */
-  def unseal[T]()(implicit _pack:Codec[T]):T = {
+  def unseal[T]()(implicit _pack:ObjectMapper[T]):T = {
     _pack.decode(new MessagePack().createBufferUnpacker(payload))
   }
+
+  override def toString:String = {
+    s"Envelope(${Debug.toString(payload)},$signType,${Debug.toString(sign)},$signer)"
+  }
+
+  override def equals(obj:Any):Boolean = obj match {
+    case other:Envelope =>
+      util.Arrays.equals(this.payload, other.payload) &&
+        this.signType.id == other.signType.id &&
+        util.Arrays.equals(this.sign, other.sign) &&
+        this.signer == other.signer
+    case _ => false
+  }
+
+  override def hashCode():Int = util.Arrays.hashCode(Array[Int](
+    util.Arrays.hashCode(payload),
+    signType.id,
+    util.Arrays.hashCode(sign),
+    util.Arrays.hashCode(signer.getEncoded)
+  ))
 
 }
 
@@ -77,7 +99,7 @@ object Envelope {
     * @tparam T オブジェクトの型
     * @return 署名付き転送データ
     */
-  def seal[T](payload:T, signerCert:X509Certificate, signerKey:PrivateKey)(implicit _pack:Codec[T]):Envelope = {
+  def seal[T](payload:T, signerCert:X509Certificate, signerKey:PrivateKey)(implicit _pack:ObjectMapper[T]):Envelope = {
     val packer = new MessagePack().createBufferPacker()
     _pack.encode(packer, payload)
     seal(packer.toByteArray, signerCert, signerKey)
@@ -97,7 +119,7 @@ object Envelope {
     * @param length    署名の長さ
     * @param algorithm 署名アルゴリズム
     */
-  sealed abstract class Type(val id:Byte, val length:Int, val algorithm:String)
+  sealed abstract class Type(val id:Byte, val length:Int, val algorithm:String) extends Serializable
 
   object Type {
 

@@ -3,11 +3,14 @@ package io.asterisque.utils
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.util
+import java.util.concurrent.ConcurrentHashMap
 
 import io.asterisque.carillon._
+import org.apache.commons.codec.binary.Hex
 import org.rocksdb.{Options, RocksDB}
 import org.slf4j.LoggerFactory
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 trait KeyValueStore extends AutoCloseable {
@@ -37,6 +40,8 @@ object KeyValueStore {
   def apply(dir:File, createIfMissing:Boolean = true):KeyValueStore = {
     new Impl(dir, createIfMissing)
   }
+
+  def memory():KeyValueStore = new Memory()
 
   /**
     * Key-value store implementation to store application state or cache to local environment.
@@ -99,6 +104,33 @@ object KeyValueStore {
     }
 
     def subset(prefix:String):KeyValueStore = new Alias(root, this.prefix + prefix)
+  }
+
+  private[this] class Memory(prefix:String) extends KeyValueStore {
+    private[this] val map = new ConcurrentHashMap[String, String]()
+
+    def this(prefix:Array[Byte] = Array.empty) = this(Hex.encodeHexString(prefix))
+
+    override def get(key:Array[Byte]):Array[Byte] = {
+      Option(map.get(prefix + Hex.encodeHexString(key))).map(x => Hex.decodeHex(x)).orNull
+    }
+
+    override def put(key:Array[Byte], value:Array[Byte]):Unit = {
+      map.put(prefix + Hex.encodeHexString(key), Hex.encodeHexString(value))
+    }
+
+    override def delete(key:Array[Byte]):Unit = {
+      map.remove(prefix + Hex.encodeHexString(key))
+    }
+
+    override def toMap:Map[Array[Byte], Array[Byte]] = map.asScala.collect {
+      case (key, value) if key.startsWith(prefix) =>
+        (Hex.decodeHex(key), Hex.decodeHex(value))
+    }.toMap
+
+    override def subset(prefix:String):KeyValueStore = new Memory(this.prefix + prefix)
+
+    override def close():Unit = None
   }
 
 }

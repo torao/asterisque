@@ -5,7 +5,9 @@ import java.util.concurrent.atomic.{AtomicBoolean, AtomicReference}
 import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
 
 import io.asterisque.wire.gateway.MessageQueue.{Listener, logger}
-import io.asterisque.wire.message.{Control, Message}
+import io.asterisque.wire.message.Message
+import io.asterisque.wire.message.Message.Control
+import io.asterisque.wire.message.Message.Control.Fields
 import javax.annotation.{Nonnull, Nullable}
 import org.slf4j.LoggerFactory
 
@@ -13,7 +15,7 @@ import scala.collection.mutable
 
 
 /**
-  * {@link Wire} と Session の間に位置する非同期メッセージングの送受信キューです。この MessageQueue はメッセージの
+  * [[Wire]] と Session の間に位置する非同期メッセージングの送受信キューです。この MessageQueue はメッセージの
   * 取り出し可能状態と受け取り可能状態を [[Listener]] を経由してそれらに通知します。これは TCP/IP レベルでの
   * back pressure を機能させることを意図しています。
   *
@@ -33,7 +35,7 @@ class MessageQueue(@Nonnull val name:String, val cooperativeLimit:Int) extends A
   }
 
   /**
-    * メッセージキュー。[[poll]] 時に queue のサイズ確認のための同期を行わないように、このメッセージを poll()
+    * メッセージキュー。[[take]] 時に queue のサイズ確認のための同期を行わないように、このメッセージを poll()
     * した後のサイズを併せて保存する (WAIT の発生する poll() を synchronized すると [[offer()]] と競合して
     * デッドロックする)。
     */
@@ -42,6 +44,8 @@ class MessageQueue(@Nonnull val name:String, val cooperativeLimit:Int) extends A
   private[this] val listeners = mutable.Buffer[Listener]()
 
   private[this] val _closed = new AtomicBoolean(false)
+
+  private[this] val _iterator = new AtomicReference[MessageIterator]
 
   /**
     * このキューで保留しているメッセージ数を参照します。
@@ -59,11 +63,11 @@ class MessageQueue(@Nonnull val name:String, val cooperativeLimit:Int) extends A
 
   /**
     * このキューからメッセージを取り出します。指定されたタイムアウトまでにキューにメッセージが到達しなかった場合は null を
-    * 返します。`timeout` に 0 以下の値をしてした場合は即座に処理を返します。
-    * <p>
+    * 返します。`timeout` に 0 以下の値をしてした場合は即座に結果を返します。
+    *
     * メソッドの呼び出しでキューの空を検知した場合 [[Listener]] 経由で pollable = false が通知されます。また
     * メッセージ数がキューのサイズを下回った場合 offerable = true が通知されます。
-    * <p>
+    *
     * すでにクローズされているキューに対する poll() や、メッセージ待機中に外部スレッドからクローズされた場合、この
     * メソッドは即時に null を返します。
     *
@@ -74,7 +78,7 @@ class MessageQueue(@Nonnull val name:String, val cooperativeLimit:Int) extends A
     */
   @Nullable
   @throws[InterruptedException]
-  def poll(timeout:Long, @Nonnull unit:TimeUnit):Message = {
+  def take(timeout:Long, @Nonnull unit:TimeUnit):Message = {
 
     // lock() が呼び出されていても正常に受理した分は取り出しは可能としている
     var message:Message = null
@@ -102,15 +106,31 @@ class MessageQueue(@Nonnull val name:String, val cooperativeLimit:Int) extends A
     }
 
     // メッセージの終了を表すマーカーの場合
-    if(message != null && message == Control.EOM) {
+    if(message != null && message.eq(MessageQueue.END_OF_MESSAGE)) {
       queue.synchronized {
         // ほかに待機しているスレッドのために EOM を再投入する
-        offerAndNotify(Control.EOM)
+        offerAndNotify(MessageQueue.END_OF_MESSAGE)
       }
       return null
     }
     message
   }
+
+  /**
+    * このキューにメッセージが到着するまで待機して取り出します。
+    *
+    * メソッドの呼び出しでキューの空を検知した場合 [[Listener]] 経由で pollable = false が通知されます。また
+    * メッセージ数がキューのサイズを下回った場合 offerable = true が通知されます。
+    *
+    * すでにクローズされているキューに対する poll() や、メッセージ待機中に外部スレッドからクローズされた場合、この
+    * メソッドは即時に null を返します。
+    *
+    * @return キューから取り出したメッセージ、または null
+    * @throws InterruptedException メッセージ待機中にスレッドが割り込まれた場合
+    */
+  @Nonnull
+  @throws[InterruptedException]
+  def take():Message = take(Long.MaxValue, TimeUnit.SECONDS)
 
   /**
     * このキューからメッセージを取り出します。キューにメッセージが存在しない場合は即座に null を返します。
@@ -122,7 +142,7 @@ class MessageQueue(@Nonnull val name:String, val cooperativeLimit:Int) extends A
     */
   @Nullable
   def poll():Message = try {
-    poll(0, TimeUnit.SECONDS)
+    take(0, TimeUnit.SECONDS)
   } catch {
     case ex:InterruptedException =>
       throw new IllegalStateException("BlockingQueue.poll() without timeout is interrupted", ex)
@@ -139,7 +159,7 @@ class MessageQueue(@Nonnull val name:String, val cooperativeLimit:Int) extends A
   @throws[IllegalStateException]
   def offer(@Nonnull msg:Message):Unit = {
 
-    if(msg == Control.EOM) {
+    if(msg.eq(MessageQueue.END_OF_MESSAGE)) {
       logger.debug("closing queue by end-of-message offer")
       close()
       return
@@ -193,15 +213,13 @@ class MessageQueue(@Nonnull val name:String, val cooperativeLimit:Int) extends A
     */
   override def close():Unit = queue.synchronized {
     if(_closed.compareAndSet(false, true)) {
-      val queueSize = offerAndNotify(Control.EOM)
+      val queueSize = offerAndNotify(MessageQueue.END_OF_MESSAGE)
       MessageQueue.logger.trace("lock(), {} messages remain", queueSize - 1)
     }
   }
 
-  private[this] val _iterator = new AtomicReference[MessageIterator]
-
   /**
-    * キューから取り出せるメッセージを同期処理で扱うための列挙 [[Iterator]] を参照します。このメソッドは [[poll()]]
+    * キューから取り出せるメッセージを同期処理で扱うための列挙 [[Iterator]] を参照します。このメソッドは [[take()]]
     * の同期版代替として利用することができます。
     *
     * @return メッセージの iterator
@@ -231,8 +249,10 @@ class MessageQueue(@Nonnull val name:String, val cooperativeLimit:Int) extends A
     */
   def removeListener(@Nonnull listener:Listener):Unit = listeners.synchronized {
     listeners.indexOf(listener) match {
-      case i if i >= 0 => listeners.remove(i)
-      case _ => logger.warn(s"the specified listener is not registered: $listener")
+      case i if i >= 0 =>
+        listeners.remove(i)
+      case _ =>
+        logger.warn(s"the specified listener is not registered: $listener")
     }
   }
 }
@@ -246,15 +266,14 @@ object MessageQueue {
   trait Listener {
 
     /**
-      * 指定された [[MessageQueue]] に [[MessageQueue.poll]] 可能なメッセージが準備できたときに true の引数で
+      * 指定された [[MessageQueue]] に [[MessageQueue.take]] 可能なメッセージが準備できたときに true の引数で
       * 呼び出されます。pollable = true で呼び出された直後に poll(0) したとしても、他のスレッドの poll() が
       * すでにメッセージを獲得している場合は null を返す可能性があります。
       *
       * @param messageQueue メッセージの取り出し可能状態に変更があった MessageQueue
       * @param pollable     メッセージの取り出しが可能になったとき true、取り出せるメッセージがなくなったとき false
       */
-    def messagePollable(@Nonnull messageQueue:MessageQueue, pollable:Boolean):Unit = {
-    }
+    def messagePollable(@Nonnull messageQueue:MessageQueue, pollable:Boolean):Unit = None
 
     /**
       * 指定された [[MessageQueue]] で [[MessageQueue.offer()]] が可能になったときに true の引数で呼び出されます。
@@ -262,8 +281,12 @@ object MessageQueue {
       * @param messageQueue メッセージの受け取り可能状態に変更があった MessageQueue
       * @param offerable    メッセージの追加が可能になったとき true、キューのサイズを超えたとき false
       */
-    def messageOfferable(@Nonnull messageQueue:MessageQueue, offerable:Boolean):Unit = {
-    }
+    def messageOfferable(@Nonnull messageQueue:MessageQueue, offerable:Boolean):Unit = None
   }
+
+  /**
+    * [[MessageQueue]] 上でメッセージの終端を表すために使用するインスタンス。実際の通信上には現れない。
+    */
+  private[MessageQueue] val END_OF_MESSAGE:Message = new Control(new Fields {})
 
 }

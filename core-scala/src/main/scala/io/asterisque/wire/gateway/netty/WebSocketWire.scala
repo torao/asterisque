@@ -9,7 +9,8 @@ import io.asterisque.utils.Debug
 import io.asterisque.wire.ProtocolException
 import io.asterisque.wire.gateway.netty.WebSocketWire.logger
 import io.asterisque.wire.gateway.{MessageQueue, Wire}
-import io.asterisque.wire.message.{Codec, CodecException, Message}
+import io.asterisque.wire.message.Message
+import io.asterisque.wire.rpc.{CodecException, ObjectMapper}
 import io.netty.buffer.{ByteBufUtil, Unpooled}
 import io.netty.channel.{Channel, ChannelHandlerContext}
 import io.netty.handler.codec.http.websocketx.{BinaryWebSocketFrame, WebSocketFrame}
@@ -22,14 +23,15 @@ import scala.annotation.tailrec
 import scala.concurrent.Promise
 
 private[netty] class WebSocketWire(@Nonnull name:String, primary:Boolean, inboundQueueSize:Int, outboundQueueSize:Int) extends Wire(name, inboundQueueSize, outboundQueueSize) {
-  super.inbound.addListener(new WebSocketWire#InboundListener())
-  super.outbound.addListener(new WebSocketWire#OutboundListener())
   private[this] val promise = Promise[Wire]()
   private[netty] val future = promise.future
-  private[this] val context = new AtomicReference[ChannelHandlerContext]
-  private[this] val messagePollable = new AtomicBoolean
-  private[netty] val servant = new WebSocketWire#WSServant
-  private[this] val closed = new AtomicBoolean
+  private[this] val context = new AtomicReference[ChannelHandlerContext]()
+  private[this] val messagePollable = new AtomicBoolean()
+  private[netty] val servant = new WSServant()
+  private[this] val closed = new AtomicBoolean()
+
+  inbound.addListener(new InboundListener())
+  outbound.addListener(new OutboundListener())
 
   @Nullable
   override def local:SocketAddress = Option(context.get).map(_.channel.localAddress).orNull
@@ -54,7 +56,7 @@ private[netty] class WebSocketWire(@Nonnull name:String, primary:Boolean, inboun
       if(!promise.isCompleted) {
         promise.failure(new IOException("the wire closed before connection was established"))
       }
-      fireWireEvent(_.wireClosed(this))
+      super.foreach(_.wireClosed(this))
     }
     super.close()
   }
@@ -66,7 +68,7 @@ private[netty] class WebSocketWire(@Nonnull name:String, primary:Boolean, inboun
 
     @tailrec
     def _pumpUp(channel:Channel):Unit = if(channel.isOpen && channel.isWritable && messagePollable.get()) {
-      val msg = super.outbound.poll()
+      val msg = outbound.poll()
       if(msg != null) {
         logger.debug("{} >> {}: {}", local, remote, msg)
         channel.writeAndFlush(messageToFrame(msg))
@@ -85,7 +87,7 @@ private[netty] class WebSocketWire(@Nonnull name:String, primary:Boolean, inboun
     */
   @Nonnull
   private def messageToFrame(@Nonnull msg:Message):WebSocketFrame = {
-    val buffer = Codec.MESSAGE.encode(msg)
+    val buffer = ObjectMapper.MESSAGE.encode(msg)
     val buf = Unpooled.wrappedBuffer(buffer)
     new BinaryWebSocketFrame(buf)
   }
@@ -107,10 +109,10 @@ private[netty] class WebSocketWire(@Nonnull name:String, primary:Boolean, inboun
       ByteBuffer.wrap(bytes)
     }
     try {
-      Some(Codec.MESSAGE.decode(buffer.array()))
+      Some(ObjectMapper.MESSAGE.decode(buffer.array()))
     } catch {
       case ex:CodecException =>
-        logger.warn(s"unsupported websocket frame: ${Debug.toString(buffer.array())}")
+        logger.warn(s"unsupported websocket frame: ${Debug.toString(buffer.array())}; $ex")
         None
     }
   }
@@ -118,10 +120,12 @@ private[netty] class WebSocketWire(@Nonnull name:String, primary:Boolean, inboun
   /**
     * Netty との WebSocket フレーム送受信を行うためのクラス。
     */
-  private class WSServant extends WebSocket.Servant {
+  private[netty] class WSServant extends WebSocket.Servant {
     override def wsReady(@Nonnull ctx:ChannelHandlerContext):Unit = {
-      if(closed.get) ctx.close
-      else {
+      if(closed.get()) {
+        ctx.close()
+        ()
+      } else {
         context.set(ctx)
         val channel = ctx.channel
         channel.config.setAutoRead(true)
@@ -140,28 +144,27 @@ private[netty] class WebSocketWire(@Nonnull name:String, primary:Boolean, inboun
             val binary = ByteBufUtil.getBytes(frame.content)
             val msg = s"websocket frame doesn't contain enough binaries to restore the message: ${Debug.toString(binary)} (${binary.length} bytes)"
             logger.warn(msg)
-            fireWireEvent((listener:Wire.Listener) => listener.wireError(WebSocketWire.this, new ProtocolException(msg)))
+            WebSocketWire.super.foreach(_.wireError(WebSocketWire.this, new ProtocolException(msg)))
         }
       case _ =>
         val msg = s"unsupported websocket frame: $frame"
         logger.warn(msg)
-        fireWireEvent((listener:Wire.Listener) => listener.wireError(WebSocketWire.this, new ProtocolException(msg)))
+        WebSocketWire.super.foreach((listener:Wire.Listener) => listener.wireError(WebSocketWire.this, new ProtocolException(msg)))
     }
 
     override def wsCaughtException(@Nonnull ctx:ChannelHandlerContext, @Nonnull ex:Throwable):Unit = {
-      logger.error("wsCaughtException callback: {}", ex)
-      fireWireEvent(_.wireError(WebSocketWire.this, ex))
-      ctx.channel.close
+      logger.error(s"wsCaughtException callback from: $ctx", ex)
       // 失敗を設定
-      if(promise.isCompleted) {
+      if(!promise.isCompleted) {
         promise.failure(ex)
       }
+      WebSocketWire.super.foreach(_.wireError(WebSocketWire.this, ex))
+      // チャネルをクローズ
+      ctx.channel.close
     }
 
-    override def wsClosed(@Nonnull ctx:ChannelHandlerContext):Unit = {
-      if(!promise.isCompleted) {
-        promise.failure(new IOException("wsClosed"))
-      }
+    override def wsClosed(@Nonnull ctx:ChannelHandlerContext):Unit = if(!promise.isCompleted) {
+      promise.failure(new IOException(s"socket closed without any result: $ctx"))
     }
   }
 
