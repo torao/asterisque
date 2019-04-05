@@ -3,9 +3,12 @@ package io.asterisque.utils
 import java.io.{DataOutputStream, File}
 import java.security.{DigestOutputStream, MessageDigest}
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
 import io.asterisque.utils.Cache.{Transformer, logger}
 import org.slf4j.LoggerFactory
+
+import scala.collection.mutable
 
 /**
   * ファイルまたはディレクトリから生成したオブジェクトをメモリ上に保持するキャッシュです。
@@ -40,9 +43,9 @@ class Cache[T](transformer:Transformer[T], periodToOmitTimestampVerification:Lon
   }
 
   private[this] class Entry(val file:File) {
-    var identity:Long = Long.MinValue
-    var lastVerifiedAt:Long = Long.MinValue
-    var value:T = _
+    val lastVerifiedAt:AtomicLong = new AtomicLong(Long.MinValue)
+    var identity:Long = Long.MaxValue
+    var value:T = transformer.defaultValue(file)
 
     /**
       * キャッシュエントリのファイルが更新されているかを確認し、更新されている場合にオブジェクトを再生成します。
@@ -51,8 +54,8 @@ class Cache[T](transformer:Transformer[T], periodToOmitTimestampVerification:Lon
       */
     def update():Entry = {
       val tm = System.currentTimeMillis()
-      if(tm > this.lastVerifiedAt + periodToOmitTimestampVerification) {
-        this.lastVerifiedAt = tm
+      val verifiedAt = this.lastVerifiedAt.get()
+      if(tm > verifiedAt + periodToOmitTimestampVerification && this.lastVerifiedAt.compareAndSet(verifiedAt, tm)) {
         val identity = transformer.hash(this.file)
         if(this.identity != identity) {
           this.identity = identity
@@ -78,11 +81,18 @@ object Cache {
   private[Cache] val logger = LoggerFactory.getLogger(classOf[Cache[_]])
 
   trait Transformer[T] {
-    def defaultValue(file:File):T
+    def defaultValue(target:File):T
 
-    def transform(file:File):T
+    def transform(target:File):T
 
-    def hash(file:File):Long
+    /**
+      * 指定されたターゲットの更新を検知するためのハッシュ値を参照します。例えばタイムスタンプをハッシュ値とする場合、タイム
+      * スタンプの更新によってファイルが変更されたものと認識されます。
+      *
+      * @param target 対象のファイルまたはディレクトリ
+      * @return 対象のハッシュ値
+      */
+    def hash(target:File):Long
   }
 
   /**
@@ -102,7 +112,7 @@ object Cache {
   trait DirTransformer[T] extends Transformer[T] {
     def transform(dir:File):T = transform(listFiles(dir))
 
-    override def hash(dir:File):Long = fileHashes(listFiles(dir).sortBy(_.getName))
+    override def hash(dir:File):Long = fileHashes(listFiles(dir).sortBy(_.getCanonicalPath))
 
     def transform(files:Seq[File]):T
 
@@ -113,8 +123,20 @@ object Cache {
       * @param dir ディレクトリ
       * @return 処理対象のファイル
       */
-    protected def listFiles(dir:File):Seq[File] = Option(dir.listFiles())
-      .getOrElse(Array.empty).filter(_.isFile).toSeq
+    protected def listFiles(dir:File):Seq[File] = {
+      def list(dir:File, files:mutable.Buffer[File] = mutable.Buffer()):Seq[File] = {
+        Option(dir.listFiles()).getOrElse(Array.empty).foreach { file =>
+          if(file.isFile) {
+            files.append(file)
+          } else if(file.isDirectory) {
+            list(file, files)
+          }
+        }
+        files
+      }
+
+      list(dir)
+    }
   }
 
   /**

@@ -126,7 +126,7 @@ object PKI {
       * @param ecCurve    楕円曲線の種類
       * @param days       証明書の有効期限
       */
-    def newPKCS12CertificateWithKey(pkcs12:File, alias:String, passphrase:String, subject:String, ecCurve:String = DEFAULT_EC_CURVE, days:Int = DEFAULT_DAYS):Unit = {
+    def newPKCS12KeyStore(pkcs12:File, alias:String, passphrase:String, subject:String, ecCurve:String = DEFAULT_EC_CURVE, days:Int = DEFAULT_DAYS):Unit = {
       val dir = pkcs12.getParentFile
       IO.temp(dir, s"ecdsa-$ecCurve-${pkcs12.getName}") { key =>
         IO.temp(dir, s"cert-${pkcs12.getName}") { cert =>

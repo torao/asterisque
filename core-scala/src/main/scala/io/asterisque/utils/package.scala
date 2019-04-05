@@ -94,7 +94,13 @@ package object utils {
       * @param dst コピー先ファイル
       * @return コピーした長さ
       */
-    def copy(src:File, dst:File):Long = copy(src, dst, append = false)
+    def copy(src:File, dst:File):Long = {
+      copy(src, dst, append = false)
+      /*
+      Files.copy(src.toPath, dst.toPath, StandardCopyOption.REPLACE_EXISTING)
+      Files.size(dst.toPath)
+      */
+    }
 
     def append(src:File, dst:File):Long = copy(src, dst, append = true)
 

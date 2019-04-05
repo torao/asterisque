@@ -90,7 +90,7 @@ package object test {
     val ca = PKI.CA.newRootCA(dir, "/C=JP/ST=Tokyo/L=Sumida/O=asterisque/CN=ca.asterisque.io")
     (0 until 3).map { i =>
       val pkcs12 = new File(dir, f"keystore$i%02d.p12")
-      ca.newPKCS12CertificateWithKey(pkcs12, "user", "****", f"/C=JP/ST=Tokyo/L=Sumida/O=asterisque/CN=node$i%02d.asterisque.io")
+      ca.newPKCS12KeyStore(pkcs12, "user", "****", f"/C=JP/ST=Tokyo/L=Sumida/O=asterisque/CN=node$i%02d.asterisque.io")
       val keyStore = Algorithms.KeyStore.load(pkcs12, "****")
       val key = keyStore.getKey("user", "****".toCharArray).asInstanceOf[PrivateKey]
       val cert = keyStore.getCertificate("user").asInstanceOf[X509Certificate]

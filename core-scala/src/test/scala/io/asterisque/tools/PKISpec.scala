@@ -80,7 +80,7 @@ It can revoke certificate and export PKCS#7. $revokeCertificate
       "/C=JP/ST=Tokyo/L=Sumida/O=Asterisque Ltd./OU=QA Division/CN=ca2.asterisque.io")
 
     val pkcs12File = new File(dir, "user.p12")
-    ca2.newPKCS12CertificateWithKey(pkcs12File, "user", "****", USER_SUBJECT)
+    ca2.newPKCS12KeyStore(pkcs12File, "user", "****", USER_SUBJECT)
     val keyStore = Algorithms.KeyStore.load(pkcs12File, "****")
 
     val cert = keyStore.getCertificate("user").asInstanceOf[X509Certificate]
@@ -134,7 +134,7 @@ It can revoke certificate and export PKCS#7. $revokeCertificate
     // PKCS#12: private key and certificate
     val pkcs12File = new File(dir, "user.p12")
     val certPEMFile = new File(dir, "user-cert.pem")
-    ca2.newPKCS12CertificateWithKey(pkcs12File, "user", "****", USER_SUBJECT)
+    ca2.newPKCS12KeyStore(pkcs12File, "user", "****", USER_SUBJECT)
     PKI.CA.exportCertificateAsPEM(pkcs12File, "****", certPEMFile)
     val cert = Algorithms.Certificate.load(certPEMFile)
 

@@ -1,17 +1,12 @@
 package io.asterisque.auth
 
 import java.io.{ByteArrayInputStream, File, FileInputStream, FileOutputStream}
-import java.nio.charset.StandardCharsets._
 import java.nio.file.Files
 import java.security.cert._
-import java.security.spec.PKCS8EncodedKeySpec
-import java.security.{KeyFactory, PrivateKey, PublicKey, Signature}
+import java.security.{PrivateKey, PublicKey, Signature}
 import java.util
-import java.util.Base64
 
 import io.asterisque.carillon.using
-import io.asterisque.tools.PKI
-import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
@@ -40,14 +35,20 @@ object Algorithms {
 
   val X509Factory:CertificateFactory = CertificateFactory.getInstance("X.509")
 
+  /** use [[io.asterisque.security.Algorithms]] */
+  @Deprecated
   object Certificate {
-    def load(file:File):X509Certificate = using(new FileInputStream(file)) { in =>
-      X509Factory.generateCertificate(in).asInstanceOf[X509Certificate]
-    }
+    def load(file:File):X509Certificate = load(Files.readAllBytes(file.toPath))
 
     def load(binary:Array[Byte]):X509Certificate = {
       X509Factory.generateCertificate(new ByteArrayInputStream(binary)).asInstanceOf[X509Certificate]
     }
+
+    def loads(file:File):Seq[X509Certificate] = loads(Files.readAllBytes(file.toPath))
+
+    def loads(binary:Array[Byte]):Seq[X509Certificate] = X509Factory
+      .generateCertificates(new ByteArrayInputStream(binary)).asScala
+      .map(_.asInstanceOf[X509Certificate]).toList
 
     def store(file:File, cert:X509Certificate):Unit = using(new FileOutputStream(file)) { out =>
       out.write(cert.getEncoded)
@@ -73,6 +74,8 @@ object Algorithms {
     }
 
     def load(file:File):CertPath = load(Files.readAllBytes(file.toPath))
+
+    def generate(certs:Seq[X509Certificate]) = X509Factory.generateCertPath(certs.asJava)
 
     /**
       * Validate the specified certificate chain. Returns true if all certificates contained in the chain are
@@ -107,60 +110,16 @@ object Algorithms {
     }
   }
 
-  object CRL {
+  /** use [[io.asterisque.security.Algorithms]] */
+  @Deprecated
+  val CRL = io.asterisque.security.Algorithms.CRL
 
-    /**
-      * Restore CRLs from specified encoded binary that contains `PKCS7` or `X509 CRL` entries as PEM format.
-      *
-      * @param encoded
-      * @return
-      */
-    def loads(encoded:Array[Byte]):Seq[X509CRL] = {
-      val entries = PEM.parse(encoded)
-      if(entries.isEmpty) {
-        Seq(Algorithms.X509Factory.generateCRL(new ByteArrayInputStream(encoded)).asInstanceOf[X509CRL])
-      } else if(entries.size == 1 && entries.head.name == "PKCS7") {
-        loads(PKI.pkcs7ToPEM(encoded))
-      } else {
-        entries.filter(_.name.matches("X509\\s+CRL")).map { case PEM.Entry(_, _, pemEncoded) =>
-          Algorithms.X509Factory.generateCRL(new ByteArrayInputStream(pemEncoded)).asInstanceOf[X509CRL]
-        }
-      }
-    }
+  /** use [[io.asterisque.security.Algorithms]] */
+  @Deprecated
+  val PrivateKey = io.asterisque.security.Algorithms.PrivateKey
 
-    def loads(file:File):Seq[X509CRL] = loads(Files.readAllBytes(file.toPath))
-  }
-
-  object PrivateKey {
-
-    /**
-      * Restores private key from the specified binary in PEM or DER format.
-      *
-      * @param bytes private-key binary
-      * @return private key
-      */
-    def load(bytes:Array[Byte]):PrivateKey = {
-      def deserializeDER(bytes:Array[Byte]):PrivateKey = {
-        val spec = new PKCS8EncodedKeySpec(bytes, Algorithms.Key)
-        val factory = KeyFactory.getInstance(Algorithms.Key)
-        factory.generatePrivate(spec)
-      }
-
-      // supports DER or PEM contained DER binary
-      deserializeDER(
-        PEM.parse(bytes).find(e => e.name == "PRIVATE KEY" || e.name == "EC PRIVATE KEY") match {
-          case Some(entry) => entry.content
-          case None => bytes
-        })
-    }
-
-    def load(file:File):PrivateKey = load(Files.readAllBytes(file.toPath))
-
-    def store(file:File, key:PrivateKey):Unit = using(new FileOutputStream(file)) { out =>
-      out.write(key.getEncoded)
-    }
-  }
-
+  /** use [[io.asterisque.security.Algorithms]] */
+  @Deprecated
   object KeyStore {
     def load(file:File, passphrase:String):java.security.KeyStore = {
       val keyStore = java.security.KeyStore.getInstance("PKCS12")
@@ -168,44 +127,6 @@ object Algorithms {
       keyStore.load(in, passphrase.toCharArray)
       keyStore
     }
-  }
-
-  object PEM {
-    private[this] val logger = LoggerFactory.getLogger(getClass.getName.dropRight(1))
-
-    /**
-      * PEM のエントリを抽出する正規表現。
-      */
-    private[this] val ENTRY = "(?m)(?s)-----BEGIN\\s+(.*?)-----\r?\n+(.*?)\r?\n-----END\\s+(.*?)-----".r
-
-    /**
-      * Class representing the entry stored in PEM.
-      *
-      * @param name       the name entry (e.g., "EC PRIVATE KEY", "CERTIFICATE")
-      * @param attributes attributes
-      * @param content    binary of entry
-      */
-    case class Entry(name:String, attributes:Map[String, String], content:Array[Byte])
-
-    /**
-      * Parse PEM container format and obtain internal entries. If the binary isn't PEM format like DER,
-      * this will return a zero length `Seq`.
-      *
-      * @param bytes PEM format binary
-      * @return entries that the PEM contains
-      */
-    def parse(bytes:Array[Byte]):Seq[Entry] = ENTRY.findAllMatchIn(new String(bytes, UTF_8)).flatMap { m =>
-      val begin = m.group(1).trim().toUpperCase
-      val end = m.group(3).trim().toUpperCase
-      val body = m.group(2)
-      if(begin == end) {
-        // TODO should extract attributes from body
-        Some(Entry(begin, Map.empty, Base64.getMimeDecoder.decode(body)))
-      } else {
-        logger.warn(s"PEM entry separators don't match: '$begin' != '$end'")
-        None
-      }
-    }.toSeq
   }
 
 }
