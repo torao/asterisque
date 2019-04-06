@@ -1,7 +1,7 @@
 package io.asterisque.security
 
 import java.net.Socket
-import java.security.cert.{CertPath, CertificateException, X509Certificate}
+import java.security.cert.{CertificateException, X509Certificate}
 
 import io.asterisque.security.Verifier.logger
 import io.asterisque.utils.Debug.{toString => D}
@@ -35,10 +35,8 @@ private[security] class Verifier(trustedCAs:Seq[TrustedCA], blocked:Seq[X509Cert
       case Some(Left(reason)) =>
         throw new CertificateException(reason)
       case None =>
-        val name = certPath.head.getSubjectX500Principal.getName
-        val cas = trustedCAs
-          .map(_.certPath.getCertificates.asScala.head.asInstanceOf[X509Certificate].getSubjectDN.getName)
-          .mkString("[", ", ", "]")
+        val name = D(certPath.head.getSubjectX500Principal.getName)
+        val cas = D(trustedCAs.map(_.certPath.getCertificates.asScala.head))
         throw new CertificateException(s"cert $name has not been issued by any of the trusted CAs: $cas")
     }
 
@@ -47,20 +45,6 @@ private[security] class Verifier(trustedCAs:Seq[TrustedCA], blocked:Seq[X509Cert
       throw new CertificateException(reason)
     }
   }
-
-  /**
-    * 指定された証明書パスをこの Verifier に定義されている信用情報で検証します。
-    *
-    * @param certPath 検証する証明書パス
-    * @throws IllegalArgumentException if null or zero-length array is passed
-    *                                  in for the { @code chain} parameter or if null or zero-length
-    *                                  string is passed in for the { @code authType} parameter
-    * @throws CertificateException     if the certificate chain is not trusted
-    *                                  by this TrustManager
-    */
-  @throws[IllegalArgumentException]
-  @throws[CertificateException]
-  def verify(certPath:CertPath):Unit = verify(certPath.getCertificates.asScala.map(_.asInstanceOf[X509Certificate]))
 
   /**
     * 指定された証明書の信用状況を検査します。このメソッドは証明書がブロックされているかのみを検査するために使用することが
@@ -134,7 +118,10 @@ private[security] class Verifier(trustedCAs:Seq[TrustedCA], blocked:Seq[X509Cert
       verify(chain)
     }
 
-    override def getAcceptedIssuers:Array[X509Certificate] = acceptableIssuers.toArray
+    override def getAcceptedIssuers:Array[X509Certificate] = {
+      logger.debug("getAcceptedIssuers()")
+      acceptableIssuers.toArray
+    }
   }
 
 }

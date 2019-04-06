@@ -1,6 +1,7 @@
 package io.asterisque.security
 
 import java.io.{ByteArrayInputStream, File, FileInputStream, FileOutputStream}
+import java.nio.charset.StandardCharsets
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.Files
 import java.security._
@@ -9,6 +10,7 @@ import java.security.spec.PKCS8EncodedKeySpec
 import java.util
 import java.util.Base64
 
+import io.asterisque.security.Algorithms.PEM.Entry
 import io.asterisque.tools.PKI
 import io.asterisque.utils.using
 import javax.naming.ldap.LdapName
@@ -103,9 +105,16 @@ object Algorithms {
       }
     }
 
+    /**
+      * 証明書を指定されたファイルに PEM 形式で出力します。
+      *
+      * @param cert 出力する証明書
+      * @param file 出力先のファイル
+      */
     def store(cert:X509Certificate, file:File):Unit = {
       import java.nio.file.StandardOpenOption._
-      Files.write(file.toPath, cert.getEncoded, WRITE, TRUNCATE_EXISTING, CREATE)
+      val content = PEM.build(Entry("CERTIFICATE", Map.empty, cert.getEncoded))
+      Files.write(file.toPath, content, WRITE, TRUNCATE_EXISTING, CREATE)
     }
 
     object Path {
@@ -358,6 +367,13 @@ object Algorithms {
         None
       }
     }.toSeq
+
+    def build(entries:Entry*):Array[Byte] = entries.map { case Entry(name, _, bytes) =>
+      val begin = s"-----BEGIN $name-----"
+      val end = s"-----END $name-----"
+      val body = Base64.getMimeEncoder(64, Array('\r')).encodeToString(bytes)
+      s"$begin\n$body\n$end"
+    }.mkString("", "\n", "\n").getBytes(StandardCharsets.ISO_8859_1)
   }
 
 }

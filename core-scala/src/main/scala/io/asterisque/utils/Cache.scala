@@ -42,6 +42,17 @@ class Cache[T](transformer:Transformer[T], periodToOmitTimestampVerification:Lon
     entry.value
   }
 
+  /**
+    * このキャッシュが保持しているオブジェクトをリセットし、次回の参照時に確実に更新されるようにします。
+    *
+    * @param file リセットするオブジェクトのファイル
+    * @return 現在キャッシュされているオブジェクト
+    */
+  def reset(file:File):T = {
+    val key = file.getCanonicalPath
+    Option(cache.remove(key)).map(_.value).getOrElse(transformer.defaultValue(file))
+  }
+
   private[this] class Entry(val file:File) {
     val lastVerifiedAt:AtomicLong = new AtomicLong(Long.MinValue)
     var identity:Long = Long.MaxValue

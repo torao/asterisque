@@ -3,7 +3,8 @@ package io.asterisque.utils
 import java.lang.reflect.{Constructor, Method}
 import java.net.{InetAddress, InetSocketAddress}
 import java.nio.ByteBuffer
-import java.security.cert.{Certificate, X509Certificate}
+import java.security.KeyStore
+import java.security.cert.{CertPath, Certificate, X509Certificate}
 import java.text.{DateFormat, SimpleDateFormat}
 import java.util._
 import java.util.stream.Collectors
@@ -50,6 +51,12 @@ object Debug {
         buf.append(s"${addr.getHostName}:${addr.getPort}")
       case addr:InetAddress =>
         buf.append(s"${addr.getHostName}/${addr.getHostAddress}")
+      case cert:X509Certificate =>
+        buf.append(toString(cert.getSubjectX500Principal.getName))
+      case certs:CertPath =>
+        buf.append(toString(certs.getCertificates.asScala))
+      case ks:KeyStore =>
+        buf.append(s"KeyStore[${ks.getType}:${ks.aliases().asScala.mkString(",")}]")
       case opt:Optional[_] =>
         if(opt.isPresent) {
           buf.append("Some(")

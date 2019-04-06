@@ -2,6 +2,7 @@ package io.asterisque
 
 import java.io.{File, FileOutputStream, InputStream, OutputStream}
 import java.nio.channels.FileChannel
+import java.nio.file.{Files, StandardCopyOption}
 
 import org.slf4j.LoggerFactory
 
@@ -42,6 +43,8 @@ package object utils {
     object NullInputStream extends InputStream {
       override def read():Int = -1
     }
+
+    def using[R <: AutoCloseable, S](resource:R)(f:R => S):S = utils.using(resource)(f)
 
     def touch(file:File):Unit = new FileOutputStream(file).close()
 
@@ -95,11 +98,8 @@ package object utils {
       * @return コピーした長さ
       */
     def copy(src:File, dst:File):Long = {
-      copy(src, dst, append = false)
-      /*
       Files.copy(src.toPath, dst.toPath, StandardCopyOption.REPLACE_EXISTING)
       Files.size(dst.toPath)
-      */
     }
 
     def append(src:File, dst:File):Long = copy(src, dst, append = true)

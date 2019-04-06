@@ -2,6 +2,7 @@
 *.log
 *.swp
 .DS_Store
+.temp/
 
 # sbt specific
 dist/*

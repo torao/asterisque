@@ -1,9 +1,11 @@
 package io.asterisque.security
 
 import java.io.File
+import java.nio.file.NoSuchFileException
 import java.security.KeyStore
 import java.security.cert.{CertPath, CertificateException, X509Certificate}
 
+import io.asterisque.security.Algorithms._
 import io.asterisque.security.TrustContext._
 import io.asterisque.tools.PKI
 import io.asterisque.utils.Cache.{DirTransformer, FileTransformer}
@@ -19,7 +21,7 @@ import scala.collection.mutable
 /**
   * 証明書の信頼性を検証するためのクラスです。
   */
-class TrustContext private[TrustContext](dir:File, passphrase:String) {
+class TrustContext private[TrustContext](dir:File, alias:String, passphrase:String) {
   // TODO 証明書の有効期限を返すメソッドを作成し、タイマーで期限切れを古いわける処理を起動する
 
   private[this] val keyStore = new Cache(KeyStoreTransformer)
@@ -38,38 +40,62 @@ class TrustContext private[TrustContext](dir:File, passphrase:String) {
   private val blockedCertsDirectory:File = new File(dir, BLOCKED_CERTS_DIR)
 
   /**
-    * KeyStore に保存されているすべてのエイリアスに対する証明書パスを参照します。
+    * KeyStore に保存されている証明書パスからこの TrustContext のエイリアスと一致する証明書パスを参照します。
     *
-    * @return すべての証明書パス
+    * @return 証明書パス
     */
-  def getCertPaths:Map[String, CertPath] = {
+  def getCertPath:CertPath = {
     val ks = keyStore.get(keyStoreFile)
-    ks.aliases().asScala.map { alias =>
-      val certs = ks.getCertificateChain(alias).toSeq.map(_.asInstanceOf[X509Certificate])
-      val certPath = Algorithms.Cert.Path.generate(certs)
-      (alias, certPath)
-    }.toMap
+    val certs = ks.getCertificateChain(alias).toSeq.map(_.asInstanceOf[X509Certificate])
+    Cert.Path.generate(certs)
   }
 
-  def verify(certPath:CertPath):Unit = verifier.get(dir).verify(certPath)
+  /**
+    * 指定された証明書パスをこの TrustContext に定義されている信用情報で検証します。
+    *
+    * @param certPath 検証する証明書パス
+    * @throws IllegalArgumentException if null or zero-length array is passed
+    *                                  in for the { @code chain} parameter or if null or zero-length
+    *                                  string is passed in for the { @code authType} parameter
+    * @throws CertificateException     if the certificate chain is not trusted
+    *                                  by this TrustManager
+    */
+  @throws[IllegalArgumentException]
+  @throws[CertificateException]
+  def verify(certPath:CertPath):Unit = verify(certPath.getCertificates.asScala.map(_.asInstanceOf[X509Certificate]))
 
+  /**
+    * 指定された証明書パスをこの TrustContext に定義されている信用情報で検証します。
+    *
+    * @param certPath 検証する証明書パス
+    * @throws IllegalArgumentException if null or zero-length array is passed
+    *                                  in for the { @code chain} parameter or if null or zero-length
+    *                                  string is passed in for the { @code authType} parameter
+    * @throws CertificateException     if the certificate chain is not trusted
+    *                                  by this TrustManager
+    */
+  @throws[IllegalArgumentException]
+  @throws[CertificateException]
   def verify(certPath:Seq[X509Certificate]):Unit = verifier.get(dir).verify(certPath)
 
   /**
     * 指定された CA 証明書パスをこの TrustContext の信用済み CA としてデプロイします。
     *
     * @param caCertPath 信用済みにする CA 証明書パス
+    * @throws NoSuchFileException  ファイルが存在しない場合
     * @throws CertificateException 指定されたファイルを証明書として認識できない場合
     */
+  @throws[NoSuchFileException]
   @throws[CertificateException]
   def deployTrustedCA(caCertPath:File):Unit = TrustedCA(caCertPath) match {
     case Some(trustedCA) =>
       val target = trustedCA.certPath.getCertificates.asScala.head.asInstanceOf[X509Certificate]
-      val base:String = Algorithms.Principal.parseDName(target.getSubjectX500Principal)
+      val base:String = Principal.parseDName(target.getSubjectX500Principal)
         .find(_._1 == "CN").map(_._2)
         .getOrElse(Hex.encodeHexString(target.getEncoded).take(32))
       deploy(trustedCertsDirectory, base) { file =>
         IO.copy(caCertPath, file)
+        logger.info(s"new trusted CA certificate chain deployed: ${Debug.toString(trustedCA.certPath)}")
       }
     case None =>
       throw new CertificateException(s"specified file is not recognized as certificate path: $caCertPath")
@@ -79,10 +105,12 @@ class TrustContext private[TrustContext](dir:File, passphrase:String) {
     * 指定された証明書ファイルをこの TrustedContext のブロック済み証明書としてデプロイします。
     *
     * @param certFile ブロックする証明書
+    * @throws NoSuchFileException  ファイルが存在しない場合
     * @throws CertificateException 指定されたファイルを証明書として認識できない場合
     */
+  @throws[NoSuchFileException]
   @throws[CertificateException]
-  def deployBlocked(certFile:File):Unit = Algorithms.Cert.load(certFile) match {
+  def deployBlocked(certFile:File):Unit = Cert.load(certFile) match {
     case Some(cert) => deployBlocked(cert)
     case None => throw new CertificateException(s"specified file is not recognized as certificate: $certFile")
   }
@@ -95,11 +123,12 @@ class TrustContext private[TrustContext](dir:File, passphrase:String) {
     */
   @throws[CertificateException]
   def deployBlocked(cert:X509Certificate):Unit = {
-    val base:String = Algorithms.Principal.parseDName(cert.getSubjectX500Principal)
+    val base:String = Principal.parseDName(cert.getSubjectX500Principal)
       .find(_._1 == "CN").map(_._2)
       .getOrElse(Hex.encodeHexString(cert.getEncoded).take(32))
     deploy(blockedCertsDirectory, base) { file =>
-      Algorithms.Cert.store(cert, file)
+      Cert.store(cert, file)
+      logger.info(s"new block certificate deployed: ${Debug.toString(cert)}")
     }
   }
 
@@ -109,6 +138,8 @@ class TrustContext private[TrustContext](dir:File, passphrase:String) {
       val file = new File(dir, name)
       if(file.createNewFile()) {
         f(file)
+        verifier.reset(this.dir)
+        return
       }
     }
     val msg = s"the deployment destination namespace is fully used: ${new File(dir, base)}*.pem"
@@ -131,13 +162,10 @@ class TrustContext private[TrustContext](dir:File, passphrase:String) {
     * ファイルを読み出して KeyStore を生成する Transformer です。
     */
   private[this] object KeyStoreTransformer extends FileTransformer[KeyStore] {
-    override def defaultValue(file:File):KeyStore = {
-      KeyStore.getInstance(KeyStore.getDefaultType)
-    }
+    override def defaultValue(file:File):KeyStore = KeyStore.getInstance(KeyStore.getDefaultType)
 
-    override def transform(file:File):KeyStore = {
-      Algorithms.KeyStore.load(file, passphrase.toCharArray).getOrElse(defaultValue(file))
-    }
+    override def transform(file:File):KeyStore = Algorithms.KeyStore
+      .load(file, passphrase.toCharArray).getOrElse(defaultValue(file))
   }
 
   /**
@@ -165,18 +193,17 @@ class TrustContext private[TrustContext](dir:File, passphrase:String) {
     override def transform(files:Seq[File]):Verifier = {
 
       // キーストアに保存されている自身の証明書を発行した CA は暗黙的に信頼済み CA に追加する
-      val ks = keyStore.get(keyStoreFile)
-      val defaultTrustedCAs = ks.aliases().asScala
-        .map(alias => ks.getCertificateChain(alias).drop(1))
-        .map(certs => Algorithms.Cert.Path.generate(certs.map(_.asInstanceOf[X509Certificate])))
-        .map(certPath => TrustedCA(certPath, Seq.empty))
-        .toSeq
+      val defaultTrustedCA = {
+        val certs = getCertPath.getCertificates.asScala.drop(1).map(_.asInstanceOf[X509Certificate])
+        val certPath = Cert.Path.generate(certs)
+        TrustedCA(certPath, Seq.empty)
+      }
 
-      val trustedCAs = mutable.Buffer[TrustedCA](defaultTrustedCAs:_*)
+      val trustedCAs = mutable.Buffer[TrustedCA](defaultTrustedCA)
       val blocked = mutable.Buffer[X509Certificate]()
       files.filter { file =>
         if(file.length() > MAX_CERT_SIZE_TO_READ) {
-          logger.debug(f"file too large: $file (${file.length}%,d bytes > $MAX_CERT_SIZE_TO_READ%,d), skip")
+          logger.debug(f"file too large: $file (${file.length}%,d bytes > $MAX_CERT_SIZE_TO_READ%,d), skipping")
           false
         } else true
       }.foreach { file =>
@@ -184,7 +211,7 @@ class TrustContext private[TrustContext](dir:File, passphrase:String) {
           case caCertPath if caCertPath.startsWith(s"$TRUSTED_CA_CERTS_DIR/") =>
             TrustedCA(file).foreach(ca => trustedCAs.append(ca))
           case blockedPath if blockedPath.startsWith(s"$BLOCKED_CERTS_DIR/") =>
-            Algorithms.Cert.load(file).foreach(cert => blocked.append(cert))
+            Cert.load(file).foreach(cert => blocked.append(cert))
           case _ => None
         }
       }
@@ -216,25 +243,30 @@ object TrustContext {
   /**
     * 指定されたディレクトリにマウントする TrustContext を作成します。
     *
+    * `alias`, `passphrase` はそれぞれキーストア `$dir/private.p12` の中から TrustContext が使用する秘密鍵と証明書を
+    * 特定するために使用されます。
+    *
     * @param dir        TrustContext ディレクトリ
+    * @param alias      秘密鍵のエイリアス
     * @param passphrase 秘密鍵のパスフレーズ
     * @return TrustContext
     */
-  def apply(dir:File, passphrase:String):TrustContext = new TrustContext(dir, passphrase)
+  def apply(dir:File, alias:String, passphrase:String):TrustContext = new TrustContext(dir, alias, passphrase)
 
   /**
     * 指定されたディレクトリに新規の TrustContext 用ディレクトリを作成します。
     *
     * @param dir        TrustContext ディレクトリ
+    * @param alias      秘密鍵のエイリアス
     * @param passphrase 秘密鍵のパスフレーズ
     * @return
     */
-  def newTrustContext(dir:File, ca:PKI.CA, passphrase:String, subject:String):TrustContext = {
+  def newTrustContext(dir:File, ca:PKI.CA, alias:String, passphrase:String, subject:String):TrustContext = {
     dir.mkdirs()
-    val context = new TrustContext(dir, passphrase)
+    val context = TrustContext(dir, alias, passphrase)
 
     // 秘密鍵と証明書の作成 (署名した CA は暗黙的に信頼済み CA と見なされる)
-    ca.newPKCS12KeyStore(context.keyStoreFile, "ecdsa", passphrase, subject)
+    ca.newPKCS12KeyStore(context.keyStoreFile, alias, passphrase, subject)
     context.keyStoreFile.setReadable(false)
     context.keyStoreFile.setReadable(true, true)
     context.keyStoreFile.setWritable(false)
