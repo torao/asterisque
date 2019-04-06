@@ -4,7 +4,7 @@ import java.io.File
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
 
-import io.asterisque.auth.Algorithms
+import io.asterisque.security.Algorithms
 import io.asterisque.test.fs._
 import javax.security.auth.x500.X500Principal
 import org.apache.commons.codec.binary.Hex
@@ -35,11 +35,11 @@ It can revoke certificate and export PKCS#7. $revokeCertificate
   private[this] def mountExistingCA = temp(this) { dir =>
     val ca1 = PKI.CA.newRootCA(dir, CA_SUBJECT)
     val ca1Key = Algorithms.PrivateKey.load(ca1.privateKeyFile)
-    val ca1Cert = Algorithms.Certificate.load(ca1.certFile)
+    val ca1Cert = Algorithms.Cert.load(ca1.certFile)
 
     val ca2 = PKI.CA(dir)
     val ca2Key = Algorithms.PrivateKey.load(ca2.privateKeyFile)
-    val ca2Cert = Algorithms.Certificate.load(ca2.certFile)
+    val ca2Cert = Algorithms.Cert.load(ca2.certFile)
 
     (ca1Key === ca2Key) and (ca1Cert === ca2Cert)
   }
@@ -48,7 +48,7 @@ It can revoke certificate and export PKCS#7. $revokeCertificate
     val ca = PKI.CA.newRootCA(dir, CA_SUBJECT)
     val subject = "CN=ca.asterisque.io,OU=QA Division,O=Asterisque Ltd.,ST=Tokyo,C=JP"
 
-    val cert = Algorithms.Certificate.load(ca.certFile)
+    val cert = Algorithms.Cert.load(ca.certFile).get
     logger.info(s"""[CA Certificate]""")
     logger.info(s"""Version            : ${cert.getVersion}""")
     logger.info(s"""Serial Number      : ${cert.getSerialNumber}""")
@@ -81,7 +81,7 @@ It can revoke certificate and export PKCS#7. $revokeCertificate
 
     val pkcs12File = new File(dir, "user.p12")
     ca2.newPKCS12KeyStore(pkcs12File, "user", "****", USER_SUBJECT)
-    val keyStore = Algorithms.KeyStore.load(pkcs12File, "****")
+    val keyStore = Algorithms.KeyStore.load(pkcs12File, "****".toCharArray).get
 
     val cert = keyStore.getCertificate("user").asInstanceOf[X509Certificate]
     logger.info(s"""[Use Certificate]""")
@@ -99,12 +99,12 @@ It can revoke certificate and export PKCS#7. $revokeCertificate
 
     val certPath = keyStore.getCertificateChain("user").map(_.asInstanceOf[X509Certificate])
 
-    (Algorithms.Certificate.load(root.certFile).getSubjectX500Principal.getName === rootSubject) and
-      (Algorithms.Certificate.load(root.certFile).getIssuerX500Principal.getName === rootSubject) and
-      (Algorithms.Certificate.load(ca1.certFile).getSubjectX500Principal.getName === ca1Subject) and
-      (Algorithms.Certificate.load(ca1.certFile).getIssuerX500Principal.getName === rootSubject) and
-      (Algorithms.Certificate.load(ca2.certFile).getSubjectX500Principal.getName === ca2Subject) and
-      (Algorithms.Certificate.load(ca2.certFile).getIssuerX500Principal.getName === ca1Subject) and
+    (Algorithms.Cert.load(root.certFile).get.getSubjectX500Principal.getName === rootSubject) and
+      (Algorithms.Cert.load(root.certFile).get.getIssuerX500Principal.getName === rootSubject) and
+      (Algorithms.Cert.load(ca1.certFile).get.getSubjectX500Principal.getName === ca1Subject) and
+      (Algorithms.Cert.load(ca1.certFile).get.getIssuerX500Principal.getName === rootSubject) and
+      (Algorithms.Cert.load(ca2.certFile).get.getSubjectX500Principal.getName === ca2Subject) and
+      (Algorithms.Cert.load(ca2.certFile).get.getIssuerX500Principal.getName === ca1Subject) and
       (cert.getSubjectX500Principal.getName === userSubject) and
       (cert.getIssuerX500Principal.getName === ca2Subject) and
       (certPath.length === 4) and
@@ -129,14 +129,14 @@ It can revoke certificate and export PKCS#7. $revokeCertificate
       "/C=JP/ST=Tokyo/L=Sumida/O=Asterisque Ltd./OU=QA Division/CN=ca1.asterisque.io")
     val ca2 = PKI.CA.newIntermediateCA(ca1, new File(dir, "ca2"),
       "/C=JP/ST=Tokyo/L=Sumida/O=Asterisque Ltd./OU=QA Division/CN=ca2.asterisque.io")
-    val ca2Cert = Algorithms.Certificate.load(ca2.certFile)
+    val ca2Cert = Algorithms.Cert.load(ca2.certFile).get
 
     // PKCS#12: private key and certificate
     val pkcs12File = new File(dir, "user.p12")
     val certPEMFile = new File(dir, "user-cert.pem")
     ca2.newPKCS12KeyStore(pkcs12File, "user", "****", USER_SUBJECT)
     PKI.CA.exportCertificateAsPEM(pkcs12File, "****", certPEMFile)
-    val cert = Algorithms.Certificate.load(certPEMFile)
+    val cert = Algorithms.Cert.load(certPEMFile).get
 
     // PKCS#7: CA Certificate Path and CRL
     val certPathFile = new File(dir, "certpath.p7b")
@@ -148,7 +148,7 @@ It can revoke certificate and export PKCS#7. $revokeCertificate
     ca2.revokeCertificate(certPEMFile)
     ca2.exportCRLAsPEM(crlFile)
 
-    val certPath = Algorithms.CertificateChain.load(certPathFile)
+    val certPath = Algorithms.Cert.Path.load(certPathFile).get
       .getCertificates.asScala.map(_.asInstanceOf[X509Certificate])
 
     val pemExportedCRL = Algorithms.CRL.loads(crlFile).head

@@ -2,8 +2,8 @@ package io.asterisque.security
 
 import java.io.File
 import java.nio.file.NoSuchFileException
-import java.security.KeyStore
 import java.security.cert.{CertPath, CertificateException, X509Certificate}
+import java.security.{KeyStore, PrivateKey}
 
 import io.asterisque.security.Algorithms._
 import io.asterisque.security.TrustContext._
@@ -44,7 +44,7 @@ class TrustContext private[TrustContext](dir:File, alias:String, passphrase:Stri
     *
     * @return 証明書パス
     */
-  def getCertPath:CertPath = {
+  def getCertificatePath:CertPath = {
     val ks = keyStore.get(keyStoreFile)
     val certs = ks.getCertificateChain(alias).toSeq.map(_.asInstanceOf[X509Certificate])
     Cert.Path.generate(certs)
@@ -194,7 +194,7 @@ class TrustContext private[TrustContext](dir:File, alias:String, passphrase:Stri
 
       // キーストアに保存されている自身の証明書を発行した CA は暗黙的に信頼済み CA に追加する
       val defaultTrustedCA = {
-        val certs = getCertPath.getCertificates.asScala.drop(1).map(_.asInstanceOf[X509Certificate])
+        val certs = getCertificatePath.getCertificates.asScala.drop(1).map(_.asInstanceOf[X509Certificate])
         val certPath = Cert.Path.generate(certs)
         TrustedCA(certPath, Seq.empty)
       }

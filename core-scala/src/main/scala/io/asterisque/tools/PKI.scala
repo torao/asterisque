@@ -91,7 +91,7 @@ object PKI {
       subdirs.foreach(_.mkdirs())
       _init(confFile.getName) { file =>
         using(new FileWriter(file)) { out =>
-          out.write(CA.CONF.replace("$DIR", Bash.unixPath(dir)))
+          out.write(CA.CONF.replace("$DIR", s""""${Bash.unixPath(dir)}""""))
         }
       }
       _init(CA.INIT_TOUCH:_*)(IO.touch)

@@ -255,11 +255,10 @@ object Algorithms {
     def loads(encoded:Array[Byte]):Seq[X509CRL] = {
       val entries = PEM.parse(encoded)
       if(entries.isEmpty) {
-        logger.debug(s"no PEM entries detected")
+        logger.debug(s"it seems to be PEM formatted")
         Seq.empty
       } else if(entries.exists(_.name == "PKCS7")) {
-        val in = new ByteArrayInputStream(PKI.pkcs7ToPEM(encoded))
-        Seq(X509Factory.generateCRL(in).asInstanceOf[X509CRL])
+        loads(PKI.pkcs7ToPEM(encoded))
       } else {
         entries.filter(_.name.matches("X509\\s+CRL")).map { case PEM.Entry(_, _, pemEncoded) =>
           val in = new ByteArrayInputStream(pemEncoded)

@@ -1,11 +1,13 @@
 package io.asterisque.wire.gateway.netty
 
-import java.net.{Socket, URI}
-import java.security.cert.X509Certificate
-import java.security.{Principal, PrivateKey, Security}
+import java.io.File
+import java.net.URI
+import java.security.Security
 import java.util.concurrent.TimeUnit
 
+import io.asterisque.security.TrustContext
 import io.asterisque.test._
+import io.asterisque.tools.PKI
 import io.asterisque.wire.gateway.{Bridge, Wire}
 import io.asterisque.wire.message.Message
 import javax.net.ssl._
@@ -28,55 +30,12 @@ Simple echo communication. $simpleClientServer
 
   protected def availableBridges:Seq[Bridge] = Seq(new NettyBridge())
 
-  private[this] def simpleClientServer = {
+  private[this] def simpleClientServer = fs.temp(this) { dir =>
     logger.info(Security.getAlgorithms("SSLContext").asScala.mkString("[", ", ", "]"))
 
-    val (privateKey, certificate) = NODE_CERTS.head
-    val keyManager = new X509ExtendedKeyManager {
-      override def getClientAliases(keyType:String, issuers:Array[Principal]):Array[String] = {
-        logger.debug(s"getClientAliases($keyType, $issuers)")
-        Array("foo")
-      }
-
-      override def chooseClientAlias(keyType:Array[String], issuers:Array[Principal], socket:Socket):String = {
-        logger.debug(s"chooseClientAlias($keyType, $issuers, $socket)")
-        "foo"
-      }
-
-      override def getServerAliases(keyType:String, issuers:Array[Principal]):Array[String] = {
-        logger.debug(s"getServerAliases($keyType, $issuers)")
-        Array("bar")
-      }
-
-      override def chooseServerAlias(keyType:String, issuers:Array[Principal], socket:Socket):String = {
-        logger.debug(s"chooseServerAlias($keyType, $issuers, $socket)")
-        "bar"
-      }
-
-      override def getCertificateChain(alias:String):Array[X509Certificate] = Array(certificate)
-
-      override def getPrivateKey(alias:String):PrivateKey = privateKey
-    }
-
-    val trustManager = new X509ExtendedTrustManager {
-      override def checkClientTrusted(chain:Array[X509Certificate], authType:String, socket:Socket):Unit = None
-
-      override def checkServerTrusted(chain:Array[X509Certificate], authType:String, socket:Socket):Unit = None
-
-      override def checkClientTrusted(chain:Array[X509Certificate], authType:String, engine:SSLEngine):Unit = None
-
-      override def checkServerTrusted(chain:Array[X509Certificate], authType:String, engine:SSLEngine):Unit = None
-
-      override def checkClientTrusted(chain:Array[X509Certificate], authType:String):Unit = None
-
-      override def checkServerTrusted(chain:Array[X509Certificate], authType:String):Unit = None
-
-      override def getAcceptedIssuers:Array[X509Certificate] = Array(certificate)
-    }
-
-    //    val sslContext = SSLContext.getInstance("TLS")
-    //    sslContext.init(Array(keyManager), Array(trustManager), new SecureRandom())
-    val sslContext = SSLContext.getDefault
+    val ca = PKI.CA.newRootCA(new File(dir, "ca"), dn("ca"))
+    val peer1 = TrustContext.newTrustContext(new File(dir, "peer1"), ca, "foo", "****", dn("peer1"))
+    val peer2 = TrustContext.newTrustContext(new File(dir, "peer2"), ca, "foo", "****", dn("peer2"))
 
     def _echo(wire:Wire):Result = {
       wire.outbound.offer(Message.Open(0, 0, Array.empty))
@@ -96,6 +55,8 @@ Simple echo communication. $simpleClientServer
     val promise = Promise[Wire]()
     val server = {
       val uri = new URI("wss://0.0.0.0:0/asterisque")
+      val sslContext = SSLContext.getInstance("TLS")
+      sslContext.init(peer1.getKeyManagers, peer1.getTrustManagers, null)
       val future = Bridge.builder()
         .sslContext(sslContext)
         .newServer(uri, promise.completeWith)
@@ -105,6 +66,8 @@ Simple echo communication. $simpleClientServer
 
     val wire = {
       val uri = new URI(s"wss://localhost:${server.acceptURI.getPort}/asterisque")
+      val sslContext = SSLContext.getInstance("TLS")
+      sslContext.init(peer2.getKeyManagers, peer2.getTrustManagers, null)
       val future = Bridge.builder().sslContext(sslContext).newWire(uri)
       Await.result(future, SEC30)
     }

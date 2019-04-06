@@ -59,7 +59,7 @@ package object test {
     }
 
     def createTempDirectory(owner:Object):File = {
-      val parent = new File(tempRoot, owner.getClass.getName)
+      val parent = new File(tempRoot, owner.getClass.getName.replace('$', '_'))
       parent.mkdirs()
       val temp = new File(parent, f"${nextSequence()}%06d")
       temp.mkdirs()
@@ -86,11 +86,18 @@ package object test {
     }
   }
 
+  /**
+    * テスト用の DName を作成します。
+    */
+  def dn(cn:String, ou:String = "QA", o:String = "asterisque", l:String = "Sumida", st:String = "Tokyo", c:String = "JP"):String = {
+    s"/C=$c/ST=$st/L=$l/O=$o/OU=$ou/CN=$cn"
+  }
+
   lazy val NODE_CERTS:Seq[(PrivateKey, X509Certificate)] = fs.temp(this) { dir =>
-    val ca = PKI.CA.newRootCA(dir, "/C=JP/ST=Tokyo/L=Sumida/O=asterisque/CN=ca.asterisque.io")
+    val ca = PKI.CA.newRootCA(dir, dn("ca.asterisque.io"))
     (0 until 3).map { i =>
       val pkcs12 = new File(dir, f"keystore$i%02d.p12")
-      ca.newPKCS12KeyStore(pkcs12, "user", "****", f"/C=JP/ST=Tokyo/L=Sumida/O=asterisque/CN=node$i%02d.asterisque.io")
+      ca.newPKCS12KeyStore(pkcs12, "user", "****", dn(f"node$i%02d.asterisque.io"))
       val keyStore = Algorithms.KeyStore.load(pkcs12, "****")
       val key = keyStore.getKey("user", "****".toCharArray).asInstanceOf[PrivateKey]
       val cert = keyStore.getCertificate("user").asInstanceOf[X509Certificate]

@@ -3,7 +3,7 @@ package io.asterisque.wire.message
 import java.lang.reflect.Modifier
 
 import io.asterisque.auth.Certificate
-import io.asterisque.test.NODE_CERTS
+import io.asterisque.test._
 import io.asterisque.utils.Version
 import io.asterisque.wire.Envelope
 import io.asterisque.wire.message.Message.Control

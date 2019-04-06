@@ -60,7 +60,7 @@ It skips large certificate file. $skipLargeFile
 
     // 証明書がブロックされている
     val blocked1 = newTrustContext(new File(dir, "blocked1"), caA, alias, pass, dname("blocked1"))
-    target.deployBlocked(blocked1.getCertPath.getCertificates.asScala.head.asInstanceOf[X509Certificate])
+    target.deployBlocked(blocked1.getCertificatePath.getCertificates.asScala.head.asInstanceOf[X509Certificate])
 
     // 証明書を発行した CA の親 CA がブロックされている
     val blocked2 = newTrustContext(new File(dir, "blocked2"), caD, alias, pass, dname("blocked2"))
@@ -72,11 +72,11 @@ It skips large certificate file. $skipLargeFile
       (x.isSuccess must result).setMessage(x.toString)
     }
 
-    verify(target, target.getCertPath, beTrue) and
-      verify(target, trusted.getCertPath, beTrue) and
-      verify(target, untrusted.getCertPath, beFalse) and
-      verify(target, blocked1.getCertPath, beFalse) and
-      verify(target, blocked2.getCertPath, beFalse)
+    verify(target, target.getCertificatePath, beTrue) and
+      verify(target, trusted.getCertificatePath, beTrue) and
+      verify(target, untrusted.getCertificatePath, beFalse) and
+      verify(target, blocked1.getCertificatePath, beFalse) and
+      verify(target, blocked2.getCertificatePath, beFalse)
   }
 
   private[this] def deployFailure = fs.temp(this) { dir =>
@@ -107,7 +107,7 @@ It skips large certificate file. $skipLargeFile
 
     // 同じ CA から認可されているがブロックされているノード
     val disowning = newTrustContext(new File(dir, "disowning"), ca1, "foo", pass, dname("disowning"))
-    me.deployBlocked(disowning.getCertPath.getCertificates.asScala.head.asInstanceOf[X509Certificate])
+    me.deployBlocked(disowning.getCertificatePath.getCertificates.asScala.head.asInstanceOf[X509Certificate])
 
     // 異なる CA から認可されたノード
     val alien = newTrustContext(new File(dir, "alien"), ca2, "foo", pass, dname("alien"))
@@ -192,7 +192,7 @@ It skips large certificate file. $skipLargeFile
       val ca2 = PKI.CA.newRootCA(new File(dir, "ca2"), dname("ca2"))
       val node2 = newTrustContext(new File(dir, "node2"), ca2, "foo", pass, dname("node2"))
 
-      val incompatible = node1.verify(node2.getCertPath) must throwA[CertificateException]
+      val incompatible = node1.verify(node2.getCertificatePath) must throwA[CertificateException]
 
       val largeFile = new File(dir, "large.pem")
       IO.copy(ca2.certPathFile, largeFile)
@@ -202,11 +202,11 @@ It skips large certificate file. $skipLargeFile
           out.write(padding.getBytes(StandardCharsets.US_ASCII))
       }
       node1.deployTrustedCA(largeFile)
-      val ignored = node1.verify(node2.getCertPath) must throwA[CertificateException]
+      val ignored = node1.verify(node2.getCertificatePath) must throwA[CertificateException]
 
       node1.deployTrustedCA(ca2.certPathFile)
       val authorized = {
-        node1.verify(node2.getCertPath)
+        node1.verify(node2.getCertificatePath)
         success
       }
 
