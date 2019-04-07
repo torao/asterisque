@@ -9,9 +9,10 @@ import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.joran.JoranConfigurator
 import ch.qos.logback.core.joran.spi.JoranException
 import ch.qos.logback.core.util.StatusPrinter
+import com.typesafe.config.{Config, ConfigFactory}
 import io.asterisque.auth.Authority
 import io.asterisque.node.Context.logger
-import io.asterisque.utils.KeyValueStore
+import io.asterisque.utils.{Cache, KeyValueStore}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -23,6 +24,7 @@ class Context(root:File) extends AutoCloseable {
 
   val cache = KeyValueStore(new File(root, ".cache"))
 
+  //val authority = TrustContext(new File(conf.dir, "security"), conf)
   val authority = new Authority(new File(conf.dir, "authority"), cache.subset("authority."))
 
   def close():Unit = {
@@ -95,4 +97,11 @@ class Context(root:File) extends AutoCloseable {
 
 object Context {
   private[Context] val logger = LoggerFactory.getLogger(classOf[Context])
+
+  private[Context] object ConfigurationTransformer extends Cache.FileTransformer[Config] {
+    override def defaultValue(target:File):Config = ConfigFactory.defaultApplication(getClass.getClassLoader)
+
+    override def transform(target:File):Config = ConfigFactory.parseFile(target)
+  }
+
 }

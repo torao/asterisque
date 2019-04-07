@@ -66,7 +66,7 @@ object Debug {
           buf.append("None")
         }
       case Some(elem) =>
-        buf.append("Some")
+        buf.append("Some(")
         _str(stack :+ value, buf, elem)
         buf.append(")")
       case map:java.util.Map[_, _] => _str(stack, buf, map.asScala)
