@@ -3,7 +3,6 @@ package io.asterisque.tools
 import java.io._
 import java.nio.charset.StandardCharsets
 
-import io.asterisque.carillon.using
 import io.asterisque.utils._
 import org.slf4j.LoggerFactory
 

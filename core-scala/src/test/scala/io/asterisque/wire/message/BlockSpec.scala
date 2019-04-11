@@ -2,7 +2,6 @@ package io.asterisque.wire.message
 
 import java.lang.reflect.Modifier
 
-import io.asterisque.Asterisque
 import io.asterisque.wire.message.Message.Block
 import org.specs2.specification.core.SpecStructure
 
@@ -61,7 +60,7 @@ equals. $blockEquals
   }
 
   protected override def newMessages:Seq[Message] = Seq(
-    Block(0, 0, Asterisque.Empty.Bytes, 0, 0, eof = false),
+    Block(0, 0, Array.empty, 0, 0, eof = false),
     Block(1, 1, (0 to 0xFF).map(_.toByte).toArray, 0, 0x100, eof = false),
     Block(2, 2, (0 to Block.MaxPayloadSize).map(_.toByte).toArray, 0, Block.MaxPayloadSize, eof = false)
   )

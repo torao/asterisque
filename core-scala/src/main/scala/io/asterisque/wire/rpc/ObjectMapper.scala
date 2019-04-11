@@ -5,12 +5,11 @@ import java.nio.ByteBuffer
 import java.security.cert.X509Certificate
 import java.util.ServiceLoader
 
-import io.asterisque.ProtocolViolationException
-import io.asterisque.auth.{Algorithms, Certificate}
+import io.asterisque.security.Algorithms
 import io.asterisque.utils.{Debug, Version}
+import io.asterisque.wire.Spec
 import io.asterisque.wire.message.Message.{Block, Close, Control, Open}
 import io.asterisque.wire.message._
-import io.asterisque.wire.{Envelope, Spec}
 import javax.annotation.{Nonnull, Nullable}
 import org.msgpack.io.EndOfBufferException
 import org.msgpack.packer.Packer
@@ -255,49 +254,14 @@ object ObjectMapper {
     }
   }
 
-  implicit object CERTIFICATE extends ObjectMapper[Certificate] {
-    override def encode(packer:Packer, cert:Certificate):Unit = {
-      X509CERTIFICATE.encode(packer, cert.cert)
-      MAP_STRING.encode(packer, cert.attrs)
-    }
-
-    override def decode(unpacker:Unpacker):Certificate = {
-      Certificate(X509CERTIFICATE.decode(unpacker), MAP_STRING.decode(unpacker))
-    }
-  }
-
   implicit object X509CERTIFICATE extends ObjectMapper[X509Certificate] {
 
-    import io.asterisque.carillon._
-
     override def encode(packer:Packer, cert:X509Certificate):Unit = {
-      packer.write(cert.toByteArray)
+      packer.write(cert.getEncoded)
     }
 
     override def decode(unpacker:Unpacker):X509Certificate = {
-      Algorithms.Certificate.load(unpacker.readByteArray())
-    }
-  }
-
-  implicit object ENVELOPE extends ObjectMapper[Envelope] {
-    override def encode(packer:Packer, seal:Envelope):Unit = {
-      packer
-        .write(seal.payload)
-        .write(seal.signType.id)
-        .write(seal.sign)
-      X509CERTIFICATE.encode(packer, seal.signer)
-    }
-
-    override def decode(unpacker:Unpacker):Envelope = {
-      val payload = unpacker.readByteArray()
-      Envelope.Type.valueOf(unpacker.readByte()) match {
-        case Some(sigType) =>
-          val signature = unpacker.readByteArray()
-          val signer = X509CERTIFICATE.decode(unpacker)
-          new Envelope(payload, sigType, signature, signer)
-        case None =>
-          throw new ProtocolViolationException(s"invalid seal type: $unpacker")
-      }
+      Algorithms.Cert.load(unpacker.readByteArray()).get
     }
   }
 

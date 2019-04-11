@@ -4,8 +4,7 @@ import java.io.IOException
 import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicBoolean
 
-import io.asterisque.core.util.Latch
-import io.asterisque.utils.Debug
+import io.asterisque.utils.{Debug, Latch}
 import io.asterisque.wire.message.Message.{Block, Close, Open}
 import io.asterisque.wire.message.Message
 import io.asterisque.wire.rpc.Pipe._

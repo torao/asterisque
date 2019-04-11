@@ -1,7 +1,7 @@
 package io.asterisque.node
 
 import java.io.File
-import io.asterisque.carillon.using
+import io.asterisque.utils.using
 
 object Node {
 

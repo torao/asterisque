@@ -3,8 +3,7 @@ package io.asterisque.utils
 import java.io.File
 import java.util.Random
 
-import io.asterisque.carillon.Utils.fs
-import io.asterisque.carillon.using
+import io.asterisque.test._
 import org.specs2.Specification
 
 class KeyValueStoreSpec extends Specification {
@@ -42,19 +41,19 @@ It can refer the value put and vanish on delete. $putAndGetAndDelete
       (key, value)
     }
     using(KeyValueStore(new File(dir, "cache"))) { root =>
-      val store = (0 until 10).map{ i =>
+      val store = (0 until 10).map { i =>
         val kvs = root.subset(s"c$i")
-        keyValues.foreach { case (key, value) => kvs.put(key, value)}
+        keyValues.foreach { case (key, value) => kvs.put(key, value) }
         kvs.toMap.size === keyValues.length
       }.reduceLeft(_ and _)
 
       val delete = (0 until 10).flatMap { i =>
         val kvs = root.subset(s"c$i")
-        keyValues.zipWithIndex.map { case ((key, value), i) =>
+        keyValues.zipWithIndex.map { case ((key, value), j) =>
           (kvs.get(key) === value) and {
             kvs.delete(key)
             kvs.get(key) must beNull
-          } and (kvs.toMap.size === keyValues.size - i - 1)
+          } and (kvs.toMap.size === keyValues.size - j - 1)
         }
       }.reduceLeft(_ and _)
 

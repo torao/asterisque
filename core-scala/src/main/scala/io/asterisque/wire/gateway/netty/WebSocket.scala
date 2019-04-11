@@ -3,7 +3,6 @@ package io.asterisque.wire.gateway.netty
 import java.net.{InetSocketAddress, URI}
 import java.util.Objects
 
-import io.asterisque.core.wire.netty.HTTP
 import io.asterisque.utils.Debug
 import io.netty.bootstrap.{Bootstrap, ServerBootstrap}
 import io.netty.buffer.ByteBufUtil

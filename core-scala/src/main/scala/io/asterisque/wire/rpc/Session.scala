@@ -3,8 +3,7 @@ package io.asterisque.wire.rpc
 import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicBoolean
 
-import io.asterisque.core.util.Latch
-import io.asterisque.utils.EventDispatcher
+import io.asterisque.utils.{EventDispatcher, Latch}
 import io.asterisque.wire.ProtocolException
 import io.asterisque.wire.gateway.{MessageQueue, Wire}
 import io.asterisque.wire.message.Message.{Block, Close, Control, Open}

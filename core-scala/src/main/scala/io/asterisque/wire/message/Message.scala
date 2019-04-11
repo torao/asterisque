@@ -6,7 +6,6 @@ import java.nio.charset.{Charset, StandardCharsets}
 import java.util
 import java.util.Objects
 
-import io.asterisque.Asterisque
 import javax.annotation.{Nonnull, Nullable}
 import org.apache.commons.codec.binary.Hex
 
@@ -257,7 +256,7 @@ object Message {
       * @return ペイロードを UTF-8 でデコードした文字列
       */
     @Nonnull
-    def getString:String = getString(Asterisque.UTF8)
+    def getString:String = getString(StandardCharsets.UTF_8)
 
     /**
       * このブロックのペイロードを指定された文字セットでエンコードされた文字列として参照します。
@@ -343,7 +342,7 @@ object Message {
       * @return EOF ブロック
       */
     @Nonnull
-    def eof(pipeId:Short) = new Block(pipeId, 0.toByte, Asterisque.Empty.Bytes, 0, 0, true)
+    def eof(pipeId:Short) = new Block(pipeId, 0.toByte, Array.empty, 0, 0, true)
   }
 
   /**
