@@ -5,12 +5,11 @@ import java.util.Objects
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
-import io.asterisque.auth.Authority
 import io.asterisque.wire.gateway.{MessageQueue, Wire}
 import io.asterisque.wire.message.Message.Control
 import io.asterisque.wire.message.SyncSession
 import io.asterisque.wire.rpc.Dispatcher._
-import io.asterisque.wire.{AuthenticationException, Envelope, ProtocolException}
+import io.asterisque.wire.{AuthenticationException, ProtocolException}
 import javax.annotation.{Nonnull, Nullable}
 import org.slf4j.LoggerFactory
 
@@ -21,12 +20,9 @@ import scala.util.Random
 /**
   * 複数のサービスを保持し、リモートからのセッション開始要求に応える
   *
-  * @param auth        ピア認証を行うための認証局
-  * @param sealedCert  このノードの署名付き証明書と属性
-  * @param context     ディスパッチャーがリクエストを処理するためのスレッドプール
-  * @param tlsPeerAuth TLS レイヤーで交換した証明書の検証を行う場合 true
+  * @param context ディスパッチャーがリクエストを処理するためのスレッドプール
   */
-class Dispatcher private[rpc](auth:Authority, sealedCert:Envelope, val context:ExecutionContext, codec:Codec, tlsPeerAuth:Boolean = true) {
+class Dispatcher private[rpc](val context:ExecutionContext, codec:Codec) {
 
   /**
     * このディスパッチャー上でサービスの処理を行っているセッション。
@@ -66,21 +62,14 @@ class Dispatcher private[rpc](auth:Authority, sealedCert:Envelope, val context:E
 
   def bind(@Nonnull wire:Wire, @Nonnull serviceId:String, conf:Map[String, String]):Future[Session] = {
 
-    // TLS 証明書レベルでのピア認証が必要な場合は TLS Session の中から信頼済み証明書を参照
-    val validCertficates:Seq[X509Certificate] = if(tlsPeerAuth) {
-      wire.session match {
-        case Some(tls) =>
-          val certs = tls.getPeerCertificates.collect { case cert:X509Certificate => cert }.flatMap(auth.findIssuer)
-          if(certs.isEmpty) {
-            val msg = s"peer authentication is required but TLS doesn't contain valid certificates"
-            return Future.failed(new AuthenticationException(msg))
-          }
-          certs
-        case None =>
-          val msg = s"peer authentication is required but not by TLS"
-          return Future.failed(new AuthenticationException(msg))
-      }
-    } else Seq.empty
+    // TLS 証明書でのピア認証が必要な場合は TLS Session の中から信頼済み証明書を参照
+    val validCertificates:Seq[X509Certificate] = wire.session.map { tls =>
+      // NOTE TLS で TrustManager による認証が通過しているためこの証明書パスは信頼可能
+      tls.getPeerCertificates.map(_.asInstanceOf[X509Certificate]).toSeq
+    }.getOrElse {
+      val msg = s"peer authentication is required but not by TLS"
+      return Future.failed(new AuthenticationException(msg))
+    }
 
     // セッション ID の決定
     var sessionId:Long = 0
@@ -92,40 +81,11 @@ class Dispatcher private[rpc](auth:Authority, sealedCert:Envelope, val context:E
     }
 
     // ハンドシェイクの開始
-    new Handshake(wire, serviceId, conf, validCertficates).future
+    new Handshake(wire, serviceId, conf, validCertificates).future
   }
 
   @Nonnull
   private def handshake(@Nonnull hs:Handshake, @Nonnull received:SyncSession):Future[Session] = {
-
-    // ピアの証明書が正しく署名され有効であることを確認
-    try {
-      received.sealedCertificate.signer.checkValidity()
-      received.sealedCertificate.verify()
-      received.cert.cert.checkValidity()
-    } catch {
-      case ex:Exception =>
-        return Future.failed(ex)
-    }
-
-    // 証明書属性の署名者が信頼できる CA であることを確認
-    if(!auth.getCACertificates.contains(received.sealedCertificate.signer)) {
-      val msg = s"the signer exchanged in the sync session-config isn't a trusted CA"
-      return Future.failed(new AuthenticationException(msg))
-    }
-
-    // TLS レイヤーのピア証明書が信頼できる CA から発行済みであることは検証済みであるため
-    // SyncSession で交換した証明書がそのいずれかと致していることを確認
-    if(!hs.validCerts.contains(received.cert.cert)) {
-      val msg = s"the certificate of sync session-config doesn't match the certificate exchanged with TLS"
-      return Future.failed(new AuthenticationException(msg))
-    }
-
-    // ピアの証明書が信頼済み CA によって発行されていることを確認
-    if(auth.findIssuer(received.cert.cert).isEmpty) {
-      val msg = s"certificate of connected peer is not issued by trusted CA: ${received.cert.cert}"
-      return Future.failed(new AuthenticationException(msg))
-    }
 
     // 新規セッションの構築と登録
     @tailrec
@@ -178,7 +138,7 @@ class Dispatcher private[rpc](auth:Authority, sealedCert:Envelope, val context:E
 
     private[this] val promise = Promise[Session]()
 
-    val sent = SyncSession(sealedCert, serviceId, System.currentTimeMillis, conf)
+    val sent = SyncSession(serviceId, System.currentTimeMillis, conf)
 
     def future:Future[Session] = promise.future
 

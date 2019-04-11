@@ -49,6 +49,7 @@ object KeyValueStore {
   private[this] class Impl(dir:File, createIfMissing:Boolean) extends KeyValueStore {
 
     private[this] val kvs = locally {
+      dir.getParentFile.mkdirs()
       val options = new Options()
       options.setCreateIfMissing(createIfMissing)
       options.useFixedLengthPrefixExtractor(5)

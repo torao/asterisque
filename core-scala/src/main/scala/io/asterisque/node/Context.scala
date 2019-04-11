@@ -9,10 +9,10 @@ import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.joran.JoranConfigurator
 import ch.qos.logback.core.joran.spi.JoranException
 import ch.qos.logback.core.util.StatusPrinter
-import com.typesafe.config.{Config, ConfigFactory}
-import io.asterisque.auth.Authority
-import io.asterisque.node.Context.logger
-import io.asterisque.utils.{Cache, KeyValueStore}
+import io.asterisque.node.Context.{ConfigTransformer, logger}
+import io.asterisque.security.TrustContext
+import io.asterisque.utils
+import io.asterisque.utils.{Cache, Config, KeyValueStore}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -24,8 +24,9 @@ class Context(root:File) extends AutoCloseable {
 
   val cache = KeyValueStore(new File(root, ".cache"))
 
-  //val authority = TrustContext(new File(conf.dir, "security"), conf)
-  val authority = new Authority(new File(conf.dir, "authority"), cache.subset("authority."))
+  def config():Config = conf.config.get(conf.dir)
+
+  def trustContext():TrustContext = conf.trustContextCache.get(conf.dir)
 
   def close():Unit = {
     watcher.close()
@@ -39,7 +40,7 @@ class Context(root:File) extends AutoCloseable {
     }
 
     private[Context] def init():Unit = {
-      val logConfigFile = new File(root, "logback.xml")
+      val logConfigFile = new File(conf.dir, "logback.xml")
       if(logConfigFile.isFile) {
         val context = LoggerFactory.getILoggerFactory.asInstanceOf[LoggerContext]
         try {
@@ -57,6 +58,23 @@ class Context(root:File) extends AutoCloseable {
 
   private[this] object conf {
     val dir:File = new File(root, "conf")
+
+    val config = new Cache[Config](ConfigTransformer)
+
+    val trustContextCache = new Cache[TrustContext](new utils.Cache.DirTransformer[TrustContext]() {
+
+      override def transform(files:Seq[File]):TrustContext = loadTrustContext()
+
+      override def defaultValue(target:File):TrustContext = loadTrustContext()
+    })
+
+    private[this] def loadTrustContext():TrustContext = {
+      val conf = Context.this.config()
+      val alias = conf.getOrElse("keystore.alias", "")
+      val passphrase = conf.getOrElse("keystore.passphrase", "")
+      TrustContext(new File(dir, "security"), alias, passphrase)
+    }
+
   }
 
   private[this] object watcher extends Thread("ContextWatcher") with AutoCloseable {
@@ -98,10 +116,13 @@ class Context(root:File) extends AutoCloseable {
 object Context {
   private[Context] val logger = LoggerFactory.getLogger(classOf[Context])
 
-  private[Context] object ConfigurationTransformer extends Cache.FileTransformer[Config] {
-    override def defaultValue(target:File):Config = ConfigFactory.defaultApplication(getClass.getClassLoader)
+  private[Context] object ConfigTransformer extends Cache.DirTransformer[Config](filter = _.getName.endsWith(".conf"), recurse = false) {
+    override def defaultValue(target:File):Config = Config.getDefault
 
-    override def transform(target:File):Config = ConfigFactory.parseFile(target)
+    override def transform(files:Seq[File]):Config = if(files.isEmpty) Config.getDefault else {
+      val fs = files.sortBy(_.getName)
+      Config(fs.head, fs.tail:_*)
+    }
   }
 
 }

@@ -9,7 +9,7 @@ import scala.annotation.tailrec
 
 
 class Bash private[tools](cmd:String) {
-  private[this] val logger = LoggerFactory.getLogger("io.asterisque.carillon.tools.BASH")
+  private[this] val logger = LoggerFactory.getLogger("io.asterisque.tools.BASH")
 
   def exec(stdin:InputStream = NullInputStream, stdout:OutputStream = NullOutputStream, stderr:OutputStream = NullOutputStream, silent:Boolean = false):Int = {
     var result:Option[Int] = None

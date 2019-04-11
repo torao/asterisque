@@ -116,11 +116,13 @@ object Cache {
   }
 
   /**
-    * ディレクトリ直下に存在するファイルからオブジェクトを生成するトランスフォーマーです。
+    * ディレクトリに存在するファイルからオブジェクトを生成するトランスフォーマーです。
     *
+    * @param filter  ファイルのフィルタ
+    * @param recurse 直下のディレクトリより下を再帰的に検索する場合 true
     * @tparam T このトランスフォーマーが生成するオブジェクトの型
     */
-  trait DirTransformer[T] extends Transformer[T] {
+  abstract class DirTransformer[T](filter:File => Boolean = _ => true, recurse:Boolean = true) extends Transformer[T] {
     def transform(dir:File):T = transform(listFiles(dir))
 
     override def hash(dir:File):Long = fileHashes(listFiles(dir).sortBy(_.getCanonicalPath))
@@ -137,9 +139,9 @@ object Cache {
     protected def listFiles(dir:File):Seq[File] = {
       def list(dir:File, files:mutable.Buffer[File] = mutable.Buffer()):Seq[File] = {
         Option(dir.listFiles()).getOrElse(Array.empty).foreach { file =>
-          if(file.isFile) {
+          if(file.isFile && filter(file)) {
             files.append(file)
-          } else if(file.isDirectory) {
+          } else if(file.isDirectory && recurse) {
             list(file, files)
           }
         }

@@ -2,17 +2,14 @@ package io.asterisque.wire.message
 
 import java.lang.reflect.Modifier
 
-import io.asterisque.auth.Certificate
-import io.asterisque.test._
 import io.asterisque.utils.Version
-import io.asterisque.wire.Envelope
 import io.asterisque.wire.message.Message.Control
-import io.asterisque.wire.rpc.ObjectMapper
+import org.specs2.specification.core.SpecStructure
 
 import scala.util.Random
 
 class ControlSpec extends AbstractMessageSpec {
-  override def is = super.is ^
+  override def is:SpecStructure = super.is ^
     s2"""
 It should declare as final class. ${Modifier.isFinal(classOf[Control].getModifiers) must beTrue}
 It has properties these are specified in constructor. $verifyConstructorParameter
@@ -27,16 +24,13 @@ The pipe-id must be zero. ${Control.CloseMessage.pipeId === 0}
 
   protected def newMessages:Seq[Control] = {
     val r = new Random(78287435L)
-    val version = Version(r.nextInt().toShort)
-    val (privateKey, cert) = NODE_CERTS.head
-    val attr = Map("role" -> "ca,miner", "address" -> "Tokyo")
-    val envelope = Envelope.seal(ObjectMapper.CERTIFICATE.encode(Certificate(cert, attr)), cert, privateKey)
+    val version = Version(r.nextInt())
     val serviceId = "io.asterisque.TestService"
     val utcTime = r.nextLong()
     val ping = r.nextInt()
     val sessionTimeout = r.nextInt()
     val config = Map("ping" -> ping.toString, "sessionTimeout" -> sessionTimeout.toString)
-    val syncSession = SyncSession(version, envelope, serviceId, utcTime, config)
+    val syncSession = SyncSession(version, serviceId, utcTime, config)
 
     Seq(
       new Control(syncSession),

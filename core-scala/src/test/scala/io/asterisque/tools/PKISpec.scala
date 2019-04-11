@@ -3,9 +3,13 @@ package io.asterisque.tools
 import java.io.File
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
+import java.util.UUID
 
 import io.asterisque.security.Algorithms
+import io.asterisque.test._
 import io.asterisque.test.fs._
+import io.asterisque.utils.Debug
+import javax.naming.ldap.LdapName
 import javax.security.auth.x500.X500Principal
 import org.apache.commons.codec.binary.Hex
 import org.slf4j.LoggerFactory
@@ -16,6 +20,7 @@ import scala.collection.JavaConverters._
 class PKISpec extends Specification {
   def is =
     s2"""
+It can create certificates for various CName. $variousCName
 Openssl function throws exception that exit without zero. $opensslThrowsExceptionOnError
 CA can mount existing CA repository. $mountExistingCA
 It can create and destroy CA. $caInitAndDestroy
@@ -27,6 +32,24 @@ It can revoke certificate and export PKCS#7. $revokeCertificate
 
   private[this] val CA_SUBJECT = "/C=JP/ST=Tokyo/L=Sumida/O=Asterisque Ltd./OU=QA Division/CN=ca.asterisque.io"
   private[this] val USER_SUBJECT = "/C=JP/ST=Tokyo/L=Sumida/O=Asterisque Ltd./OU=QA Division/CN=user.asterisque.io"
+
+  private[this] def variousCName = temp(this) { dir =>
+    val ca = PKI.CA.newRootCA(dir, dn("ca.asterisque.io"))
+
+    Seq(
+      s"${UUID.randomUUID()}?role=ca&x=y&a=b#fragment",
+      s"${UUID.randomUUID()},ca,committer"
+    ).map { cn =>
+      val keyStore = new File(dir, "keystore.p12")
+      ca.newPKCS12KeyStore(keyStore, "alias", "****", dn(cn))
+      val cert = Algorithms.KeyStore.load(keyStore, "****".toCharArray).get
+        .getCertificate("alias").asInstanceOf[X509Certificate]
+      val actual = new LdapName(cert.getSubjectX500Principal.getName)
+        .getRdns.asScala.find(_.getType == "CN").get.getValue.toString
+      logger.info(s"${cert.getSubjectX500Principal.getName} => $actual")
+      actual === cn
+    }.reduceLeft(_ and _)
+  }
 
   private[this] def opensslThrowsExceptionOnError = {
     PKI.openssl(sh"""pkcs7 -in file_not_exists.pem -print_certs""") must throwA[IllegalStateException]
@@ -53,6 +76,9 @@ It can revoke certificate and export PKCS#7. $revokeCertificate
     logger.info(s"""Version            : ${cert.getVersion}""")
     logger.info(s"""Serial Number      : ${cert.getSerialNumber}""")
     logger.info(s"""Sign Algorithm Name: ${cert.getSigAlgName}""")
+    (cert.getCriticalExtensionOIDs.asScala ++ cert.getNonCriticalExtensionOIDs.asScala).foreach { oid =>
+      logger.info(s"""$oid: ${Debug.toString(cert.getExtensionValue(oid))}""")
+    }
     cert.checkValidity()
 
     val key = Algorithms.PrivateKey.load(ca.privateKeyFile)

@@ -146,7 +146,7 @@ organizationalUnitName		= Organizational Unit Name (eg, section)
 #organizationalUnitName_default	=
 
 commonName			= Common Name (e.g. server FQDN or YOUR name)
-commonName_max			= 64
+commonName_max			= 256
 
 emailAddress			= Email Address
 emailAddress_max		= 64

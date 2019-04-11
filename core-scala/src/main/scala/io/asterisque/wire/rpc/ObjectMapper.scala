@@ -237,7 +237,6 @@ object ObjectMapper {
   implicit object SYNC_SESSION extends ObjectMapper[SyncSession] {
     override def encode(packer:Packer, sync:SyncSession):Unit = {
       packer.write(sync.version.version)
-      ENVELOPE.encode(packer, sync.sealedCertificate)
       packer.write(sync.serviceId)
         .write(sync.utcTime)
       MAP_STRING.encode(packer, sync.config)
@@ -245,13 +244,12 @@ object ObjectMapper {
 
     override def decode(unpacker:Unpacker):SyncSession = try {
       val version = Version(unpacker.readInt())
-      val envelope = ENVELOPE.decode(unpacker)
       val serviceId = unpacker.readString()
       val utcTime = unpacker.readLong()
       val attr = MAP_STRING.decode(unpacker)
-      SyncSession(version, envelope, serviceId, utcTime, attr)
+      SyncSession(version, serviceId, utcTime, attr)
     } catch {
-      case ex:EndOfBufferException => throw new Unsatisfied()
+      case _:EndOfBufferException => throw new Unsatisfied()
       case ex:MessageTypeException =>
         throw new CodecException(s"broken message", ex)
     }

@@ -114,8 +114,12 @@ object Config {
     */
   def apply(first:File, files:File*):Config = {
     val config = files.foldLeft(ConfigFactory.parseFile(first)) { case (cnf, file) =>
+      logger.info(s"loading configuration: ${file.getCanonicalPath}")
       ConfigFactory.parseFile(file).withFallback(cnf)
     }
     new Config(config)
   }
+
+  def getDefault:Config = new Config(ConfigFactory.defaultApplication())
+
 }
