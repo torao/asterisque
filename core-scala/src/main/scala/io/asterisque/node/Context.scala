@@ -22,7 +22,7 @@ class Context(root:File) extends AutoCloseable {
 
   logger.debug(s"initializing context on: $root")
 
-  val cache = KeyValueStore(new File(root, ".cache"))
+  val cache = KeyValueStore.local(new File(root, ".cache"))
 
   def config():Config = conf.config.get(conf.dir)
 

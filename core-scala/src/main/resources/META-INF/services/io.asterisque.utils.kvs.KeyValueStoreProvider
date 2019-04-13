@@ -1,0 +1,2 @@
+io.asterisque.utils.kvs.MemoryProvider
+io.asterisque.utils.kvs.RocksDBProvider

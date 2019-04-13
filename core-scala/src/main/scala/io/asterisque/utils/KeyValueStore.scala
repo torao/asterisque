@@ -1,13 +1,12 @@
 package io.asterisque.utils
 
 import java.io.File
+import java.net.URI
 import java.nio.charset.StandardCharsets
-import java.util
-import java.util.concurrent.ConcurrentHashMap
+import java.util.ServiceLoader
 
-import io.asterisque.carillon._
-import org.apache.commons.codec.binary.Hex
-import org.rocksdb.{Options, RocksDB}
+import io.asterisque.utils.KeyValueStore.SubKVS
+import io.asterisque.utils.kvs.KeyValueStoreProvider
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -27,9 +26,19 @@ trait KeyValueStore extends AutoCloseable {
 
   def delete(key:String):Unit = delete(KeyValueStore.key(key))
 
-  def toMap:Map[Array[Byte], Array[Byte]]
+  def foreach(f:(Array[Byte], Array[Byte]) => Unit):Unit
 
-  def subset(prefix:String):KeyValueStore
+  def toSeq:Seq[(Array[Byte], Array[Byte])] = {
+    val seq = mutable.Buffer[(Array[Byte], Array[Byte])]()
+    foreach((key, value) => seq.append((key, value)))
+    seq
+  }
+
+  def toMap:Map[Array[Byte], Array[Byte]] = toSeq.toMap
+
+  def subKVS(prefix:Array[Byte]):KeyValueStore = new SubKVS(this, prefix)
+
+  def subKVS(prefix:String):KeyValueStore = subKVS(KeyValueStore.key(prefix))
 }
 
 object KeyValueStore {
@@ -37,57 +46,39 @@ object KeyValueStore {
 
   private[KeyValueStore] def key(key:String):Array[Byte] = key.getBytes(StandardCharsets.UTF_8)
 
-  def apply(dir:File, createIfMissing:Boolean = true):KeyValueStore = {
-    new Impl(dir, createIfMissing)
-  }
-
-  def memory():KeyValueStore = new Memory()
-
   /**
-    * Key-value store implementation to store application state or cache to local environment.
+    * 指定された URI に対する KeyValueStore 実装を参照します。URI は `kvs:` で始まる必要があります。
+    *
+    * @param uri KVS の URI
+    * @return KVS
+    * @throws ServiceNotFoundException URI に対するプロバイダが見つからない場合
     */
-  private[this] class Impl(dir:File, createIfMissing:Boolean) extends KeyValueStore {
-
-    private[this] val kvs = locally {
-      dir.getParentFile.mkdirs()
-      val options = new Options()
-      options.setCreateIfMissing(createIfMissing)
-      options.useFixedLengthPrefixExtractor(5)
-      RocksDB.open(options, dir.toString)
+  @throws[ServiceNotFoundException]
+  def getInstance(uri:URI):KeyValueStore = {
+    val scheme = Option(uri.getScheme).map(_.toLowerCase).getOrElse("")
+    val loader = ServiceLoader.load(classOf[KeyValueStoreProvider])
+    val builder = loader.iterator().asScala.map(_.getBuilder).reduceLeft((a, b) => a.orElse(b))
+    try {
+      builder.apply((scheme, uri))
+    } catch {
+      case _:MatchError =>
+        throw new ServiceNotFoundException(s"unsupported key-value storage uri: $uri")
     }
-
-    def get(key:Array[Byte]):Array[Byte] = kvs.get(key)
-
-    def put(key:Array[Byte], value:Array[Byte]):Unit = kvs.put(key, value)
-
-    def delete(key:Array[Byte]):Unit = kvs.delete(key)
-
-    override def close():Unit = kvs.close()
-
-    def toMap:Map[Array[Byte], Array[Byte]] = toMap("")
-
-    def toMap(prefix:String):Map[Array[Byte], Array[Byte]] = using(kvs.newIterator()) { it =>
-      if(prefix.length == 0) it.seekToFirst() else it.seek(key(prefix))
-      val map = mutable.HashMap[Array[Byte], Array[Byte]]()
-      while(it.isValid) {
-        val key = it.key()
-        val value = it.value()
-        map.put(key, value)
-        it.next()
-      }
-      map.toMap
-    }
-
-    def subset(prefix:String):KeyValueStore = new Alias(this, prefix)
   }
 
-  private[this] class Alias(root:Impl, prefix:String) extends KeyValueStore {
-    private[this] val _prefix = key(prefix)
+  def local(dir:File, createIfMissing:Boolean = true):KeyValueStore = {
+    val part = dir.toURI.getRawSchemeSpecificPart
+    getInstance(URI.create(s"rocksdb:$part?createIfMissing=$createIfMissing"))
+  }
+
+  def memory():KeyValueStore = getInstance(URI.create(s"mem:."))
+
+  private[KeyValueStore] class SubKVS(root:KeyValueStore, prefix:Array[Byte]) extends KeyValueStore {
 
     private[this] def join(key:Array[Byte]):Array[Byte] = {
-      val binary = new Array[Byte](_prefix.length + key.length)
-      System.arraycopy(_prefix, 0, binary, 0, _prefix.length)
-      System.arraycopy(key, 0, binary, _prefix.length, key.length)
+      val binary = new Array[Byte](prefix.length + key.length)
+      System.arraycopy(prefix, 0, binary, 0, prefix.length)
+      System.arraycopy(key, 0, binary, prefix.length, key.length)
       binary
     }
 
@@ -97,41 +88,18 @@ object KeyValueStore {
 
     def delete(key:Array[Byte]):Unit = root.delete(join(key))
 
-    override def close():Unit = root.close()
+    /**
+      * Close operations on subsets have no effect.
+      */
+    def close():Unit = None
 
-    def toMap:Map[Array[Byte], Array[Byte]] = root.toMap(prefix).collect {
-      case (key, value) if util.Arrays.equals(key, 0, _prefix.length, _prefix, 0, _prefix.length) =>
-        (util.Arrays.copyOfRange(key, _prefix.length, key.length), value)
+    def foreach(f:(Array[Byte], Array[Byte]) => Unit):Unit = root.foreach { (key, value) =>
+      if(key.length >= prefix.length && prefix.indices.forall(i => prefix(i) == key(i))) {
+        f(key.drop(prefix.length), value)
+      }
     }
 
-    def subset(prefix:String):KeyValueStore = new Alias(root, this.prefix + prefix)
-  }
-
-  private[this] class Memory(prefix:String) extends KeyValueStore {
-    private[this] val map = new ConcurrentHashMap[String, String]()
-
-    def this(prefix:Array[Byte] = Array.empty) = this(Hex.encodeHexString(prefix))
-
-    override def get(key:Array[Byte]):Array[Byte] = {
-      Option(map.get(prefix + Hex.encodeHexString(key))).map(x => Hex.decodeHex(x)).orNull
-    }
-
-    override def put(key:Array[Byte], value:Array[Byte]):Unit = {
-      map.put(prefix + Hex.encodeHexString(key), Hex.encodeHexString(value))
-    }
-
-    override def delete(key:Array[Byte]):Unit = {
-      map.remove(prefix + Hex.encodeHexString(key))
-    }
-
-    override def toMap:Map[Array[Byte], Array[Byte]] = map.asScala.collect {
-      case (key, value) if key.startsWith(prefix) =>
-        (Hex.decodeHex(key), Hex.decodeHex(value))
-    }.toMap
-
-    override def subset(prefix:String):KeyValueStore = new Memory(this.prefix + prefix)
-
-    override def close():Unit = None
+    override def subKVS(prefix:Array[Byte]):KeyValueStore = new SubKVS(root, join(prefix))
   }
 
 }

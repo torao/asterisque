@@ -46,7 +46,7 @@ trait EventDispatcher[LISTENER <: AnyRef] {
   @tailrec
   private[this] def _removeListener(listener:LISTENER):EventDispatcher[LISTENER] = {
     val ls = listeners.get()
-    if(listeners.compareAndSet(ls, ls.filterNot(l => l.eq(listener)))) this else _removeListener(listener)
+    if(listeners.compareAndSet(ls, ls.filterNot(l => l == listener))) this else _removeListener(listener)
   }
 
   /**
@@ -58,7 +58,7 @@ trait EventDispatcher[LISTENER <: AnyRef] {
     try {
       f(listener)
     } catch {
-      case ex:Throwable =>
+      case ex:Exception =>
         logger.error(s"fail to dispatch event call-back", ex)
     }
   }
