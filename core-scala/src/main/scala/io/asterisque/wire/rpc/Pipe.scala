@@ -42,6 +42,8 @@ class Pipe private[rpc](@Nonnull val open:Open, @Nonnull stub:Pipe.Stub) {
     */
   def id:Short = open.pipeId
 
+  def service:String = open.serviceId
+
   def function:Short = open.functionId
 
   def priority:Byte = open.priority
@@ -62,13 +64,13 @@ class Pipe private[rpc](@Nonnull val open:Open, @Nonnull stub:Pipe.Stub) {
   def isClosed:Boolean = closed.get
 
   /**
-    * このパイプが示す function 番号に対して指定された引数で Open メッセージを送信します。
+    * このパイプが示すサービスと function 番号に対して指定された引数で Open メッセージを送信します。
     *
     * @param params function 呼び出し時の引数
     */
   private[rpc] def open(params:Array[Byte]):Unit = {
     logger.trace("{}: sending open", this)
-    val open = Open(id, priority, function, params)
+    val open = Open(id, priority, service, function, params)
     stub.post(open)
   }
 

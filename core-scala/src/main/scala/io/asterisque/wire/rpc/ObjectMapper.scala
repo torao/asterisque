@@ -142,6 +142,7 @@ object ObjectMapper {
         case open:Open =>
           packer.write(open.pipeId)
           packer.write(open.priority)
+          packer.write(open.serviceId)
           packer.write(open.functionId)
           packer.write(open.params)
           Msg.Open
@@ -199,9 +200,10 @@ object ObjectMapper {
           case Msg.Open =>
             val pipeId = unpacker.readShort()
             val priority = unpacker.readByte()
+            val serviceId = unpacker.readString()
             val functionId = unpacker.readShort()
             val params = unpacker.readByteArray()
-            Open(pipeId, priority, functionId, params)
+            Open(pipeId, priority, serviceId, functionId, params)
           case Msg.Close =>
             val pipeId = unpacker.readShort()
             val code = unpacker.readByte()

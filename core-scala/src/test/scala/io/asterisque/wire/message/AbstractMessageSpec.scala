@@ -32,7 +32,7 @@ Message returns false if compare with null or other object. $falseIfCompareWithN
   private[this] def falseIfCompareWithNullOrElse = newMessages.map { msg =>
     (msg.equals(null) must beFalse) and
       (msg.equals(new Object()) must beFalse) and
-      (msg.equals(if(msg.isInstanceOf[Open]) Close(0, Array.empty) else Open(0, 0, Array.empty)) must beFalse) and
+      (msg.equals(if(msg.isInstanceOf[Open]) Close(0, Array.empty) else Open(0, "service", 0, Array.empty)) must beFalse) and
       (msg.equals("foo".asInstanceOf[Object]) must beFalse)
   }.reduceLeft(_ and _)
 

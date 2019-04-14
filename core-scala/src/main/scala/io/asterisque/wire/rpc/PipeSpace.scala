@@ -85,17 +85,18 @@ private[rpc] class PipeSpace(session:Session) {
     * ピアに対して Open メッセージを送信するためのパイプを生成します。
     *
     * @param priority プライオリティ
+    * @param service  サービス ID
     * @param function ファンクション ID
     */
   @Nonnull
-  def create(priority:Byte, function:Short):Pipe = {
+  def create(priority:Byte, service:String, function:Short):Pipe = {
     @tailrec
     def _create():Pipe = {
       if(!closed.get) {
         throw new IllegalStateException("session has already been closed")
       }
       val id = ((sequence.getAndIncrement & 0x7FFF) | pipeMask).toShort
-      val open = new Open(id, priority, function, Array.empty)
+      val open = new Open(id, priority, service, function, Array.empty)
       val pipe = new Pipe(open, session.stub)
       if(pipes.putIfAbsent(id, pipe) == null) pipe else _create()
     }

@@ -38,7 +38,7 @@ Simple echo communication. $simpleClientServer
     val peer2 = TrustContext.newTrustContext(new File(dir, "peer2"), ca, "foo", "****", dn("peer2"))
 
     def _echo(wire:Wire):Result = {
-      wire.outbound.offer(Message.Open(0, 0, Array.empty))
+      wire.outbound.offer(Message.Open(0, "service", 0, Array.empty))
       wire.inbound.take() match {
         case _:Message.Open =>
           wire.outbound.offer(Message.Close(0, 0, Array.empty))

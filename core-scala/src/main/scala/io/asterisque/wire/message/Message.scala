@@ -48,12 +48,14 @@ object Message {
     *
     * @param pipeId     新しく要求するパイプの ID
     * @param priority   ファンクション呼び出しのプライオリティ
+    * @param serviceId  オープンを要求するサービス ID
     * @param functionId オープンを要求するファンクション ID
     * @param params     ファンクションの呼び出しパラメータ
     * @author Takami Torao
     */
-  final case class Open(pipeId:Short, priority:Byte, functionId:Short, @Nonnull params:Array[Byte]) extends Message {
-    Objects.requireNonNull(params, "params shouldn't be null")
+  final case class Open(pipeId:Short, priority:Byte, @Nonnull serviceId:String, functionId:Short, @Nonnull params:Array[Byte]) extends Message {
+    Objects.requireNonNull(serviceId, "service must not be null")
+    Objects.requireNonNull(params, "params must not be null")
 
     /**
       * 指定されたオブジェクトとこのインスタンスが等しい場合 true を返します。
@@ -85,10 +87,13 @@ object Message {
       * デフォルトの優先度を持つ Open メッセージを構築します。
       *
       * @param pipeId     新しく要求するパイプの ID
+      * @param serviceId  オープンを要求するサービス ID
       * @param functionId オープンを要求するファンクション ID
       * @param params     ファンクションの呼び出しパラメータ
       */
-    def apply(pipeId:Short, functionId:Short, @Nonnull params:Array[Byte]):Open = Open(pipeId, 0, functionId, params)
+    def apply(pipeId:Short, serviceId:String, functionId:Short, @Nonnull params:Array[Byte]):Open = {
+      Open(pipeId, 0, serviceId, functionId, params)
+    }
   }
 
   /**

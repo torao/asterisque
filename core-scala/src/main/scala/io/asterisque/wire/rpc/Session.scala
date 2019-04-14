@@ -148,19 +148,20 @@ class Session private[rpc](val id:Long, dispatcher:Dispatcher, wire:Wire, codec:
     * このセッション上のピアに対して指定された function との非同期呼び出しのためのパイプを作成します。
     *
     * @param priority           新しく生成するパイプの同一セッション内でのプライオリティ
+    * @param service            function の定義されているサービス
     * @param function           function の識別子
     * @param params             function の実行パラメータ
     * @param onTransferComplete 呼び出し先とのパイプが生成されたときに実行される処理
     * @return オープンしたパイプでの処理の実行結果を通知する Future
     */
-  def open(priority:Byte, function:Short, @Nonnull params:Array[Byte], @Nonnull onTransferComplete:Pipe => Future[Any]):Future[Any] = {
-    val pipe = pipes.create(priority, function)
+  def open(priority:Byte, service:String, function:Short, @Nonnull params:Array[Byte], @Nonnull onTransferComplete:Pipe => Future[Any]):Future[Any] = {
+    val pipe = pipes.create(priority, service, function)
     pipe.open(params)
     onTransferComplete.apply(pipe)
   }
 
-  def open(priority:Byte, function:Short, @Nonnull params:Array[Byte]):Future[Any] = {
-    open(priority, function, params, _.future)
+  def open(priority:Byte, service:String, function:Short, @Nonnull params:Array[Byte]):Future[Any] = {
+    open(priority, service, function, params, _.future)
   }
 
   /**
@@ -251,18 +252,21 @@ class Session private[rpc](val id:Long, dispatcher:Dispatcher, wire:Wire, codec:
   /**
     * このセッションの相手側となるインターフェースを参照します。
     */
-  def bind[T](clazz:Class[T]):T = bind(clazz, Thread.currentThread.getContextClassLoader)
+  def bind[T](service:String, clazz:Class[T]):T = bind(service, clazz, Thread.currentThread.getContextClassLoader)
 
   /**
     * このセッションのピアと通信することのできるリモートインターフェースを参照します。
     *
-    * @param clazz  リモートインターフェース
-    * @param loader クラスローダー
+    * @param service サービスID
+    * @param clazz   リモートインターフェース
+    * @param loader  クラスローダー
     * @tparam T リモート実装
     * @return リモートインターフェース
     */
-  def bind[T](clazz:Class[T], loader:ClassLoader):T = {
-    val skeleton = new Skeleton(logId, clazz, codec, open)
+  def bind[T](service:String, clazz:Class[T], loader:ClassLoader):T = {
+    val skeleton = new Skeleton(logId, clazz, codec, { (priority, function, params) =>
+      open(priority, service, function, params)
+    })
     clazz.cast(java.lang.reflect.Proxy.newProxyInstance(loader, Array[Class[_]](clazz), skeleton))
   }
 
