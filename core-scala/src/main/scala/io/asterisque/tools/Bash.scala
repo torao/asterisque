@@ -1,6 +1,6 @@
 package io.asterisque.tools
 
-import java.io.{File, InputStream, OutputStream, OutputStreamWriter}
+import java.io.{File, InputStream, OutputStream}
 
 import io.asterisque.utils.IO.{NullInputStream, NullOutputStream}
 import org.slf4j.LoggerFactory
@@ -15,14 +15,14 @@ class Bash private[tools](cmd:String) {
     var result:Option[Int] = None
     try {
       val proc = Runtime.getRuntime.exec("bash")
+      val out = proc.getOutputStream()
+      out.write(s"$cmd; exit $$?\n".getBytes)
+      out.flush()
       val io = Seq(
         new Reader(proc.getInputStream, (if(silent) Seq(stdout) else Seq(stdout, System.out)):_*),
         new Reader(proc.getErrorStream, (if(silent) Seq(stderr) else Seq(stderr, System.err)):_*),
-        new Writer(stdin, proc.getOutputStream, (if(silent) Seq.empty else Seq(System.out)):_*))
+        new Writer(stdin, out, (if(silent) Seq.empty else Seq(System.out)):_*))
       io.foreach(_.start())
-      val out = new OutputStreamWriter(proc.getOutputStream)
-      out.write(s"$cmd; exit $$?\n")
-      out.flush()
       result = Some(proc.waitFor())
       io.foreach(_.join())
       result.get

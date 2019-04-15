@@ -21,7 +21,7 @@ scalacOptions ++= Seq(
   "-Ywarn-numeric-widen",
   "-Ywarn-unused",
   "-Ywarn-unused-import",
-  "-Ywarn-value-discard",
+  // "-Ywarn-value-discard",
   "-Yrangepos" /* for Specs2 */
 )
 
