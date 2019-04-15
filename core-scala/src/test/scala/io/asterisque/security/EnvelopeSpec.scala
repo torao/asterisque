@@ -33,7 +33,6 @@ It throws IllegalArgumentException for invalid JSON structure. $parseErrorPatter
     val cert = ks.getCertificate("foo").asInstanceOf[X509Certificate]
 
     (0 until 20).map(i => randomJSON(328475 + i)).zipWithIndex.map { case (json, i) =>
-      logger.info(f"$i%02d: ${Json.stringify(json)}%s")
       val envelope = Envelope(json, key, cert)
       val file = new File(dir, s"$i.json")
       Files.writeString(file.toPath, Json.prettyPrint(envelope.toJSON), CREATE_NEW, WRITE)
