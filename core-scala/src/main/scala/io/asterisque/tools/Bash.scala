@@ -29,7 +29,7 @@ class Bash private[tools](cmd:String) {
     } finally {
       result match {
         case Some(rc) => logger.debug(s"$cmd => $rc")
-        case None => logger.error(s"$cmd")
+        case None => logger.error(s"$cmd (no result)")
       }
     }
   }

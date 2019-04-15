@@ -83,7 +83,7 @@ Data size must be constant value. $verifyDataSize
       Long.MinValue, Long.MaxValue,
       Float.MinValue, Float.MaxValue,
       Double.MinValue, Double.MaxValue,
-      ('A', "A"), ('\n', "\n"), ('\0', "\0"),
+      ('A', "A"), ('\n', "\n"), ('\u0000', "\u0000"),
       randomString(938443, 256)
     ).map {
       case (value, expected) =>
