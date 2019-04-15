@@ -126,6 +126,7 @@ private[netty] class WebSocketWire(@Nonnull name:String, primary:Boolean, inboun
       if(closed.get()) {
         ctx.close()
       } else {
+        logger.debug(s"connection succeeded: $ctx")
         context.set(ctx)
         val channel = ctx.channel
         channel.config.setAutoRead(true)

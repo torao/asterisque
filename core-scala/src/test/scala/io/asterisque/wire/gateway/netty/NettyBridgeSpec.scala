@@ -89,11 +89,12 @@ Simple echo communication. $simpleClientServer
     }
     logger.info(s"client: ${wire.local} <--> ${wire.remote}")
 
-    val clientResult = Await.result(Future(_echo("CLIENT", wire)), SEC30)
-    val serverResult = Await.result(promise.future.map { w =>
-      logger.info(s"ECHO: server connect: $w")
+    val serverFuture = promise.future.map { w =>
       _echo("SERVER", w)
-    }, SEC30)
+    }
+
+    val clientResult = _echo("CLIENT", wire)
+    val serverResult = Await.result(serverFuture, SEC30)
 
     wire.close()
     server.close()
