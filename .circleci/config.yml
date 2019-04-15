@@ -5,7 +5,9 @@ jobs:
       - image: circleci/openjdk:11.0
     steps:
       - checkout
-      - run: pwd && ls -laF && ls core-scala -laF
+      - run:
+          name: "Runtime Status"
+          command: pwd && ls -laF && ls core-scala -laF && openssl version
       - restore_cache:
           key: scala-library-dependencies-{{ checksum "core-scala/build.sbt" }}
       - run: cd core-scala && sbt test:compile
