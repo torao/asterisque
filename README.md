@@ -2,6 +2,8 @@
 
 asterisque is lightweight bidirectional RPC with asynchronous messaging framework, protocol and implementation for P2P distributed system.
 
+[![CircleCI](https://circleci.com/gh/torao/asterisque.svg?style=svg)](https://circleci.com/gh/torao/asterisque)
+
 ## Documents
 
 * [Motive](http://prezi.com/ia6rjvjrhe6d/asterisk-motivation/)
