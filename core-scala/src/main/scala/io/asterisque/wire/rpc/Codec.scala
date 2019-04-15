@@ -6,7 +6,7 @@ import java.lang.reflect.Method
 import javax.annotation.{Nonnull, Nullable}
 
 /**
-  * メソッドのパラメータまたは
+  * メソッドのパラメータまたは返値をバイト配列に変換するためのトレイト。
   */
 trait Codec {
 

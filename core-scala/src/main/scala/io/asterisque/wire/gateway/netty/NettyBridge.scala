@@ -14,8 +14,7 @@ import javax.net.ssl.{SSLEngine, SSLException}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class NettyBridge() extends Bridge with AutoCloseable {
 
@@ -24,7 +23,7 @@ class NettyBridge() extends Bridge with AutoCloseable {
   /**
     * この Bridge から生成される Wire で共通して使用されるイベントループです。
     */
-  private[this] val _worker = new NioEventLoopGroup
+  private[this] val _worker = new NioEventLoopGroup()
 
   /**
     * この Bridge に終了命令が出されていることを示すブール値です。
@@ -37,7 +36,7 @@ class NettyBridge() extends Bridge with AutoCloseable {
     * @return Wire の Future
     */
   @Nonnull
-  override def newWire(@Nonnull uri:URI, @Nonnull config:Config):Future[Wire] = {
+  override def newWire(@Nonnull uri:URI, @Nonnull config:Config)(implicit _context:ExecutionContext):Future[Wire] = {
     Objects.requireNonNull(uri)
     Objects.requireNonNull(config)
     getScheme(uri) match {
@@ -50,16 +49,6 @@ class NettyBridge() extends Bridge with AutoCloseable {
 
         val ssl:SslContext = if(secure) {
           Option(config.sslContext)
-            /*
-            SSLContext sslContext,
-                         boolean isClient,
-                         Iterable<String> ciphers,
-                         CipherSuiteFilter cipherFilter,
-                         ApplicationProtocolConfig apn,
-                         ClientAuth clientAuth,
-                         String[] protocols,
-                         boolean startTls
-             */
             .map(ctx => new JdkSslContext(ctx, true, ClientAuth.NONE).asInstanceOf[SslContext])
             .getOrElse {
               NettyBridge.logger.debug(s"ssl context ism't specified for uri $uri, use default client ssl")
@@ -80,7 +69,7 @@ class NettyBridge() extends Bridge with AutoCloseable {
     * @return Server の Future
     */
   @Nonnull
-  override def newServer(@Nonnull uri:URI, @Nonnull config:Config, @Nonnull onAccept:Future[Wire] => Unit):Future[Server] = {
+  override def newServer(@Nonnull uri:URI, @Nonnull config:Config, @Nonnull onAccept:Future[Wire] => Unit)(implicit _context:ExecutionContext):Future[Server] = {
     Objects.requireNonNull(uri)
     Objects.requireNonNull(config)
     Objects.requireNonNull(onAccept)

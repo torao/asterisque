@@ -1,7 +1,7 @@
 package io.asterisque.wire.gateway.netty
 
 import java.net.{BindException, InetSocketAddress, URI}
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{ExecutorService, Executors, TimeUnit}
 
 import io.asterisque.test._
 import io.asterisque.wire.gateway.netty.WebSocket.{Servant, Server}
@@ -12,11 +12,12 @@ import io.netty.handler.codec.http.websocketx.{BinaryWebSocketFrame, TextWebSock
 import io.netty.handler.ssl._
 import org.slf4j.LoggerFactory
 import org.specs2.Specification
+import org.specs2.specification.BeforeAfterAll
 
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Promise}
+import scala.concurrent.{Await, ExecutionContext, Promise}
 
-class WebSocketSpec extends Specification {
+class WebSocketSpec extends Specification with BeforeAfterAll {
   def is =
     s2"""
 The server and client should connect and communicate with locally. $simpleClientServerConnection
@@ -29,6 +30,19 @@ It throws exception if uri schema is not for WebSocket. $specifyNotWSSSchemeURI
 """
 
   private[this] val logger = LoggerFactory.getLogger(classOf[WebSocketSpec])
+
+  private[this] var executor:ExecutorService = _
+  private[this] implicit var _context:ExecutionContext = _
+
+  override def beforeAll():Unit = {
+    executor = Executors.newCachedThreadPool()
+    _context = ExecutionContext.fromExecutor(executor)
+  }
+
+  override def afterAll():Unit = {
+    executor.shutdown()
+    _context = null
+  }
 
   private[this] def simpleClientServerConnection = Seq("ws", "wss").map { scheme =>
     val group = new NioEventLoopGroup()
@@ -70,6 +84,7 @@ It throws exception if uri schema is not for WebSocket. $specifyNotWSSSchemeURI
   private[this] def serverBindFailure = {
     val group = new NioEventLoopGroup()
     val subProtocol = "unit-test"
+
     val serverURI = new URI("ws://255.255.255.255/unit-test")
     var result:Option[Throwable] = None
     val server = new WebSocket.Server(group, subProtocol, new Server.Listener {

@@ -16,7 +16,9 @@ import io.netty.handler.stream.ChunkedWriteHandler
 import javax.annotation.{Nonnull, Nullable}
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
+
+//import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Promise}
 import scala.util.{Failure, Success}
 
@@ -56,7 +58,7 @@ object WebSocket {
     * @param listener    サーバイベントリスナ
     * @param sslContext  SSL/TLS を使用する場合は有効な { @link SslContext}、使用しない場合は null
     */
-  class Server(@Nonnull group:EventLoopGroup, @Nonnull subprotocol:String, @Nonnull listener:Server.Listener, @Nullable sslContext:SslContext) {
+  class Server(@Nonnull group:EventLoopGroup, @Nonnull subprotocol:String, @Nonnull listener:Server.Listener, @Nullable sslContext:SslContext)(@Nonnull implicit val _context:ExecutionContext) {
     private[this] val logger = Server.logger
 
     private var channel:Channel = _
@@ -149,7 +151,7 @@ object WebSocket {
     * @param subprotocol asterisque 上で使用するサブプロトコル
     * @param sslContext  SSL/TLS を使用する場合は有効な { @link SslContext}、使用しない場合は null
     */
-  class Client(@Nonnull group:EventLoopGroup, @Nonnull subprotocol:String, @Nullable sslContext:SslContext) extends AutoCloseable {
+  class Client(@Nonnull group:EventLoopGroup, @Nonnull subprotocol:String, @Nullable sslContext:SslContext)(@Nonnull implicit val _context:ExecutionContext) extends AutoCloseable {
     private[this] val logger = Client.logger
     Objects.requireNonNull(group)
     Objects.requireNonNull(subprotocol)

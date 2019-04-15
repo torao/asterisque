@@ -1,0 +1,14 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/openjdk:8-jdk
+    steps:
+      - checkout
+      - restore_cache:
+          key: scala-library-dependencies-{{ checksum "build.sbt" }}
+      - run: sbt test:compile
+      - save_cache:
+          paths: [ "~/.m2", "~/.ivy2", "~/.cache/coursier" ]
+          key: scala-library-dependencies-{{ checksum "build.sbt" }}
+      - run: sbt test

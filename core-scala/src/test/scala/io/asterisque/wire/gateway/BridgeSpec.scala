@@ -4,6 +4,8 @@ import java.net.URI
 
 import org.specs2.Specification
 
+import scala.concurrent.ExecutionContext.Implicits.global
+
 abstract class BridgeSpec extends Specification {
   def is =
     s2"""

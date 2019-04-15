@@ -9,7 +9,7 @@ import javax.net.ssl.SSLContext
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * Bridge は下層のメッセージングネットワーク実装を利用するためのインターフェース。別のノードへの接続と、別のノードからの
@@ -36,7 +36,7 @@ trait Bridge {
     * @param config Wire 通信設定
     * @return Wire の Future
     */
-  def newWire(@Nonnull uri:URI, @Nonnull config:Config):Future[Wire]
+  def newWire(@Nonnull uri:URI, @Nonnull config:Config)(implicit _context:ExecutionContext):Future[Wire]
 
   /**
     * 指定されたネットワークからの接続を非同期で受け付ける [[Server]] の Future を返します。
@@ -45,7 +45,7 @@ trait Bridge {
     * @param config   Wire 通信設定
     * @param onAccept サーバが接続を受け付けたとき (新規の [[Wire]] が発生したとき) のコールバック
     */
-  def newServer(@Nonnull uri:URI, @Nonnull config:Config, @Nonnull onAccept:Future[Wire] => Unit):Future[Server]
+  def newServer(@Nonnull uri:URI, @Nonnull config:Config, @Nonnull onAccept:Future[Wire] => Unit)(implicit _context:ExecutionContext):Future[Server]
 }
 
 object Bridge {
@@ -138,7 +138,7 @@ object Bridge {
       * @param uri 接続先の URI
       * @return Wire の Future
       */
-    def newWire(@Nonnull uri:URI):Future[Wire] = find(uri)
+    def newWire(@Nonnull uri:URI)(implicit _context:ExecutionContext):Future[Wire] = find(uri)
       .map(_.newWire(uri, config))
       .getOrElse(Future.failed(new UnsupportedProtocolException(s"unsupported uri scheme: $uri")))
 
@@ -149,7 +149,7 @@ object Bridge {
       * @param uri      接続先の URI
       * @param onAccept サーバが接続を受け付けたときのコールバック
       */
-    def newServer(@Nonnull uri:URI, @Nonnull onAccept:Future[Wire] => Unit):Future[Server] = find(uri)
+    def newServer(@Nonnull uri:URI, @Nonnull onAccept:Future[Wire] => Unit)(implicit _context:ExecutionContext):Future[Server] = find(uri)
       .map(_.newServer(uri, config, onAccept))
       .getOrElse(Future.failed(new UnsupportedProtocolException(s"unsupported uri scheme: $uri")))
 

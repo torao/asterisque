@@ -60,7 +60,7 @@ class Dispatcher private[rpc](val context:ExecutionContext, codec:Codec) {
     }
   }
 
-  def bind(@Nonnull wire:Wire, @Nonnull serviceId:String, conf:Map[String, String]):Future[Session] = {
+  def bind(@Nonnull wire:Wire, conf:Map[String, String]):Future[Session] = {
 
     // TLS 証明書でのピア認証が必要な場合は TLS Session の中から信頼済み証明書を参照
     val validCertificates:Seq[X509Certificate] = wire.session.map { tls =>
@@ -81,7 +81,7 @@ class Dispatcher private[rpc](val context:ExecutionContext, codec:Codec) {
     }
 
     // ハンドシェイクの開始
-    new Handshake(wire, serviceId, conf, validCertificates).future
+    new Handshake(wire, conf, validCertificates).future
   }
 
   @Nonnull
@@ -111,15 +111,14 @@ class Dispatcher private[rpc](val context:ExecutionContext, codec:Codec) {
   /**
     * 指定されたサービスの処理を呼び出します。
     *
-    * @param serviceId 呼び出すサービスの ID
-    * @param pipe      呼び出しのパイプ
-    * @param logId     ログ出力用の文字列
+    * @param pipe  呼び出しのパイプ
+    * @param logId ログ出力用の文字列
     * @return サービスの呼び出し結果
     */
-  private[rpc] def dispatch(serviceId:String, @Nonnull pipe:Pipe, @Nonnull logId:String):Future[Array[Byte]] = {
-    val service = services.get(serviceId)
+  private[rpc] def dispatch(@Nonnull pipe:Pipe, @Nonnull logId:String):Future[Array[Byte]] = {
+    val service = services.get(pipe.service)
     if(service == null) {
-      val msg = s"no such service: $serviceId"
+      val msg = s"no such service: ${pipe.service}"
       logger.debug(s"$logId: $msg")
       Future.failed(new ProtocolException(msg))
     } else {
@@ -130,15 +129,14 @@ class Dispatcher private[rpc](val context:ExecutionContext, codec:Codec) {
   /**
     * メッセージキューに対して [[SyncSession]] ハンドシェイクの到着を待機するクラスです。
     *
-    * @param wire      SyncSession の到着を待機する Wire
-    * @param serviceId 此方から接続しようとしているサービス
-    * @param conf      セッション同期の設定
+    * @param wire SyncSession の到着を待機する Wire
+    * @param conf セッション同期の設定
     */
-  private[this] class Handshake(val wire:Wire, val serviceId:String, val conf:Map[String, String], val validCerts:Seq[X509Certificate]) extends MessageQueue.Listener {
+  private[this] class Handshake(val wire:Wire, val conf:Map[String, String], val validCerts:Seq[X509Certificate]) extends MessageQueue.Listener {
 
     private[this] val promise = Promise[Session]()
 
-    val sent = SyncSession(serviceId, System.currentTimeMillis, conf)
+    val sent:SyncSession = SyncSession(System.currentTimeMillis, conf)
 
     def future:Future[Session] = promise.future
 

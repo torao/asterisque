@@ -101,7 +101,7 @@ private[netty] class WebSocketWire(@Nonnull name:String, primary:Boolean, inboun
   @Nonnull
   private def frameToMessage(@Nonnull frame:BinaryWebSocketFrame):Option[Message] = {
     val buf = frame.content
-    val buffer = if(buf.isDirect) {
+    val buffer = if(!buf.isDirect) {
       buf.nioBuffer()
     } else {
       val bytes = new Array[Byte](buf.readableBytes)
@@ -122,9 +122,9 @@ private[netty] class WebSocketWire(@Nonnull name:String, primary:Boolean, inboun
     */
   private[netty] class WSServant extends WebSocket.Servant {
     override def wsReady(@Nonnull ctx:ChannelHandlerContext):Unit = {
+      logger.trace("wsReady({})", ctx)
       if(closed.get()) {
         ctx.close()
-        ()
       } else {
         context.set(ctx)
         val channel = ctx.channel

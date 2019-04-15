@@ -3,7 +3,7 @@ package io.asterisque.wire.gateway.netty
 import java.io.File
 import java.net.URI
 import java.security.Security
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{Executors, TimeUnit}
 
 import io.asterisque.security.TrustContext
 import io.asterisque.test._
@@ -16,9 +16,8 @@ import org.specs2.Specification
 import org.specs2.execute.Result
 
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent._
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Promise}
 
 class NettyBridgeSpec extends Specification {
   override def is =
@@ -37,19 +36,33 @@ Simple echo communication. $simpleClientServer
     val peer1 = TrustContext.newTrustContext(new File(dir, "peer1"), ca, "foo", "****", dn("peer1"))
     val peer2 = TrustContext.newTrustContext(new File(dir, "peer2"), ca, "foo", "****", dn("peer2"))
 
-    def _echo(wire:Wire):Result = {
-      wire.outbound.offer(Message.Open(0, "service", 0, Array.empty))
-      wire.inbound.take() match {
-        case _:Message.Open =>
-          wire.outbound.offer(Message.Close(0, 0, Array.empty))
+    def _echo(name:String, wire:Wire):Result = {
+      logger.info(s"ECHO: $name started")
+      val first = Message.Open(0, s"service/${name.toLowerCase}", 0, Array.empty)
+      wire.outbound.offer(first)
+      logger.info(s"ECHO: $name >> $first")
+      wire.inbound.take(15, TimeUnit.SECONDS) match {
+        case x:Message.Open =>
+          logger.info(s"ECHO: $name << $x")
+          val open = Message.Close(0, 0, Array.empty)
+          wire.outbound.offer(open)
+          logger.info(s"ECHO: $name >> $open")
           wire.inbound.take() match {
-            case _:Message.Close => success
-            case msg => failure(s"Close expect but: $msg")
+            case y:Message.Close =>
+              logger.info(s"ECHO: $name << $y")
+              success
+            case msg =>
+              logger.info(s"ECHO: $name << $msg")
+              failure(s"Close expect but: $msg")
           }
-        case msg => failure(s"Open expect but: $msg")
+        case msg =>
+          logger.info(s"ECHO: $name << $msg")
+          failure(s"Open expect but: $msg")
       }
     }
 
+    val executor = Executors.newCachedThreadPool()
+    implicit val _context:ExecutionContextExecutor = ExecutionContext.fromExecutor(executor)
     val SEC30 = Duration(30, TimeUnit.SECONDS)
 
     val promise = Promise[Wire]()
@@ -59,7 +72,10 @@ Simple echo communication. $simpleClientServer
       sslContext.init(peer1.getKeyManagers, peer1.getTrustManagers, null)
       val future = Bridge.builder()
         .sslContext(sslContext)
-        .newServer(uri, promise.completeWith)
+        .newServer(uri, { fw =>
+          logger.info(s"ECHO: server accept connection: $fw")
+          promise.completeWith(fw)
+        })
       Await.result(future, SEC30)
     }
     logger.info(s"server address: ${server.acceptURI}")
@@ -73,11 +89,15 @@ Simple echo communication. $simpleClientServer
     }
     logger.info(s"client: ${wire.local} <--> ${wire.remote}")
 
-    val clientResult = _echo(wire)
-    val serverResult = Await.result(promise.future.map(_echo), SEC30)
+    val clientResult = Await.result(Future(_echo("CLIENT", wire)), SEC30)
+    val serverResult = Await.result(promise.future.map { w =>
+      logger.info(s"ECHO: server connect: $w")
+      _echo("SERVER", w)
+    }, SEC30)
 
     wire.close()
     server.close()
+    executor.shutdown()
     clientResult and serverResult
   }
 

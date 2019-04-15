@@ -4,7 +4,6 @@ import java.io.{InputStream, OutputStream}
 import java.lang.reflect.Method
 import java.util.UUID
 
-import io.asterisque.wire.rpc.MessagePackCodec.Tag
 import javax.annotation.{Nonnull, Nullable}
 import org.msgpack.MessagePack
 import org.msgpack.packer.Packer
@@ -12,18 +11,42 @@ import org.msgpack.unpacker.Unpacker
 
 import scala.collection.JavaConverters._
 
-class MessagePackCodec extends Codec {
+class MessagePackCodec extends ObjectMapper[Any] {
+
+  override def encode(packer:Packer, value:Any):Unit = MessagePackCodec.encode(packer, value)
+
+  override def decode(unpacker:Unpacker):Any = MessagePackCodec.decode(unpacker)
+}
+
+object MessagePackCodec extends Codec {
   private[this] val msgpack = new MessagePack()
 
   def encode(@Nonnull out:OutputStream, @Nonnull method:Method, isParams:Boolean, @Nullable value:Object):Unit = {
     val packer = msgpack.createPacker(out)
-    encode(packer, value)
+    MessagePackCodec.encode(packer, value)
     packer.flush()
   }
 
   def decode(@Nonnull in:InputStream, @Nonnull method:Method, isParams:Boolean):Object = {
     val unpacker = msgpack.createUnpacker(in)
-    decode(unpacker)
+    MessagePackCodec.decode(unpacker)
+  }
+
+  object Tag {
+    val Null:Byte = 0
+    val True:Byte = 1
+    val False:Byte = 2
+    val Int8:Byte = 3
+    val Int16:Byte = 4
+    val Int32:Byte = 5
+    val Int64:Byte = 6
+    val Float32:Byte = 7
+    val Float64:Byte = 8
+    val Binary:Byte = 10
+    val String:Byte = 11
+    val UUID:Byte = 12
+    val List:Byte = 32
+    val Map:Byte = 33
   }
 
   private[this] def encodeInt(packer:Packer, value:Long):Unit = if(value >= Byte.MinValue && value <= Byte.MaxValue) {
@@ -51,7 +74,7 @@ class MessagePackCodec extends Codec {
     * @throws CodecException 指定された値のエンコードに対応していない場合
     */
   @throws[CodecException]
-  private[this] def encode(packer:Packer, _value:Any):Unit = _value match {
+  def encode(packer:Packer, _value:Any):Unit = _value match {
     case null | () => packer.write(Tag.Null)
     case b:Boolean => packer.write(if(b) Tag.True else Tag.False)
     case i:Byte => encodeInt(packer, i.toLong)
@@ -77,16 +100,16 @@ class MessagePackCodec extends Codec {
       encodeInt(packer, d.getTime)
     case m:Map[_, _] =>
       packer.write(Tag.Map)
-      ObjectMapper.writeMap(packer, m)
+      writeMap(packer, m)
     case l:Iterable[_] =>
       packer.write(Tag.List)
-      ObjectMapper.writeArray(packer, l)
+      writeArray(packer, l)
     case l:Array[_] =>
       packer.write(Tag.List)
-      ObjectMapper.writeArray(packer, l)
+      writeArray(packer, l)
     case t:Product =>
       packer.write(Tag.List)
-      ObjectMapper.writeArray(packer, (0 until t.productArity).map(i => t.productElement(i)))
+      writeArray(packer, (0 until t.productArity).map(i => t.productElement(i)))
 
     // Java プリミティブ型と標準コレクション型
     case b:java.lang.Boolean => packer.write(if(b.booleanValue()) Tag.True else Tag.False)
@@ -107,10 +130,10 @@ class MessagePackCodec extends Codec {
     case dt:java.util.Date => encodeInt(packer, dt.getTime)
     case m:java.util.Map[_, _] =>
       packer.write(Tag.List)
-      ObjectMapper.writeMap(packer, m.asScala)
+      writeMap(packer, m.asScala)
     case l:java.util.Collection[_] =>
       packer.write(Tag.List)
-      ObjectMapper.writeArray(packer, l.asScala)
+      writeArray(packer, l.asScala)
     case unsupported =>
       throw new CodecException(s"marshal not supported for data type: ${unsupported.getClass.getCanonicalName}: $unsupported")
   }
@@ -123,7 +146,7 @@ class MessagePackCodec extends Codec {
     * @throws CodecException オブジェクトの復元に失敗した場合
     */
   @throws[CodecException]
-  private[this] def decode(unpacker:Unpacker):Object = unpacker.readByte() match {
+  def decode(unpacker:Unpacker):Object = unpacker.readByte() match {
     case Tag.Null => null
     case Tag.True => java.lang.Boolean.TRUE
     case Tag.False => java.lang.Boolean.FALSE
@@ -139,39 +162,66 @@ class MessagePackCodec extends Codec {
       val leastSignificantBits = unpacker.readLong()
       new UUID(mostSignificantBits, leastSignificantBits)
     case Tag.Map =>
-      val size = unpacker.readMapBegin()
-      val map = (0 until size).map { _ =>
-        (ObjectMapper.decode(unpacker), ObjectMapper.decode(unpacker))
-      }.toMap
-      unpacker.readMapEnd(true)
-      map
+      readMap(unpacker)
     case Tag.List =>
-      val size = unpacker.readArrayBegin()
-      val list = (0 until size).map(_ => ObjectMapper.decode(unpacker))
-      unpacker.readArrayEnd(true)
-      list
+      readArray(unpacker)
     case unsupported =>
       throw new CodecException(s"marshal not supported for data type: ${unsupported.getClass.getCanonicalName}: $unsupported")
   }
-}
 
-object MessagePackCodec {
+  /**
+    * MessagePack の map family は要素数を固定しているが asterisque では複合型 (type + data) をとして保存するため
+    * MessagePack の map フォーマットは適用できない。
+    *
+    * @param packer packer
+    * @param map    シリアライズする Map
+    */
+  private[this] def writeMap(packer:Packer, map:scala.collection.Map[_, _]):Unit = {
+    assert(map.size <= 0xFFFF)
+    packer.write(map.size.toShort)
+    map.foreach { case (key, value) =>
+      ObjectMapper.encode(packer, key)
+      ObjectMapper.encode(packer, value)
+    }
+  }
 
-  object Tag {
-    val Null:Byte = 0
-    val True:Byte = 1
-    val False:Byte = 2
-    val Int8:Byte = 3
-    val Int16:Byte = 4
-    val Int32:Byte = 5
-    val Int64:Byte = 6
-    val Float32:Byte = 7
-    val Float64:Byte = 8
-    val Binary:Byte = 10
-    val String:Byte = 11
-    val UUID:Byte = 12
-    val List:Byte = 32
-    val Map:Byte = 33
+  /**
+    * [[writeMap()]] でシリアライズしたマップを復元する。
+    *
+    * @param unpacker unpacker
+    * @return 復元したマップ
+    */
+  private[this] def readMap(unpacker:Unpacker):Map[_, _] = {
+    val size = unpacker.readShort() & 0xFFFF
+    (0 until size).map { _ =>
+      val key = ObjectMapper.decode(unpacker)
+      val value = ObjectMapper.decode(unpacker)
+      (key, value)
+    }.toMap
+  }
+
+  /**
+    * MessagePack の array family は要素数を固定しているが asterisque では複合型 (type + data) をとして保存するため
+    * MessagePack の array フォーマットは適用できない。
+    *
+    * @param packer packer
+    * @param array  シリアライズする Array
+    */
+  private[this] def writeArray(packer:Packer, array:Iterable[_]):Unit = {
+    assert(array.size <= 0xFFFF)
+    packer.write(array.size.toShort)
+    array.foreach(value => ObjectMapper.encode(packer, value))
+  }
+
+  /**
+    * [[writeArray()]] でシリアライズしたアレイを復元する。
+    *
+    * @param unpacker unpacker
+    * @return 復元したアレイ
+    */
+  private[this] def readArray(unpacker:Unpacker):Iterable[Any] = {
+    val size = unpacker.readShort() & 0xFFFF
+    (0 until size).map(_ => ObjectMapper.decode(unpacker))
   }
 
 }

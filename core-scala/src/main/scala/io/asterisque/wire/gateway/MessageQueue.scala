@@ -86,7 +86,11 @@ class MessageQueue(@Nonnull val name:String, val cooperativeLimit:Int) extends A
     queue.synchronized {
       message = queue.poll()
       if(message == null && timeout > 0) {
+        if(logger.isDebugEnabled) {
+          logger.debug(s"listener is waiting message on queue [$name]")
+        }
         queue.wait(unit.toMillis(timeout))
+        logger.debug(s"listener is waked up on queue [$name]")
         message = queue.poll()
       }
       queueSize = queue.size
@@ -196,6 +200,9 @@ class MessageQueue(@Nonnull val name:String, val cooperativeLimit:Int) extends A
   private[this] def offerAndNotify(@Nonnull msg:Message):Int = {
     assert(Thread.holdsLock(queue))
     queue.offer(msg)
+    if(logger.isDebugEnabled) {
+      logger.debug(s"message is available for retrieval from queue [$name]: $msg; total queue size=${queue.size}, listeners=${listeners.size}")
+    }
     queue.notify() // キューを待機しているスレッドに通知
     queue.size
   }

@@ -2,10 +2,8 @@ package io.asterisque.wire.rpc
 
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
-import java.security.cert.X509Certificate
 import java.util.ServiceLoader
 
-import io.asterisque.security.Algorithms
 import io.asterisque.utils.{Debug, Version}
 import io.asterisque.wire.Spec
 import io.asterisque.wire.message.Message.{Block, Close, Control, Open}
@@ -31,6 +29,7 @@ trait ObjectMapper[T] {
     *
     * @param packer Packer
     * @param value  直列化するオブジェクト
+    * @throws CodecException オブジェクトの直列化がサポートされていない場合
     */
   @throws[CodecException]
   def encode(@Nonnull packer:Packer, @Nullable value:T):Unit
@@ -97,8 +96,8 @@ object ObjectMapper {
       case _:CodecException =>
         logger.trace("encode unsupported: {} @ {}", value, codec.getClass.getSimpleName)
         false
-      case ex:Throwable =>
-        logger.warn(s"unexpected exception: ${Debug.toString(value)}", ex)
+      case ex:Exception =>
+        logger.warn(s"unexpected exception for: ${Debug.toString(value)}", ex)
         false
     }
   }.orElse {
@@ -113,8 +112,8 @@ object ObjectMapper {
       } catch {
         case _:CodecException =>
           logger.trace("encode unsupported: {} ", codec.getClass.getSimpleName)
-        case ex:Throwable =>
-          logger.warn(s"unexpected exception: ${codec.getClass.getSimpleName}", ex)
+        case ex:Exception =>
+          logger.warn(s"unexpected exception from: ${codec.getClass.getSimpleName}.decode()", ex)
       }
     }
     throw new CodecException(s"codec unsupported")
@@ -185,16 +184,24 @@ object ObjectMapper {
     @throws[CodecException]
     @Nonnull
     def decode(@Nonnull binary:Array[Byte]):Message = {
-      assert(binary.length >= Padding.length)
+      if(binary.length < Padding.length) {
+        throw new Unsatisfied()
+      }
 
       // Get message type and length
       val buf = ByteBuffer.wrap(binary, 0, Padding.length)
       buf.order(Spec.Std.endian)
       val msgType = buf.get()
       val length = buf.getShort & 0xFFFF
-      assert(binary.length == length)
+      if(length < Padding.length) {
+        throw new CodecException(f"binary length $length%,d too short")
+      }
+      if(binary.length < length) {
+        throw new Unsatisfied(f"binary length ${binary.length}%,d must equal to $length%,d")
+      }
 
-      val unpacker = MESSAGE_PACK.createBufferUnpacker(binary, Padding.length, length - Padding.length)
+      var offset = Padding.length
+      var unpacker = MESSAGE_PACK.createBufferUnpacker(binary, offset, length - offset)
       try {
         msgType match {
           case Msg.Open =>
@@ -217,129 +224,62 @@ object ObjectMapper {
             val payload = unpacker.readByteArray()
             Block(pipeId, loss, payload, 0, payload.length, eof)
           case Msg.Control =>
-            if(binary.length <= 1) {
+            if(binary.length <= Padding.length) {
               throw new Unsatisfied()
             }
-            binary(1) match {
+            offset = Padding.length + 1
+            unpacker = MESSAGE_PACK.createBufferUnpacker(binary, offset, length - offset)
+            binary(offset - 1) match {
               case Control.SyncSession =>
                 Control(SYNC_SESSION.decode(unpacker))
               case Control.Close =>
                 Control(Control.CloseField)
+              case unexpected =>
+                val msg = f"unexpected control code: 0x$unexpected%02X (${Debug.toString(unexpected.toChar)})"
+                throw new CodecException(msg)
             }
+          case unexpected =>
+            val msg = f"unexpected message id: 0x$unexpected%02X (${Debug.toString(unexpected.toChar)})"
+            throw new CodecException(msg)
         }
       } catch {
+        case ex:Unsatisfied =>
+          throw ex
+        case _:EndOfBufferException =>
+          throw new Unsatisfied()
+        case ex:MessageTypeException =>
+          throw new CodecException(s"broken message", ex)
         case ex:Exception =>
-          val pos = unpacker.getReadByteCount + Padding.length
+          val pos = unpacker.getReadByteCount + offset
           throw new CodecException(f"message restoration failed; type=0x${msgType & 0xFF}%02X ('${msgType.toChar}%s'), length=$length%,d; $pos @ ${Debug.toString(binary)}", ex)
       }
     }
   }
 
-  implicit object SYNC_SESSION extends ObjectMapper[SyncSession] {
+  private[this] object SYNC_SESSION extends ObjectMapper[SyncSession] {
     override def encode(packer:Packer, sync:SyncSession):Unit = {
-      packer.write(sync.version.version)
-      packer.write(sync.serviceId)
+      packer
+        .write(sync.version.version)
         .write(sync.utcTime)
-      MAP_STRING.encode(packer, sync.config)
-    }
-
-    override def decode(unpacker:Unpacker):SyncSession = try {
-      val version = Version(unpacker.readInt())
-      val serviceId = unpacker.readString()
-      val utcTime = unpacker.readLong()
-      val attr = MAP_STRING.decode(unpacker)
-      SyncSession(version, serviceId, utcTime, attr)
-    } catch {
-      case _:EndOfBufferException => throw new Unsatisfied()
-      case ex:MessageTypeException =>
-        throw new CodecException(s"broken message", ex)
-    }
-  }
-
-  implicit object X509CERTIFICATE extends ObjectMapper[X509Certificate] {
-
-    override def encode(packer:Packer, cert:X509Certificate):Unit = {
-      packer.write(cert.getEncoded)
-    }
-
-    override def decode(unpacker:Unpacker):X509Certificate = {
-      Algorithms.Cert.load(unpacker.readByteArray()).get
-    }
-  }
-
-  implicit object MAP_STRING extends ObjectMapper[Map[String, String]] {
-    override def encode(packer:Packer, map:Map[String, String]):Unit = {
-      packer.writeMapBegin(map.size)
-      map.foreach { case (key, value) =>
-        packer.write(key)
-        packer.write(value)
+      packer.writeMapBegin(sync.config.size)
+      sync.config.foreach { case (key, value) =>
+        packer.write(key).write(value)
       }
       packer.writeMapEnd(true)
     }
 
-    override def decode(unpacker:Unpacker):Map[String, String] = {
+    override def decode(unpacker:Unpacker):SyncSession = {
+      val version = Version(unpacker.readInt())
+      val utcTime = unpacker.readLong()
       val size = unpacker.readMapBegin()
-      val map = (0 until size).map { _ =>
-        (unpacker.readString(), unpacker.readString())
+      val config = (0 until size).map { _ =>
+        val key = unpacker.readString()
+        val value = unpacker.readString()
+        (key, value)
       }.toMap
       unpacker.readMapEnd(true)
-      map
+      SyncSession(version, utcTime, config)
     }
-  }
-
-  /**
-    * MessagePack の map family は要素数を固定しているが asterisque では複合型 (type + data) をとして保存するため
-    * MessagePack の map フォーマットは適用できない。
-    *
-    * @param packer packer
-    * @param map    シリアライズする Map
-    */
-  private[rpc] def writeMap(packer:Packer, map:scala.collection.Map[_, _]):Unit = {
-    assert(map.size <= 0xFFFF)
-    packer.write(map.size.toShort)
-    map.foreach { case (key, value) =>
-      ObjectMapper.encode(packer, key)
-      ObjectMapper.encode(packer, value)
-    }
-  }
-
-  /**
-    * [[writeMap()]] でシリアライズしたマップを復元する。
-    *
-    * @param unpacker unpacker
-    * @return 復元したマップ
-    */
-  private[rpc] def readMap(unpacker:Unpacker):Map[_, _] = {
-    val size = unpacker.readShort() & 0xFFFF
-    (0 until size).map { _ =>
-      val key = ObjectMapper.decode(unpacker)
-      val value = ObjectMapper.decode(unpacker)
-      (key, value)
-    }.toMap
-  }
-
-  /**
-    * MessagePack の array family は要素数を固定しているが asterisque では複合型 (type + data) をとして保存するため
-    * MessagePack の array フォーマットは適用できない。
-    *
-    * @param packer packer
-    * @param array  シリアライズする Array
-    */
-  private[rpc] def writeArray(packer:Packer, array:Iterable[_]):Unit = {
-    assert(array.size <= 0xFFFF)
-    packer.write(array.size.toShort)
-    array.foreach(value => ObjectMapper.encode(packer, value))
-  }
-
-  /**
-    * [[writeArray()]] でシリアライズしたアレイを復元する。
-    *
-    * @param unpacker unpacker
-    * @return 復元したアレイ
-    */
-  private[rpc] def readArray(unpacker:Unpacker):Iterable[Any] = {
-    val size = unpacker.readShort() & 0xFFFF
-    (0 until size).map(_ => ObjectMapper.decode(unpacker))
   }
 
 }

@@ -25,12 +25,11 @@ The pipe-id must be zero. ${Control.CloseMessage.pipeId === 0}
   protected def newMessages:Seq[Control] = {
     val r = new Random(78287435L)
     val version = Version(r.nextInt())
-    val serviceId = "io.asterisque.TestService"
     val utcTime = r.nextLong()
     val ping = r.nextInt()
     val sessionTimeout = r.nextInt()
     val config = Map("ping" -> ping.toString, "sessionTimeout" -> sessionTimeout.toString)
-    val syncSession = SyncSession(version, serviceId, utcTime, config)
+    val syncSession = SyncSession(version, utcTime, config)
 
     Seq(
       new Control(syncSession),

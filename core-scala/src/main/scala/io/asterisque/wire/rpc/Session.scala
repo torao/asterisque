@@ -69,11 +69,6 @@ class Session private[rpc](val id:Long, dispatcher:Dispatcher, wire:Wire, codec:
   private[this] val pipes = new PipeSpace(this)
 
   /**
-    * このセッションが接続しているローカル側のサービス ID。
-    */
-  val localServiceId:String = (if(wire.isPrimary) sync.secondary else sync.primary).serviceId
-
-  /**
     * [[Wire.outbound]] のメッセージ流出量を調整するためのラッチです。
     */
   final private val outboundLatch = new Latch()
@@ -175,7 +170,7 @@ class Session private[rpc](val id:Long, dispatcher:Dispatcher, wire:Wire, codec:
     msg match {
       case open:Open =>
         val pipe = pipes.create(open)
-        dispatcher.dispatch(localServiceId, pipe, logId).onComplete {
+        dispatcher.dispatch(pipe, logId).onComplete {
           case Success(result) =>
             post(Close(pipe.id, result))
           case Failure(ex:NoSuchServiceException) =>

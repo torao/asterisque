@@ -6,6 +6,8 @@ import java.nio.charset.{Charset, StandardCharsets}
 import java.util
 import java.util.Objects
 
+import io.asterisque.utils.Debug
+import io.asterisque.wire.Spec
 import javax.annotation.{Nonnull, Nullable}
 import org.apache.commons.codec.binary.Hex
 
@@ -56,6 +58,9 @@ object Message {
   final case class Open(pipeId:Short, priority:Byte, @Nonnull serviceId:String, functionId:Short, @Nonnull params:Array[Byte]) extends Message {
     Objects.requireNonNull(serviceId, "service must not be null")
     Objects.requireNonNull(params, "params must not be null")
+    if(serviceId.getBytes(Spec.Std.charset).length > Spec.Std.MAX_SERVICE_ID_BYTES) {
+      throw new IllegalArgumentException(s"service id too long: $serviceId must be less than or equal ${Spec.Std.MAX_SERVICE_ID_BYTES}")
+    }
 
     /**
       * 指定されたオブジェクトとこのインスタンスが等しい場合 true を返します。
@@ -66,6 +71,7 @@ object Message {
     override def equals(obj:Any):Boolean = super.equals(obj) && (obj match {
       case other:Open =>
         this.priority == other.priority &&
+          this.serviceId == other.serviceId &&
           this.functionId == other.functionId &&
           util.Arrays.equals(this.params, other.params)
       case _ => false
@@ -77,7 +83,11 @@ object Message {
       * @return ハッシュ値
       */
     override def hashCode():Int = {
-      Message.hashCode(super.hashCode(), priority, functionId, Message.hashCode(params, 0, params.length))
+      Message.hashCode(super.hashCode(), priority, serviceId.hashCode(), functionId, Message.hashCode(params, 0, params.length))
+    }
+
+    override def toString:String = {
+      s"Open($pipeId, $priority, ${Debug.toString(serviceId)}, $functionId, ${Debug.toString(params)})"
     }
   }
 
@@ -136,6 +146,10 @@ object Message {
       * @return ハッシュ値
       */
     override def hashCode():Int = Message.hashCode(super.hashCode(), code, util.Arrays.hashCode(result))
+
+    override def toString:String = {
+      s"Close($pipeId, $code, ${Debug.toString(result)})"
+    }
   }
 
   object Close {
@@ -277,7 +291,7 @@ object Message {
       */
     @Nonnull
     override def toString:String = {
-      s"Block($pipeId,0x${Hex.encodeHexString(ByteBuffer.wrap(payload, offset, length))},$loss${if(eof) ",EOF" else ""})"
+      s"Block($pipeId, 0x${Hex.encodeHexString(ByteBuffer.wrap(payload, offset, length))}, $loss${if(eof) ", EOF" else ""})"
     }
 
     /**
@@ -302,6 +316,7 @@ object Message {
     override def hashCode():Int = {
       Message.hashCode(super.hashCode(), loss, Message.hashCode(payload, offset, length), if(eof) 1 else 0)
     }
+
   }
 
   object Block {
