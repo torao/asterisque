@@ -22,7 +22,7 @@ import scala.util.Random
   *
   * @param context ディスパッチャーがリクエストを処理するためのスレッドプール
   */
-class Dispatcher private[rpc](val context:ExecutionContext, codec:Codec) {
+class Dispatcher(val context:ExecutionContext, codec:Codec) {
 
   /**
     * このディスパッチャー上でサービスの処理を行っているセッション。

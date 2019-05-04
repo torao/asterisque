@@ -23,6 +23,7 @@ package object tools {
             case file:File => buf.append(Bash.escape(Bash.unixPath(file)))
             case file:Path => buf.append(Bash.escape(Bash.unixPath(file.toFile)))
             case Unwrapped(text) => buf.append(String.valueOf(text))
+            case cmd:Bash => buf.append(cmd.toString)
             case value => buf.append(Bash.escape(String.valueOf(value)))
           }
         }

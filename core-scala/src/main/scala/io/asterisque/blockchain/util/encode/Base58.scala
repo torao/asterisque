@@ -10,18 +10,18 @@ object Base58 {
   private[this] val RADIX = 58
   private[this] val DIGITS = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz".toArray
 
-  val ZERO = DIGITS(0)
+  val ZERO:Char = DIGITS(0)
 
   private[this] val DIGIT_TO_BYTE = {
     val arr = new Array[Int](DIGITS.max + 1)
     util.Arrays.fill(arr, -1)
     DIGITS.zipWithIndex.foreach { case (digit, i) =>
-      arr(digit) = i
+      arr(digit.toInt) = i
     }
     arr
   }
 
-  private[this] val ESTIMATE_FACTOR = math.log(256) / math.log(RADIX)
+  private[this] val ESTIMATE_FACTOR = math.log(256) / math.log(RADIX.toDouble)
 
   assert(DIGITS.length == RADIX)
 
@@ -50,7 +50,7 @@ object Base58 {
     */
   def decode(text:String):Array[Byte] = {
     val value = text.map { ch =>
-      val byte = if(ch >= DIGIT_TO_BYTE.length) -1 else DIGIT_TO_BYTE(ch)
+      val byte = if(ch >= DIGIT_TO_BYTE.length) -1 else DIGIT_TO_BYTE(ch.toInt)
       if(byte < 0) {
         throw new IllegalArgumentException(s"unexpected character: '$ch'")
       } else {

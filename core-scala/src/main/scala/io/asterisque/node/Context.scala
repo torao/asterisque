@@ -57,7 +57,7 @@ class Context(root:File) extends AutoCloseable {
   }
 
   private[this] object conf {
-    val dir:File = new File(root, "conf")
+    val dir:File = new File(root, Context.CONF_DIR)
 
     val config = new Cache[Config](ConfigTransformer)
 
@@ -115,6 +115,10 @@ class Context(root:File) extends AutoCloseable {
 
 object Context {
   private[Context] val logger = LoggerFactory.getLogger(classOf[Context])
+
+  val CONF_DIR = "conf"
+
+  val TRUST_CONTEXT_DIR = "security"
 
   private[Context] object ConfigTransformer extends Cache.DirTransformer[Config](filter = _.getName.endsWith(".conf"), recurse = false) {
     override def defaultValue(target:File):Config = Config.getDefault

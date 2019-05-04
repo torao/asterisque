@@ -39,6 +39,7 @@ libraryDependencies ++= Seq(
   "com.typesafe"       %  "config"          % "1.+",
   "com.typesafe.play"  %% "play-json"       % "2.+",
   "org.rocksdb"        %  "rocksdbjni"      % "5.+",
+  "net.sourceforge.argparse4j" % "argparse4j" % "0.8.+",
   "ch.qos.logback"     %  "logback-classic" % "1.+",
   "org.specs2"         %% "specs2-core"     % "4.4.+" % Test
 )

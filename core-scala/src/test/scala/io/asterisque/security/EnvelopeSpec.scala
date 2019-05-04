@@ -22,8 +22,6 @@ It throws SignatureException when data tampered. $dataTampering
 It throws IllegalArgumentException for invalid JSON structure. $parseErrorPatterns
 """
 
-  private[this] val logger = LoggerFactory.getLogger(classOf[EnvelopeSpec])
-
   private[this] def storeAndLoad = fs.temp(this) { dir =>
     val ca = PKI.CA.newRootCA(new File(dir, "ca"), dn("ca"))
     val ksFile = new File(dir, "keystore.p12")
@@ -32,7 +30,7 @@ It throws IllegalArgumentException for invalid JSON structure. $parseErrorPatter
     val key = ks.getKey("foo", "****".toCharArray).asInstanceOf[PrivateKey]
     val cert = ks.getCertificate("foo").asInstanceOf[X509Certificate]
 
-    (0 until 20).map(i => randomJSON(328475 + i)).zipWithIndex.map { case (json, i) =>
+    (0 until 20).map(i => randomJSON(328475L + i)).zipWithIndex.map { case (json, i) =>
       val envelope = Envelope(json, key, cert)
       val file = new File(dir, s"$i.json")
       Files.writeString(file.toPath, Json.prettyPrint(envelope.toJSON), CREATE_NEW, WRITE)

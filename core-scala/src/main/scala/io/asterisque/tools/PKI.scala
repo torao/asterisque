@@ -2,7 +2,9 @@ package io.asterisque.tools
 
 import java.io._
 import java.nio.charset.StandardCharsets
+import java.security.cert.X509Certificate
 
+import io.asterisque.security.Algorithms
 import io.asterisque.utils._
 import org.slf4j.LoggerFactory
 
@@ -39,6 +41,9 @@ object PKI {
 
     /** CA 証明書 */
     val certFile:File = caCertFile
+
+    /** CA 証明書 */
+    lazy val certificate:X509Certificate = Algorithms.Cert.load(certFile).get
 
     /** CA 秘密鍵 */
     val privateKeyFile:File = caKeyFile
@@ -148,7 +153,7 @@ object PKI {
     private def newPEMCertificateWithKey(keyPEM:File, certPEM:File, certPathPEM:File, subject:String, ecCurve:String, days:Int):Unit = {
       IO.temp(keyPEM.getParentFile, s"csr-${certPEM.getName}") { csr =>
         openssl(sh"""req -new -sha256 -newkey ec:<(openssl ecparam -name $ecCurve) -batch -nodes -subj $subject -days $days -out $csr -keyout $keyPEM""")
-        openssl(sh"""ca -config $confFile -in $csr -batch -days $days -out $certPEM""")
+        issueCertificate(csr, certPEM, None, Some(days))
       }
 
       // 証明書パスの作成
@@ -157,6 +162,20 @@ object PKI {
         val _ = IO.append(caCertPathFile, certPathPEM)
       }
     }
+
+    /**
+      * 指定された CSR に対して X509 証明書の発行し PEM 形式で保存します。
+      *
+      * @param csr     入力元の CSR ファイル
+      * @param certPEM X509 証明書の出力先ファイル
+      * @param subject 証明書の Subject (e.g., "/C=JP/ST=Tokyo/L=Sumida/O=MyCompany Ltd./OU/Dev 1/CN=www.example.com") (None の場合は CSR に従う)
+      * @param days    証明書の有効期限 (None の場合は CSR に従う)
+      */
+    def issueCertificate(csr:File, certPEM:File, subject:Option[String], days:Option[Int]):Unit = openssl(
+      sh"""ca -config $confFile -in $csr -batch -days $days -out $certPEM""" +
+        subject.map(subj => sh" -subj $subj").getOrElse(sh"") +
+        days.map(ds => sh" -days $ds").getOrElse(sh"")
+    )
 
     /**
       * この CA が発行した証明書を無効化します。

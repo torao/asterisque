@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
 
-trait Service extends ((Codec, Pipe, ExecutionContext) => Future[Any]) {
+trait Service extends ((Codec, Pipe, ExecutionContext) => Future[Array[Byte]]) {
 
   def apply(@Nonnull codec:Codec, @Nonnull pipe:Pipe, @Nonnull executor:ExecutionContext):Future[Array[Byte]] = {
     execute(this, codec, pipe, executor) match {

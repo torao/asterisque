@@ -2,8 +2,8 @@ package io.asterisque.security
 
 import java.io.File
 import java.nio.file.NoSuchFileException
+import java.security.KeyStore
 import java.security.cert.{CertPath, CertificateException, X509Certificate}
-import java.security.{KeyStore, PrivateKey}
 
 import io.asterisque.security.Algorithms._
 import io.asterisque.security.TrustContext._
@@ -31,7 +31,7 @@ class TrustContext private[TrustContext](dir:File, alias:String, passphrase:Stri
   private[this] val verifier = new Cache(VerifierTransformer)
 
   /** プライベートキーと証明書が保存されている PKCS#12 または JKS 形式のファイル */
-  private val keyStoreFile:File = new File(dir, PRIVATE_KEY_FILE)
+  private val keyStoreFile:File = new File(dir, KEY_STORE_FILE)
 
   /** 信頼済み CA 証明書パスとその CRL が PEM または PKCS#7 形式のファイルとして保存されているディレクトリ */
   private val trustedCertsDirectory:File = new File(dir, TRUSTED_CA_CERTS_DIR)
@@ -232,7 +232,7 @@ class TrustContext private[TrustContext](dir:File, alias:String, passphrase:Stri
 object TrustContext {
   private[TrustContext] val logger = LoggerFactory.getLogger(classOf[TrustContext])
 
-  val PRIVATE_KEY_FILE:String = "private.p12"
+  val KEY_STORE_FILE:String = "private.p12"
 
   val TRUSTED_CA_CERTS_DIR:String = "trusted"
 

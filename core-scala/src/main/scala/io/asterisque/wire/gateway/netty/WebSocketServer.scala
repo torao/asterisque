@@ -1,6 +1,6 @@
 package io.asterisque.wire.gateway.netty
 
-import java.net.{InetSocketAddress, SocketAddress, URI}
+import java.net.{InetSocketAddress, URI}
 import java.util.concurrent.atomic.AtomicBoolean
 
 import io.asterisque.wire.gateway.Server

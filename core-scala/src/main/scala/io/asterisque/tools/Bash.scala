@@ -11,11 +11,13 @@ import scala.annotation.tailrec
 class Bash private[tools](cmd:String) {
   private[this] val logger = LoggerFactory.getLogger("io.asterisque.tools.BASH")
 
+  def +(other:Bash):Bash = new Bash(this.cmd + other.toString)
+
   def exec(stdin:InputStream = NullInputStream, stdout:OutputStream = NullOutputStream, stderr:OutputStream = NullOutputStream, silent:Boolean = false):Int = {
     var result:Option[Int] = None
     try {
       val proc = Runtime.getRuntime.exec("bash")
-      val out = proc.getOutputStream()
+      val out = proc.getOutputStream
       out.write(s"$cmd; exit $$?\n".getBytes)
       out.flush()
       val io = Seq(
@@ -49,7 +51,7 @@ class Bash private[tools](cmd:String) {
     if(len > 0) {
       outs.foreach { out =>
         (0 until len).foreach { i =>
-          out.write(buffer(i))
+          out.write(buffer(i) & 0xFF)
           if(buffer(i) == '\n') {
             out.flush()
           }

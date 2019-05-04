@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.Files
 import java.security._
 import java.security.cert._
+import java.security.interfaces.ECPrivateKey
 import java.security.spec.PKCS8EncodedKeySpec
 import java.util
 import java.util.Base64
@@ -273,6 +274,13 @@ object Algorithms {
   object PrivateKey {
     val ALGORITHM = "EC"
 
+    def generate(keySize:Int = 256):PrivateKey = {
+      val generator = KeyPairGenerator.getInstance(ALGORITHM)
+      generator.initialize(keySize, null)
+      val keyPair = generator.generateKeyPair()
+      keyPair.getPrivate
+    }
+
     /**
       * Restores private key from the specified binary in PEM or DER format.
       *
@@ -296,8 +304,40 @@ object Algorithms {
 
     def load(file:File):PrivateKey = load(Files.readAllBytes(file.toPath))
 
+    /**
+      * Save the private key to the specified file. This save in DER format if the file extension is .der,
+      * otherwise in PEM format.
+      *
+      * @param file 保存先のファイル
+      * @param key  保存する秘密鍵
+      */
     def store(file:File, key:PrivateKey):Unit = using(new FileOutputStream(file)) { out =>
-      out.write(key.getEncoded)
+      if(file.getName.endsWith(".der")) {
+        out.write(key.getEncoded)
+      } else key match {
+        case ec:ECPrivateKey =>
+          def b64(a:Array[Byte]):String = if(a == null) "null" else Base64.getEncoder.encodeToString(a)
+
+          logger.info(
+            s"""S = ${b64(ec.getS.toByteArray)}
+               |A = ${b64(ec.getParams.getCurve.getA.toByteArray)}
+               |B = ${b64(ec.getParams.getCurve.getB.toByteArray)}
+               |Seed = ${b64(ec.getParams.getCurve.getSeed)}
+               |Order = ${b64(ec.getParams.getOrder.toByteArray)}
+               |X = ${b64(ec.getParams.getGenerator.getAffineX.toByteArray)}
+               |Y = ${b64(ec.getParams.getGenerator.getAffineY.toByteArray)}
+               |secp224r1 = BgUrgQQAIQ==
+             """.stripMargin)
+          val params = ec.getS.toByteArray
+          val privateKey = ec.getEncoded
+          out.write(PEM.build(
+            Entry("EC PARAMETERS", Map.empty, params),
+            Entry("EC PRIVATE KEY", Map.empty, privateKey)
+          ))
+        case pk =>
+          val privateKey = pk.getEncoded
+          out.write(PEM.build(Entry("PRIVATE KEY", Map.empty, privateKey)))
+      }
     }
   }
 

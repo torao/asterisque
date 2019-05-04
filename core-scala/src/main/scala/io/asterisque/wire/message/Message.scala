@@ -39,7 +39,7 @@ sealed trait Message extends Serializable {
     *
     * @return ハッシュ値
     */
-  override def hashCode():Int = pipeId
+  override def hashCode():Int = pipeId.toInt
 }
 
 object Message {
@@ -83,7 +83,7 @@ object Message {
       * @return ハッシュ値
       */
     override def hashCode():Int = {
-      Message.hashCode(super.hashCode(), priority, serviceId.hashCode(), functionId, Message.hashCode(params, 0, params.length))
+      Message.hashCode(super.hashCode(), priority.toInt, serviceId.hashCode(), functionId.toInt, Message.hashCode(params, 0, params.length))
     }
 
     override def toString:String = {
@@ -145,7 +145,7 @@ object Message {
       *
       * @return ハッシュ値
       */
-    override def hashCode():Int = Message.hashCode(super.hashCode(), code, util.Arrays.hashCode(result))
+    override def hashCode():Int = Message.hashCode(super.hashCode(), code.toInt, util.Arrays.hashCode(result))
 
     override def toString:String = {
       s"Close($pipeId, $code, ${Debug.toString(result)})"
@@ -314,7 +314,7 @@ object Message {
       * @return ハッシュ値
       */
     override def hashCode():Int = {
-      Message.hashCode(super.hashCode(), loss, Message.hashCode(payload, offset, length), if(eof) 1 else 0)
+      Message.hashCode(super.hashCode(), loss.toInt, Message.hashCode(payload, offset, length), if(eof) 1 else 0)
     }
 
   }

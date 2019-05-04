@@ -173,7 +173,7 @@ object Base {
       * @return sufficient number of digits to store toRadix
       */
     def sufficientSizeToConvertRadix(numOfDigits:Int, base:Int, toRadix:Int):Int = {
-      math.ceil(math.log(base) * numOfDigits / math.log(toRadix)).toInt
+      math.ceil(math.log(base.toDouble) * numOfDigits / math.log(toRadix.toDouble)).toInt
     }
 
   }
