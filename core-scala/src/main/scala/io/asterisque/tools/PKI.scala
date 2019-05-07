@@ -135,7 +135,7 @@ object PKI {
       IO.temp(dir, s"ecdsa-$ecCurve-${pkcs12.getName}") { key =>
         IO.temp(dir, s"cert-${pkcs12.getName}") { cert =>
           newPEMCertificateWithKey(key, cert, null, subject, ecCurve, days)
-          openssl(sh"""pkcs12 -export -inkey $key -in $cert -certfile $caCertPathFile -name $alias -passout pass:$passphrase -out $pkcs12""")
+          newPKCS12(pkcs12, key, cert, caCertPathFile, alias, passphrase)
         }
       }
     }
@@ -280,6 +280,20 @@ object PKI {
     val out = new ByteArrayOutputStream()
     openssl(sh"""pkcs7 -print_certs""", stdin = in, stdout = out)
     out.toByteArray
+  }
+
+  /**
+    * 指定された秘密鍵と証明書を含む PKCS#12 キーストアを作成します。
+    *
+    * @param pkcs12         出力先の PKCS#12 キーストア
+    * @param key            秘密鍵
+    * @param cert           証明書
+    * @param caCertPathFile 証明書を発行した CA の証明書パス
+    * @param alias          エントリのエイリアス
+    * @param passphrase     エントリのパスフレーズ
+    */
+  def newPKCS12(pkcs12:File, key:File, cert:File, caCertPathFile:File, alias:String, passphrase:String):Unit = {
+    openssl(sh"""pkcs12 -export -inkey $key -in $cert -certfile $caCertPathFile -name $alias -passout pass:$passphrase -out $pkcs12""")
   }
 
   /**

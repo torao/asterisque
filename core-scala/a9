@@ -1,0 +1,105 @@
+#!/bin/bash
+
+OPENSSL=openssl
+PROGRAM="$0"
+
+#
+# a9 key [-f] private_key
+#
+function create_private_key(){
+  local key=
+  local force=0
+  for OPT in $@
+  do
+    case "$OPT" in
+      "-f" | "--force")
+        force=1
+        ;;
+      *)
+        [[ "$key" != "" ]] && error "Unsupported option $OPT."
+        key="$OPT"
+    esac
+  done
+  [[ "$key" == "" ]] && error "The destination private key is not specified."
+  [[ ${force} -eq 0 && -f "$key" ]] && error "The destination private key $key already exist."
+
+  [[ ! -e "$key" ]] && cat /dev/null > "$key"
+  chmod 600 "$key"
+  ${OPENSSL} ecparam -genkey -name 'prime256v1' -out "$key"
+  [[ $? -ne 0 ]] && error "Failed to create private key."
+  chmod 400 "$key"
+  message "The private key was created successfully: $key"
+}
+
+#
+# a9 csr [-f] private_key
+#
+function create_csr(){
+  local key=
+  local subject=
+  local days=360
+  local csr=
+  local force=0
+  while [[ $# -gt 0 ]]
+  do
+    case "$1" in
+      "-f" | "--force")
+        force=1
+        ;;
+      "-d" | "--days")
+        shift
+        [[ $# -eq 0 ]] && error "You must specify an expiration date for --days option."
+        [[ ! "$1" =~ [0-9]+ ]] && error "Expiration date for --days option must be a valid number: $1"
+        [[ $1 -lt 0 ]] && error "Expiration date for --days option must be a number greater than or equal to 0: $1"
+        days=$1
+        ;;
+      "-s" | "--subject")
+        shift
+        [[ $# -eq 0 ]] && error "You must specify an subject DN for --subject option."
+        subject="$1"
+        ;;
+      *)
+        if [[ "$key" == "" ]]
+        then
+          key="$1"
+        elif [[ "$csr" == "" ]]
+        then
+          csr="$1"
+        else
+          error "Unrecognized option: $1"
+        fi
+    esac
+    shift
+  done
+  [[ "$key" == "" ]] && error "No private key specified."
+  [[ "$csr" == "" ]] && error "CSR destination is not specified."
+  [[ ${force} -eq 0 && -f "$csr" ]] && error "The destination CSR $csr already exist."
+
+  ${OPENSSL} req -new -key "$key" -sha256 -subj "$subject" -days "$days" -batch -out "$csr"
+  [[ $? -ne 0 ]] && error "Failed to create CSR."
+  message "The CSR was created successfully: $csr"
+}
+
+function message(){
+  echo "$1" >&2
+}
+
+function error(){
+  echo "ERROR: $1" >&2
+  exit 1
+}
+
+while [[ $# -gt 0 ]]
+do
+  case "$1" in
+    "key")
+      shift
+      create_private_key $*
+      ;;
+    "csr")
+      shift
+      create_csr $*
+      ;;
+  esac
+  shift
+done

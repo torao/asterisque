@@ -1,13 +1,14 @@
 package io.asterisque.tools.a9
 
-import java.io.File
+import java.io.{File, FileOutputStream}
 import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermission
 import java.util
 
 import io.asterisque.node.Context
-import io.asterisque.security.{Algorithms, TrustContext}
+import io.asterisque.security.TrustContext
 import io.asterisque.tools._
+import io.asterisque.utils.IO
 import org.slf4j.LoggerFactory
 
 object Commands {
@@ -28,23 +29,40 @@ object Commands {
       PKI.CA.newRootCA(dir, subject, days = days)
     }
 
-    def approve(caDir:File, nodeDir:File, subject:Option[String] = None, days:Option[Int] = None, force:Boolean = false):Unit = {
-      logger.debug(s"ca.approve($caDir, $nodeDir, $subject, $days, $force)")
-      val ca = PKI.CA(caDir)
-      val cname = Algorithms.Principal.parseDName(ca.certificate.getSubjectX500Principal).toMap.getOrElse("CN", "unknown-ca")
-
-      val security = new File(new File(nodeDir, Context.CONF_DIR), Context.TRUST_CONTEXT_DIR)
-      val csr = new File(security, CSR_FILE)
-      val cert = new File(security, CERT_FILE)
-      val cacert = new File(new File(security, TrustContext.TRUSTED_CA_CERTS_DIR), s"$cname.pk7")
-      if(!force && (cert.isFile || cacert.isFile)) {
+    def approve(caDir:File, csr:File, cert:File, subject:Option[String] = None, days:Option[Int] = None, force:Boolean = false):Unit = {
+      if(!force && cert.exists()) {
         exit(s"Certificate $cert already exists.")
       }
+      val ca = PKI.CA(caDir)
       ca.issueCertificate(csr, cert, subject, days)
-
-      // install trusted certificate path
-      ca.exportCertPathWithCRLAsPKCS7(cacert)
     }
+  }
+
+  object keyStore {
+    def put(keyStore:File, privateKey:File, certificate:File, caCert:File, alias:String, passphrase:String, force:Boolean = false):Unit = {
+      PKI.newPKCS12(keyStore, privateKey, certificate, caCert, alias, passphrase)
+    }
+  }
+
+  def newKey(privateKey:File, force:Boolean = false):Unit = {
+    if(!force && privateKey.exists()) {
+      exit(s"Private key $privateKey already exists.")
+    }
+    privateKey.getAbsoluteFile.getParentFile.mkdirs()
+    IO.using(new FileOutputStream(privateKey))(_ => ())
+    IO.setPermission(privateKey, "rw-------")
+    PKI.openssl(sh"""ecparam -genkey -name ${PKI.DEFAULT_EC_CURVE} -out $privateKey""")
+    if(!IO.setPermission(privateKey, "r--------")) {
+      privateKey.setWritable(false)
+      privateKey.setReadable(true, true)
+    }
+  }
+
+  def newCSR(privateKey:File, csr:File, subject:String, days:Int, force:Boolean = false):Unit = {
+    if(!force && csr.exists()) {
+      exit(s"CSR $csr already exists.")
+    }
+    PKI.openssl(sh"""req -new -key $privateKey -sha256 -subj $subject -days $days -batch -out $csr""")
   }
 
   def init(dir:File, subject:String, days:Int, key:Option[File] = None, force:Boolean = false):Unit = {

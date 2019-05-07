@@ -2,7 +2,8 @@ package io.asterisque
 
 import java.io.{File, FileOutputStream, InputStream, OutputStream}
 import java.nio.channels.FileChannel
-import java.nio.file.{Files, StandardCopyOption}
+import java.nio.file.attribute.PosixFilePermissions
+import java.nio.file.{FileSystems, Files, StandardCopyOption}
 
 import org.slf4j.LoggerFactory
 
@@ -148,6 +149,21 @@ package object utils {
         }
       }
     }
+
+    /**
+      * ファイルパーミッションを設定します。ファイルシステムが POSIX に準拠していない場合は何もしません。
+      *
+      * @param file        パーミッションを設定するファイル
+      * @param permissions ファイルに設定するパーミッション (e.g., `"rwxr-x---"`)
+      * @return ファイルシステムが POSIX に準拠していない場合 false
+      */
+    def setPermission(file:File, permissions:String):Boolean = if(posixSupported) {
+      val perms = PosixFilePermissions.fromString(permissions)
+      Files.setPosixFilePermissions(file.toPath, perms)
+      true
+    } else false
+
+    private[this] lazy val posixSupported = FileSystems.getDefault.supportedFileAttributeViews().contains("posix")
   }
 
 }
