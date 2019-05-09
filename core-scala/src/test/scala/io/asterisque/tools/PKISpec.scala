@@ -69,7 +69,7 @@ It can revoke certificate and export PKCS#7. $revokeCertificate
 
   private[this] def caInitAndDestroy = temp(this) { dir =>
     val ca = PKI.CA.newRootCA(dir, CA_SUBJECT)
-    val subject = "CN=ca.asterisque.io,OU=QA Division,O=Asterisque Ltd.,ST=Tokyo,C=JP"
+    val subject = "CN=ca.asterisque.io,OU=QA Division,O=Asterisque Ltd.,L=Sumida,ST=Tokyo,C=JP"
 
     val cert = Algorithms.Cert.load(ca.certFile).get
     logger.info(s"""[CA Certificate]""")
@@ -94,10 +94,10 @@ It can revoke certificate and export PKCS#7. $revokeCertificate
   }
 
   private[this] def issueCertificateFromCA = temp(this) { dir =>
-    val userSubject = "CN=user.asterisque.io,OU=QA Division,O=Asterisque Ltd.,ST=Tokyo,C=JP"
-    val rootSubject = "CN=ca.asterisque.io,OU=QA Division,O=Asterisque Ltd.,ST=Tokyo,C=JP"
-    val ca1Subject = "CN=ca1.asterisque.io,OU=QA Division,O=Asterisque Ltd.,ST=Tokyo,C=JP"
-    val ca2Subject = "CN=ca2.asterisque.io,OU=QA Division,O=Asterisque Ltd.,ST=Tokyo,C=JP"
+    val userSubject = "CN=user.asterisque.io,OU=QA Division,O=Asterisque Ltd.,L=Sumida,ST=Tokyo,C=JP"
+    val rootSubject = "CN=ca.asterisque.io,OU=QA Division,O=Asterisque Ltd.,L=Sumida,ST=Tokyo,C=JP"
+    val ca1Subject = "CN=ca1.asterisque.io,OU=QA Division,O=Asterisque Ltd.,L=Sumida,ST=Tokyo,C=JP"
+    val ca2Subject = "CN=ca2.asterisque.io,OU=QA Division,O=Asterisque Ltd.,L=Sumida,ST=Tokyo,C=JP"
 
     val root = PKI.CA.newRootCA(new File(dir, "root"), CA_SUBJECT)
     val ca1 = PKI.CA.newIntermediateCA(root, new File(dir, "ca1"),
@@ -145,9 +145,9 @@ It can revoke certificate and export PKCS#7. $revokeCertificate
   }
 
   private[this] def revokeCertificate = temp(this) { dir =>
-    val rootSubject = "CN=root.asterisque.io,OU=QA Division,O=Asterisque Ltd.,ST=Tokyo,C=JP"
-    val ca1Subject = "CN=ca1.asterisque.io,OU=QA Division,O=Asterisque Ltd.,ST=Tokyo,C=JP"
-    val ca2Subject = "CN=ca2.asterisque.io,OU=QA Division,O=Asterisque Ltd.,ST=Tokyo,C=JP"
+    val rootSubject = "CN=root.asterisque.io,OU=QA Division,O=Asterisque Ltd.,L=Sumida,ST=Tokyo,C=JP"
+    val ca1Subject = "CN=ca1.asterisque.io,OU=QA Division,O=Asterisque Ltd.,L=Sumida,ST=Tokyo,C=JP"
+    val ca2Subject = "CN=ca2.asterisque.io,OU=QA Division,O=Asterisque Ltd.,L=Sumida,ST=Tokyo,C=JP"
 
     val root = PKI.CA.newRootCA(new File(dir, "root"),
       "/C=JP/ST=Tokyo/L=Sumida/O=Asterisque Ltd./OU=QA Division/CN=root.asterisque.io")
