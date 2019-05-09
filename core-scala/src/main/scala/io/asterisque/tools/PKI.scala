@@ -172,7 +172,7 @@ object PKI {
       * @param days    証明書の有効期限 (None の場合は CSR に従う)
       */
     def issueCertificate(csr:File, certPEM:File, subject:Option[String], days:Option[Int]):Unit = openssl(
-      sh"""ca -config $confFile -in $csr -batch -days $days -out $certPEM""" +
+      sh"""ca -config $confFile -in $csr -batch -out $certPEM""" +
         subject.map(subj => sh" -subj $subj").getOrElse(sh"") +
         days.map(ds => sh" -days $ds").getOrElse(sh"")
     )
